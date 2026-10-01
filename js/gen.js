@@ -64,30 +64,46 @@ function splitTotal(T) {
     atem = Math.max(3, Math.round(T * 0.07)), schluss = Math.max(2, Math.round(T * 0.04));
   return { einl, atem, schluss, shava, haupt: Math.max(10, T - shava - einl - atem - schluss), mantra: 5, kraft: 3, shakti: 8 };
 }
-// Zeitblöcke des Rahmens in Stundenreihenfolge; Mantra und Kraftübung zählen nur, wenn sie aufgenommen sind
-const durKeys = c => ['einl'].concat(c.breath === 'aus' ? [] : ['atem'], mantraMode(c) !== 'aus' ? ['mantra'] : [], ['haupt'], c.shakti ? ['shakti'] : [], c.kraft ? ['kraft'] : [], ['schluss', 'shava']);
-// Gesamtdauer bleibt fest (c.total); alle anderen Teile werden angepasst. keep = Teil, der unverändert bleibt.
+// Zeitblöcke des Rahmens in Stundenreihenfolge (jeder entspricht einem Block der Stunde). Mantra, Mobilisation und Shakti Naam zählen nur, wenn aufgenommen; die Kraftübungen stehen innerhalb der Asanas.
+const partOn = (c, k) => c[k + 'On'] !== 0; // Einleitung, Schluss und Shavasana lassen sich rauslassen (Standard: Ja)
+const durKeys = c => (partOn(c, 'einl') ? ['einl'] : []).concat(c.breath === 'aus' ? [] : ['atem'], mantraMode(c) !== 'aus' ? ['mantra'] : [], c.mobi === 'aus' ? [] : ['mobi'], c.shakti ? ['shakti'] : [], ['asana'], partOn(c, 'ausgl') ? ['ausgl'] : [], partOn(c, 'schluss') ? ['schluss'] : [], partOn(c, 'shava') ? ['shava'] : []);
+// Zeiten der Hauptteil-Blöcke aus der Gesamt-Hauptteilzeit H ableiten (Altbestand / neue Gesamtdauer)
+function deriveBlockDurs(c, H) {
+  const d = c.durs, sb = c.shakti ? Math.max(2, +d.shakti || 8) : 0, rest = Math.max(10, H - sb), kb = c.kraft ? Math.max(0, +d.kraft || 3) : 0;
+  const mo = c.mobi === 'aus' ? 0 : Math.round((rest - kb) * (c.kraft ? .26 : .24)), au = partOn(c, 'ausgl') ? Math.round((rest - kb) * .22) : 0;
+  d.mobi = mo || (+d.mobi || 6); d.ausgl = au ? Math.max(2, au) : (+d.ausgl || 6); d.asana = Math.max(5, rest - mo - (au ? d.ausgl : 0));
+}
+// Gesamtdauer bleibt fest (c.total); alle anderen Teile werden angepasst (zuerst die Asanas). keep = Teil, der unverändert bleibt.
 function fitDurs(c, keep) {
-  const d = c.durs, T = Math.round(+c.total) || 75, ks = durKeys(c), mn = k => k === 'haupt' ? 5 : 1;
+  const d = c.durs, T = Math.round(+c.total) || 75;
+  if (d.asana == null) deriveBlockDurs(c, (+d.haupt || 40) + (c.kraft ? +d.kraft || 0 : 0) + (c.shakti ? +d.shakti || 0 : 0));
+  const ks = durKeys(c), mn = k => k === 'asana' ? 5 : 1;
   ks.forEach(k => { d[k] = Math.max(mn(k), Math.round(+d[k] || 0)); });
-  if (keep === 'total') { const b = splitTotal(T); ['einl', 'atem', 'schluss', 'shava'].forEach(k => { d[k] = b[k]; }); }
+  if (keep === 'total') {
+    const b = splitTotal(T); ['einl', 'atem', 'schluss', 'shava'].forEach(k => { d[k] = b[k]; });
+    const fixed = (ks.includes('einl') ? d.einl : 0) + (ks.includes('atem') ? d.atem : 0) + (ks.includes('mantra') ? d.mantra : 0) + (ks.includes('schluss') ? d.schluss : 0) + (ks.includes('shava') ? d.shava : 0);
+    deriveBlockDurs(c, Math.max(15, T - fixed));
+  }
   const sum = () => ks.reduce((a, k) => a + d[k], 0);
   let diff = T - sum();
-  if (diff && keep !== 'haupt') { const m = Math.max(5, d.haupt + diff); diff -= m - d.haupt; d.haupt = m; }
-  for (let g = 0; diff && g < 500; g++) {
+  if (diff && keep !== 'asana') { const m = Math.max(5, d.asana + diff); diff -= m - d.asana; d.asana = m; }
+  for (let gi = 0; diff && gi < 500; gi++) {
     const st = diff > 0 ? 1 : -1, cand = ks.filter(k => k !== keep && d[k] + st >= mn(k)).sort((a, b) => d[b] - d[a]);
     if (!cand.length) break;
     d[cand[0]] += st; diff -= st;
   }
+  if (c.kraft) d.kraft = Math.min(Math.max(1, +d.kraft || 3), Math.max(1, d.asana - 3));
+  d.haupt = (ks.includes('mobi') ? d.mobi : 0) + (c.shakti ? d.shakti : 0) + d.asana + (ks.includes('ausgl') ? d.ausgl : 0);
   c.total = sum();
 }
-// Dauer je Stunde aus dem Rahmen: die Kraftübungs-Zeit gehört zum Hauptteil der Stunde, die Mantra-Zeit ist ein eigener Block
+// Dauer je Stunde aus dem Rahmen: Hauptteil = Mobilisation + Shakti Naam + Asanas (inkl. Kraft) + Ausgleich; die Mantra-Zeit ist ein eigener Block
 function courseDur(c) {
+  if (c.durs && c.durs.asana == null) fitDurs(c, 'norm');
   const d = Object.assign({}, c.durs || splitTotal(c.total || 75));
-  if (c.kraft && d.kraft > 0) d.haupt += d.kraft;
-  if (c.shakti && d.shakti > 0) d.haupt += d.shakti;
-  delete d.kraft; delete d.shakti;
+  d.haupt = (c.mobi === 'aus' ? 0 : +d.mobi || 0) + (c.shakti ? +d.shakti || 0 : 0) + (+d.asana || 0) + (partOn(c, 'ausgl') ? +d.ausgl || 0 : 0);
+  ['kraft', 'shakti', 'mobi', 'asana', 'ausgl'].forEach(k => { delete d[k]; });
   if (c.breath === 'aus') d.atem = 0;
+  ['einl', 'schluss', 'shava'].forEach(k => { if (!partOn(c, k)) d[k] = 0; });
   return d;
 }
 // ---------- Blöcke der Stunde (Standard + individuelle Anpassung, eigene Blöcke möglich) ----------
@@ -113,6 +129,12 @@ const abOf = (s, k) => (s && s.bm && s.bm[k] && s.bm[k].ab) || (isCustomKey(k) ?
 const MOBI_MODES = { sitz: 'Mobilisation im Sitzen', liegen: 'Mobilisation im Liegen', stand: 'Mobilisation im Stehen' };
 const MOBI_LIE_POSES = new Set(['supine_knee', 'leg_stretch', 'bridge', 'heart_supine', 'butterfly_lying', 'twist_supine', 'legs_wall']);
 const mobiMode = c => (c && c.mobi) || 'sitz';
+// Anzahl Kraftübungen je Stunde (bei „zufällig“ 1 bis 3, je Stunde unterschiedlich)
+const kraftCountFor = (c, ix) => !c.kraft ? 0 : c.kraftRnd ? 1 + Math.floor(rng((+c.kraftSeed || 11) + Math.max(0, ix || 0) * 131)() * 3) : (c.kraftN || 1);
+// Shakti-Naam-Block je Stunde: Ja (immer), abwechselnd (Stunde 1, 3, 5 …) oder zufällig (ca. jede zweite)
+const shaktiOnFor = (c, ix) => { if (!c.shakti) return false; const m = c.shaktiMode || 'immer'; return m === 'immer' || (m === 'wechsel' && Math.max(0, ix || 0) % 2 === 0) || (m === 'zufall' && rng((+c.shaktiSeed || 5) + Math.max(0, ix || 0) * 97)() < 0.5); };
+// Art der Mobilisation je Stunde (bei „abwechselnd“ reihum Sitzen → Liegen → Stehen)
+const mobiModeFor = (c, ix) => c.mobi === 'zufall' ? ['sitz', 'liegen', 'stand'][Math.floor(rng((+c.mobiSeed || 7) + Math.max(0, ix || 0) * 7919)() * 3)] : c.mobi === 'wechsel' ? ['sitz', 'liegen', 'stand'][Math.max(0, ix || 0) % 3] : (c.mobi && c.mobi !== 'aus' ? c.mobi : 'sitz');
 function mobiPool(s) {
   const m = (s && s.mobiMode) || 'sitz';
   return m === 'liegen' ? poolOf('boden').filter(e => MOBI_LIE_POSES.has(e.pose)) : m === 'stand' ? poolOf('mobi_stand') : poolOf('mobi_sitz');
@@ -130,17 +152,18 @@ function courseBM(c) {
   BDEF.forEach(([k, n]) => { c.bm[k] = Object.assign({ name: n, on: true }, c.bm[k]); if (!c.bm[k].name) c.bm[k].name = n; });
   return c.bm;
 }
-function initBM(c, s) {
+function initBM(c, s, idx) {
   courseBM(c);
-  const B = blockBudgets(c, +s.dur.haupt || 45);
-  s.bm = {}; s.order = BDEF.map(b => b[0]); s.mobiMode = c.mobi && c.mobi !== 'aus' ? c.mobi : 'sitz';
-  BDEF.forEach(([k, n, ty]) => { s.bm[k] = { ab: k, name: k === 'mobi' && (!c.bm[k].name || Object.values(MOBI_MODES).includes(c.bm[k].name)) ? MOBI_MODES[s.mobiMode] : (c.bm[k].name || n), on: k === 'kraft' ? !!c.kraft : k === 'atem' ? c.breath !== 'aus' : k === 'mobi' ? c.mobi !== 'aus' && c.bm[k].on !== false : k === 'shakti' ? !!c.shakti : k === 'mantra' ? !!(s.dur && s.dur.mantra > 0) : c.bm[k].on !== false, type: ty, min: EXKEYS.includes(k) ? B[k] : undefined }; });
+  s.shaktiOn = shaktiOnFor(c, idx != null ? idx : (c.sessions || []).indexOf(s));
+  const B = blockBudgets(c, +s.dur.haupt || 45, !s.shaktiOn);
+  s.bm = {}; s.order = BDEF.map(b => b[0]); s.mobiMode = mobiModeFor(c, idx != null ? idx : (c.sessions || []).indexOf(s));
+  BDEF.forEach(([k, n, ty]) => { s.bm[k] = { ab: k, name: k === 'mobi' && (!c.bm[k].name || Object.values(MOBI_MODES).includes(c.bm[k].name)) ? MOBI_MODES[s.mobiMode] : (c.bm[k].name || n), on: (k === 'einl' || k === 'schluss' || k === 'shava' || k === 'ausgl') ? partOn(c, k) : k === 'kraft' ? !!c.kraft : k === 'atem' ? c.breath !== 'aus' : k === 'mobi' ? c.mobi !== 'aus' && c.bm[k].on !== false : k === 'shakti' ? !!s.shaktiOn : k === 'mantra' ? !!(s.dur && s.dur.mantra > 0) : c.bm[k].on !== false, type: ty, min: EXKEYS.includes(k) ? B[k] : undefined }; });
   s.bmCustom = false;
 }
 function syncHaupt(s) { s.dur.haupt = exKeys(s).reduce((a, k) => a + (bon(s, k) ? (+s.bm[k].min || 0) : 0), 0); }
 function blockTargets(c, s) {
   if (!s.bm) initBM(c, s);
-  const B = { kraftN: c.kraft && bon(s, 'asana') ? (c.kraftN || 1) : 0 }; // Kraftübungen stehen innerhalb des Blocks „Asanas (Hauptteil)“
+  const B = { kraftN: c.kraft && bon(s, 'asana') ? (s.kN != null ? s.kN : (c.kraftN || 1)) : 0 }; // Kraftübungen stehen innerhalb des Blocks „Asanas (Hauptteil)“
   exKeys(s).forEach(k => { B[k] = bon(s, k) ? (+s.bm[k].min || 0) : 0; });
   return B;
 }
@@ -304,7 +327,7 @@ const plannedHaupt = s => sumMin(blkAll(s));
 // Kraftübungen: Anzahl im Block „Asanas (Hauptteil)“ an den Rahmen angleichen
 function syncKraft(c, s) {
   if (!bon(s, 'asana') || !s.blk || !s.blk.asana) return;
-  const items = s.blk.asana, want = c.kraft ? (c.kraftN || 1) : 0, ks = items.filter(i => (exById(i.id) || {}).c === 'kraft');
+  const items = s.blk.asana, want = s.kN != null ? s.kN : (c.kraft ? (c.kraftN || 1) : 0), ks = items.filter(i => (exById(i.id) || {}).c === 'kraft');
   while (ks.length > want) { const k = ks.pop(); items.splice(items.indexOf(k), 1); }
   if (ks.length < want) { const ctx = mkCtx(c, s, Math.random); ctx.have = new Set(blkIds(s)); pickN(poolOf('kraft'), want - ks.length, ctx).forEach(e => items.push(mkItem(e))); }
   items.sort((a, b) => seqIdx(a.id) - seqIdx(b.id));
@@ -357,7 +380,7 @@ function normalizeState() {
       if (c.kraft) c.durs.haupt = Math.max(5, c.durs.haupt - c.durs.kraft);
       c.total = (+c.total || 0) || 75;
     }
-    if (c.durs.shakti == null) c.durs.shakti = 8; c.shakti = !!c.shakti;
+    if (c.durs.shakti == null) c.durs.shakti = 8; c.shakti = c.shakti ? 1 : 0; c.shaktiMode = c.shakti ? (c.shaktiMode && c.shaktiMode !== 'aus' ? c.shaktiMode : 'immer') : 'aus'; c.kraftRnd = c.kraft && c.kraftRnd ? 1 : 0; ['einl', 'schluss', 'shava', 'ausgl'].forEach(k => { c[k + 'On'] = c[k + 'On'] === 0 ? 0 : 1; }); c.mobi = c.mobi || 'sitz'; c.mantra = c.mantra || 'aus';
     fitDurs(c, 'norm'); c.st = c.st || []; c.reg = c.reg || []; courseBM(c); if (c.altDef === undefined) c.altDef = !!c.bothAll; });
 }
 
@@ -428,8 +451,14 @@ function pickN(pool, n, ctx) {
 }
 const poolOf = (...cats) => exAll().filter(e => cats.includes(e.c));
 const half = v => Math.round(v * 2) / 2;
-function blockBudgets(c, H) {
-  const kn = c.kraft ? (c.kraftN || 1) : 0, kb = kn ? Math.min(H - 5, (c.durs && +c.durs.kraft) || kn * 3) : 0, sb = c.shakti ? Math.max(2, Math.min(H - 12, (c.durs && +c.durs.shakti) || 8)) : 0, rest = Math.max(H - kb - sb, 10);
+function blockBudgets(c, H, noShakti) {
+  if (c.durs && c.durs.asana != null) { // Zeiten der einzelnen Hauptteil-Blöcke stehen im Rahmen
+    const kn0 = c.kraft ? (c.kraftN || 1) : 0, sb0 = c.shakti && !noShakti ? Math.max(2, Math.min(H - 12, +c.durs.shakti || 8)) : 0, rest0 = Math.max(H - sb0, 10);
+    const w = { mobi: c.mobi === 'aus' ? 0 : (+c.durs.mobi || 6), ausgl: partOn(c, 'ausgl') ? (+c.durs.ausgl || 6) : 0, asana: +c.durs.asana || 10 }, tot0 = (w.mobi + w.ausgl + w.asana) || 1;
+    const B0 = { mobi: half(rest0 * w.mobi / tot0), aufw: 0, ausgl: half(rest0 * w.ausgl / tot0), kraft: kn0 ? Math.min(rest0 - 5, +c.durs.kraft || kn0 * 3) : 0, kraftN: kn0, shakti: sb0 };
+    B0.asana = Math.max(2, rest0 - B0.mobi - B0.ausgl); return B0;
+  }
+  const kn = c.kraft ? (c.kraftN || 1) : 0, kb = kn ? Math.min(H - 5, (c.durs && +c.durs.kraft) || kn * 3) : 0, sb = c.shakti && !noShakti ? Math.max(2, Math.min(H - 12, (c.durs && +c.durs.shakti) || 8)) : 0, rest = Math.max(H - kb - sb, 10);
   const P = c.mobi === 'aus' ? { mobi: 0, aufw: 0, ausgl: .26 } : c.kraft ? { mobi: .26, aufw: 0, ausgl: .22 } : { mobi: .24, aufw: 0, ausgl: .22 };
   const B = { mobi: half(rest * P.mobi), aufw: 0, ausgl: half(rest * P.ausgl), kraft: kb, kraftN: kn, shakti: sb };
   B.asana = Math.max(2, H - B.mobi - B.aufw - B.ausgl - B.shakti); // enthält die Zeit der Kraftübungen
@@ -735,13 +764,14 @@ function fillSession(c, s, idx, opts) {
   s.txd = {};
   if (opts.motto) s.motto = opts.motto;
   s.status = 'vorgeplant';
+  s.kN = kraftCountFor(c, idx);
   const mOn = mantraOn(c, s, idx);
   if (s.bm && s.bmCustom) { syncHaupt(s); setMantraBlock(c, s, mOn); }
   else {
     const mm = Math.max(1, +(c.durs && c.durs.mantra) || MANTRA_MIN);
     s.dur = courseDur(c); s.dur.mantra = mOn ? mm : 0;
     if (!mOn && mantraMode(c) !== 'aus') s.dur.haupt += mm; // Stunde ohne Mantra: Zeit geht in den Hauptteil, Gesamtdauer bleibt
-    initBM(c, s); s.dur.mantra = mm;
+    initBM(c, s, idx); s.dur.mantra = mm;
   }
   s.mantra = mOn ? { id: pickMantra(c, s) } : null;
   fillExercises(c, s, idx);
@@ -752,14 +782,24 @@ function fillSession(c, s, idx, opts) {
 }
 // Zeiten aus dem Rahmen auf eine bestehende Stunde übertragen (Übungen bleiben, Minuten werden angepasst)
 function applyCourseDur(c, s, idx) {
-  if ((s.mobiMode || 'sitz') !== (c.mobi && c.mobi !== 'aus' ? c.mobi : 'sitz')) (s.blk || (s.blk = {})).mobi = [];
+  if ((s.mobiMode || 'sitz') !== mobiModeFor(c, idx)) (s.blk || (s.blk = {})).mobi = [];
   Object.keys(s.blk || {}).forEach(k => { if (isCustomKey(k)) { delete s.blk[k]; if (s.tx) delete s.tx[k]; } });
   const on = mantraOn(c, s, idx), mm = Math.max(1, +(c.durs && c.durs.mantra) || MANTRA_MIN);
   s.dur = courseDur(c); s.dur.mantra = on ? mm : 0;
   if (!on && mantraMode(c) !== 'aus') s.dur.haupt += mm;
-  initBM(c, s); s.dur.mantra = mm; s.txd = {};
+  initBM(c, s, idx); s.dur.mantra = mm; s.txd = {};
   s.mantra = on ? (s.mantra || { id: pickMantra(c, s) }) : null;
+  s.kN = kraftCountFor(c, idx);
   syncKraft(c, s);
+  // Atemteil / Wahrnehmungsübung gemäß Rahmen (Ja, Rauslassen, abwechselnd, zufällig)
+  { s.atem = s.atem || { a: '', w: '' };
+    if (c.breath === 'aus' || !bon(s, 'atem')) s.atem = { a: '', w: '' };
+    else {
+      const wahr = c.breath === 'atem_wahr' || (c.breath === 'gemischt' && idx % 2 === 1) || (c.breath === 'zufall' && rng(s.seed + 5)() < 0.5);
+      const ctxA = mkCtx(c, s, Math.random); ctxA.have = new Set(blkIds(s));
+      if (!s.atem.a) s.atem.a = pickBreath(ctxA, 'atem') || 'bauchatmung';
+      if (!wahr) s.atem.w = ''; else if (!s.atem.w) s.atem.w = pickBreath(ctxA, 'wahr') || 'bodenkontakt';
+    } }
   exKeys(s).forEach(k => rebalanceBlock(c, s, k));
   EXKEYS.forEach(k => { if (bon(s, k) && bty(s, k) === 'ex' && !(s.blk[k] || []).length) rerollBlock(c, s, k); });
   genTexts(c, s, idx);

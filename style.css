@@ -560,3 +560,39 @@ button.armed{background:#c0463a!important;color:#fff!important;border-color:#c04
 @media (max-width:760px){.ahd{display:none}.ar{grid-template-columns:1fr;gap:6px}.ar .am{justify-content:flex-start}}
 
 .aufb i.sk-einl{background:#b9a684}.aufb i.sk-atem{background:#6fb8bd}.aufb i.sk-mantra{background:#d4d8e2;color:#4a5160;text-shadow:none}.aufb i.sk-mobi{background:#d4b483}.aufb i.sk-shakti{background:#8e6bb8}.aufb i.sk-asana{background:#4f8a6e}.aufb i.sk-kraft{background:#b0443a}.aufb i.sk-schluss{background:#cdb463}.aufb i.sk-shava{background:#7d8fa8}
+
+.aufb i.sk-ausgl{background:#cf8fa3}.aufb i.sk-mobi{background:#d4b483}
+.agrp{display:flex;align-items:baseline;gap:12px;padding:8px 14px;background:#eef3ee;border-top:1px solid var(--line,#e6e1d6);font-size:13px}.agrp span{font:700 12px/1 inherit;font-family:inherit;text-transform:uppercase;letter-spacing:.05em;color:#3f5a4b}.agrp b{color:#3f5a4b}.agrp small{color:#7a7468}
+.ar.ing{border-left:5px solid #b8cdbd;background:#fbfdfb}.ar.ing.off{background:#f7f7f4}
+.ar.sub{padding-top:5px;padding-bottom:5px;margin-left:22px;border-left:3px solid #e3b9b3;background:#fffafa}.ar.sub .an i{height:22px;width:10px}.ar.sub .an b{font-size:13.5px}
+
+.qd{display:flex;gap:6px}.qdb{font:700 14px/1 inherit;font-family:inherit;padding:8px 14px;border-radius:999px;border:1px solid var(--accent,#5f8a72);background:var(--card,#fff);color:var(--accent-deep,#3f5a4b);cursor:pointer}
+.qdb:hover{background:#eef5f0}.qdb.on{background:var(--accent,#5f8a72);color:#fff}
+
+.seg{display:flex;flex-wrap:wrap;gap:6px;width:100%}
+.sgb{font:600 13.5px/1 inherit;font-family:inherit;padding:8px 14px;border-radius:999px;border:1px solid var(--line,#cfd8d0);background:var(--card,#fff);color:#4a4a42;cursor:pointer;transition:.12s}
+.sgb:hover:not(:disabled){border-color:var(--accent,#5f8a72);background:#eef5f0}
+.sgb.on{background:var(--accent,#5f8a72);border-color:var(--accent,#5f8a72);color:#fff;font-weight:700}
+.sgb:disabled{opacity:.45;cursor:not-allowed}
+.ar.off .sgb.on{background:#9aa79f;border-color:#9aa79f}
+
+/* Unterzeilen (Wahrnehmungsübung, Kraftübungen): nur der Name rückt ein, die Buttons stehen bündig mit den übrigen Zeilen */
+.ar{border-left:5px solid transparent}
+.ar.ing{border-left-color:#b8cdbd}
+.ar.sub{margin-left:0;border-left:5px solid transparent}
+.ar.sub.ing{border-left-color:#b8cdbd}
+.ar.sub .an{padding-left:24px}
+.ar.sub .an::before{content:'';flex:none}
+
+/* „Rauslassen / Keine / Gar nicht / Nein“: ganz rechts, bei Auswahl leicht rot hinterlegt */
+.sgb.sgoff{margin-left:auto}
+.sgb.sgoff.on{background:#f6dcd8;border-color:#d9776d;color:#8a2f25}
+.ar.off .sgb.sgoff.on{background:#f6dcd8;border-color:#d9776d;color:#8a2f25}
+.sgb.sgoff:hover:not(:disabled):not(.on){border-color:#d9776d;background:#fcefed}
+
+.aufb.sess{margin:6px 0 10px}.aufb.sess .astrip{height:22px;border-radius:11px;margin-bottom:10px}.aufb.sess .astrip i{line-height:22px;font-size:11px}
+details.defx{margin:10px 0;border:1px dashed var(--line,#d7d1c3);border-radius:10px;padding:6px 10px;background:#fcfbf7}details.defx>summary{cursor:pointer;font-weight:600;color:#6b665c;font-size:13px}
+.aufb i.sk-shava{background:#7d8fa8}
+
+.sgb.sgi{padding:6px 12px;display:inline-flex;align-items:center;justify-content:center;min-width:46px}
+.sgb.sgi svg{display:block}

@@ -31,6 +31,8 @@ const DOC_CSS = `
 .paper .pr{font-size:11px;color:#7a7468}
 .paper .hint{font-size:12px;color:#7a7468;font-style:italic;margin-top:10px}
 .paper .foot{position:absolute;left:15mm;right:15mm;bottom:7mm;text-align:center;font-size:10px;color:#a39c8e}
+.praxt{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px}.praxt td{border:1px solid #444;padding:4px 7px;vertical-align:top}.praxt td.pm{width:15mm;border:0;border-right:1px solid #444;text-align:right;font-size:11px;color:#6b665c;padding-right:5px}.praxt td.pl{width:46mm;line-height:1.35}.praxt tr.txr td.pr2{line-height:1.4}.praxt .eff{font-size:11px;color:#6b665c}
+.praxt tr.figr td.pr2{padding:3px 4px}.praxt .pt{display:inline-flex;flex-direction:column;align-items:center;width:calc(100% / var(--per) - 2px);margin:1px;text-align:center;font-size:10.5px;line-height:1.15;vertical-align:top}.praxt .pt .fg{position:relative;display:inline-block;line-height:0}.praxt .pt .fig,.praxt .pt svg{width:var(--pfig);height:var(--pfig);color:#222}.praxt .pt .nm{display:block;margin-top:1px}.praxt .pt.kr .nm{color:#b0443a;font-weight:700}.praxt .pt .pk{position:absolute;top:-2px;right:-5px;width:11px;height:11px;border-radius:50%;background:#e0a82e;color:#fff;font-size:8px;line-height:11px;text-align:center}
 .ovc{border:1px solid #cfd8d0;border-radius:8px;padding:5px 8px 4px;margin:0 0 7px;break-inside:avoid;background:#fffdf9}
 .ovh{display:flex;align-items:baseline;gap:8px;font-size:12.5px;margin-bottom:3px}.ovh .no{display:inline-block;min-width:18px;height:18px;border-radius:50%;background:#c9826b;color:#fff;text-align:center;font-size:11px;line-height:18px;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact}.ovh .tt{font-weight:700;color:#3f5a4b}.ovh .mi{margin-left:auto;color:#7a7468;white-space:nowrap}
 .ovs{display:flex;height:13px;border-radius:7px;overflow:hidden;margin:2px 0 4px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.ovs i{display:block;font-style:normal;font-size:7.5px;line-height:13px;color:#fff;text-align:center;overflow:hidden;white-space:nowrap;text-shadow:0 0 2px rgba(0,0,0,.35)}
@@ -244,6 +246,48 @@ function renderStundenUeb(c, only) {
   if (only) return `<section class="paper land">${paperHead(c, esc(sessionTitle(c, only.s, only.i)) + '<br><span style="font-size:15px">Stundenübersicht</span>')}${cards}${pageFoot(c)}</section>`;
   return `<section class="paper land">${paperHead(c, 'Stundenübersicht', esc(courseSub(c)))}${cards}${pageFoot(c)}</section>`;
 }
+
+// Praxisblatt (nach Vorlage): eine Seite je Stunde – links Zeit/Notizen, rechts Übungen als Strichmännchen; Mobilisation und Shakti Naam als Textzeilen, Asanas gruppiert
+function renderPrax(c, s, i) {
+  const ks = order(s).filter(k => bon(s, k));
+  const minOf = k => bty(s, k) === 'ex' ? sumMin(s.blk[k] || []) : (+s.dur[k] || 0);
+  const names = items => (items || []).map(it => exById(it.id)).filter(Boolean).map(e => esc(e.n) + (e.peak ? ' ★' : '')).join(', ');
+  const fig = it => { const e = exById(it.id); return e ? `<span class="pt${e.c === 'kraft' ? ' kr' : ''}"><span class="fg">${figureSVG(e.pose)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span class="nm">${esc(e.n)}</span></span>` : ''; };
+  const n = ks.reduce((a, k) => a + (bty(s, k) === 'ex' && ['asana', 'ausgl'].includes(abOf(s, k)) ? (s.blk[k] || []).length : 0), 0);
+  const per = n > 64 ? 8 : n > 48 ? 7 : n > 34 ? 6 : 5, figMm = n > 64 ? 8.5 : n > 48 ? 11 : n > 34 ? 14 : 17;
+  const row = (min, left, right, cls) => `<tr class="${cls || ''}"><td class="pm">${min != null ? esc(fmtMin(min)) + ' Min.' : ''}</td><td class="pl">${left}</td><td class="pr2">${right}</td></tr>`;
+  const rows = [];
+  ks.forEach(k => {
+    const ty = bty(s, k), ab = abOf(s, k), name = esc(bn(s, k)), mn = minOf(k);
+    if (ty === 'text') {
+      const kern = esc(s.tx.kern || s.motto.kern || '');
+      rows.push(row(mn, `<b>${name}</b>`, ab === 'einl' ? `<b>${esc(s.motto.title)}</b>${kern ? ' – ' + kern : ''}` : ab === 'shava' ? (kern ? '„' + kern + '“' : '') : ab === 'schluss' ? 'Nachspüren' : '', 'txr'));
+    } else if (ty === 'atem') {
+      rows.push(row(mn, `<b>${name}</b>`, esc([s.atem.a && exName(s.atem.a), s.atem.w && exName(s.atem.w)].filter(Boolean).join(' + ')), 'txr'));
+    } else if (ty === 'mantra') {
+      const mm = s.mantra && typeof manById === 'function' && manById(s.mantra.id);
+      rows.push(row(mn, `<b>${name}</b>`, esc(mm ? mm.n : ''), 'txr'));
+    } else if (ty === 'ex') {
+      const items = s.blk[k] || []; if (!items.length) return;
+      if (ab === 'mobi' || ab === 'shakti') {
+        const eff = ab === 'shakti' ? items.map(it => exById(it.id)).filter(e => e && e.d).slice(0, 2).map(e => '<br><span class="eff">' + esc(e.n) + ': ' + esc(e.d.length > 130 ? e.d.slice(0, 127).replace(/\s+\S*$/, '') + ' …' : e.d) + '</span>').join('') : '';
+        rows.push(row(mn, `<b>${name}</b>`, names(items) + eff, 'txr'));
+      } else {
+        // Gruppen nach Chakra (falls zugeordnet), sonst fortlaufend
+        const ch = it => { const e = exById(it.id); return ((e && e.kat && e.kat.chakra) || [])[0] || ''; };
+        let groups = []; items.forEach(it => { const g = groups[groups.length - 1], key = ch(it); if (g && g.key === key) g.items.push(it); else groups.push({ key, items: [it] }); });
+        groups = [{ key: '', items }]; // fortlaufend in Reihen (links Platz für eigene Notizen)
+        groups.forEach((g, gi) => {
+          for (let p = 0; p < g.items.length; p += per) {
+            const first = gi === 0 && p === 0, lbl = p === 0 ? (g.key ? '<b>' + esc((KAT.chakra || {})[g.key] || g.key) + '</b>' : (first ? '' : '')) : '';
+            rows.push(row(first ? mn : null, (first ? '<b>' + name + '</b>' : '') + (first && lbl ? '<br>' : '') + lbl, g.items.slice(p, p + per).map(fig).join(''), 'figr'));
+          }
+        });
+      }
+    }
+  });
+  return `<section class="paper prax">${paperHead(c, esc(sessionTitle(c, s, i)), esc(`${fmtMin(plannedTotal(s))} Min. · ${LEVELS[c.level]}`))}<table class="praxt" style="--per:${per};--pfig:${figMm}mm"><tbody>${rows.join('')}</tbody></table>${pageFoot(c)}</section>`;
+}
 function buildDoc(c, o) {
   const sel = docSelIdx(c, o), whole = !c.single && sel.length === c.sessions.length;
   let h = '';
@@ -251,6 +295,7 @@ function buildDoc(c, o) {
   if (o.uebS && whole && c.sessions.length) h += renderStundenUeb(c);
   sel.forEach(i => {
     const s = c.sessions[i]; if (!s) return;
+    if (o.prax) h += renderPrax(c, s, i);
     if (o.uebE) h += renderStundenUeb(c, { s, i });
     if (o.std) h += renderSession(c, s, i, o);
     if (o.blatt) h += renderBlatt(c, s, i);

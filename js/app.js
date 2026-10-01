@@ -26,7 +26,7 @@ const idxOf = (c, s) => c.sessions.indexOf(s);
 function defaultCourse(over) {
   return Object.assign({
     id: uid(), name: 'Neues Programm', created: todayIso(), count: 10, start: todayIso(), rhythm: 'weekly', days: [], pauses: '', durMode: 'einzeln', total: 75, durs: splitTotal(75), st: [], reg: [],
-    status: 'vorgeplant', bm: {}, level: 'sen', breath: 'gemischt', kraft: true, kraftN: 1, mantra: 'immer', gebrechen: [], showAlt: false, email: state.settings.email || '',
+    status: 'vorgeplant', bm: {}, level: 'sen', breath: 'gemischt', kraft: true, kraftN: 1, mantra: 'immer', mobi: 'sitz', shakti: 0, shaktiMode: 'aus', einlOn: 1, schlussOn: 1, shavaOn: 1, ausglOn: 1, gebrechen: [], showAlt: false, email: state.settings.email || '',
     motto: { mode: 'uebermotto', preset: 'alltag', free: '', eigen: '' }, seed: Math.floor(Math.random() * 1e9), sessions: [], dirty: false, template: false
   }, over || {});
 }
@@ -188,24 +188,35 @@ ${ui.tab === 'frame' ? '' : '<button class="ghost" data-a="saveTpl" title="Als V
 function frameView(c) {
   const d = c.durs, m = c.motto;
   const gebs = Object.keys(GEBRECHEN).map(k => `<label class="fchip${c.gebrechen.includes(k) ? ' on' : ''}"><input type="checkbox" data-a="toggleGeb" data-k="${k}" ${c.gebrechen.includes(k) ? 'checked' : ''}> ${esc(GEBRECHEN[k])}</label>`).join('');
-  const DL = { einl: 'Einleitung', atem: 'Atemübung', mantra: 'Mantra', haupt: 'Hauptteil', shakti: 'Shakti Naam', kraft: 'Kraftübung', schluss: 'Schluss', shava: 'Shavasana' };
-  // Stundenaufbau & Dauer: übersichtlich als Liste der Bausteine (Einstellung + Minuten) mit farbigem Verlauf
-  const STK = { einl: 'einl', atem: 'atem', mantra: 'mantra', haupt: 'asana', shakti: 'shakti', kraft: 'kraft', schluss: 'schluss', shava: 'shava' };
+  const DL = { einl: 'Einleitung', atem: 'Atemübung', mantra: 'Mantra', mobi: 'Mobilisation', shakti: 'Shakti Naam', asana: 'Asanas', ausgl: 'Ausgleich', schluss: 'Schluss', shava: 'Shavasana' };
+  // Stundenaufbau & Dauer: ein Baustein = ein Block der Stunde (Einstellung + Minuten); der Hauptteil fasst seine Blöcke zusammen
   const aMin = k => `<div class="am"><input type="number" data-f="c:durs.${k}" data-num="1" min="1" max="150" value="${d[k]}" data-dirty="1"><span>Min.</span></div>`;
-  const aRow = (k, label, sub, setting, on) => `<div class="ar${on ? '' : ' off'}"><div class="an"><i class="sk-${STK[k]}"></i><div><b>${label}</b><small>${sub}</small></div></div><div class="as">${setting}</div>${on ? aMin(k) : '<div class="am muted">–</div>'}</div>`;
-  const stripSeg = durKeys(c).map(k => `<i class="sk-${STK[k]}" style="flex:${Math.max(+d[k] || 0, 0.01)}" title="${DL[k]}: ${d[k]} Min.">${d[k] >= 6 ? DL[k] : ''}</i>`).join('');
-  const dur = `<div class="aufb"><div class="atot"><label>Gesamtdauer der Stunde</label><div class="atin">${inp('c:total', 'number', c.total, 'min="20" max="180" step="1" data-dirty="1"')}<span>Minuten</span></div><p class="muted">Die Gesamtdauer bleibt fest – ändert sich ein Baustein, passt sich der Hauptteil an (beim Hauptteil die übrigen).</p></div>
+  const aRow = (k, label, sub, setting, on, cls) => `<div class="ar${on ? '' : ' off'}${cls ? ' ' + cls : ''}"><div class="an"><i class="sk-${k}"></i><div><b>${label}</b><small>${sub}</small></div></div><div class="as">${setting}</div>${on ? aMin(k) : '<div class="am muted">–</div>'}</div>`;
+  const stripSeg = durKeys(c).map(k => `<i class="sk-${k}" style="flex:${Math.max(+d[k] || 0, 0.01)}" title="${DL[k]}: ${d[k]} Min.">${d[k] >= 6 ? DL[k] : ''}</i>`).join('');
+  const kn = c.kraft ? (c.kraftN || 1) : 0;
+  const selC = (chg, opts, cur_, extra) => `<select data-chg="${chg}" ${extra || ''}>${opts.map(o => opt(o[0], o[1], cur_)).join('')}</select>`;
+  // Einstellungen als Buttons: das ausgeblendete Auswahlfeld bleibt die Datenquelle, ein Klick setzt dessen Wert und löst die gewohnte Änderung aus
+  const isOffOpt = o => /^(Rauslassen|Keine|Gar nicht|Nein)/i.test(String(o[1]));
+  const seg = (selHtml, opts, cur_, dis) => `<div class="seg">${selHtml.replace('<select ', '<select hidden ')}${opts.filter(o => !isOffOpt(o)).concat(opts.filter(isOffOpt)).map(o => `<button type="button" class="sgb${o[2] ? ' sgi' : ''}${isOffOpt(o) ? ' sgoff' : ''}${String(o[0]) === String(cur_) ? ' on' : ''}" data-a="segPick" data-v="${esc(o[0])}" title="${esc(o[1])}"${dis ? ' disabled' : ''}>${o[2] ? sgIcon(o[2]) : esc(String(o[1]).replace(/\s*\(.*\)$/, ''))}</button>`).join('')}</div>`;
+  const segSel = (f, opts, cur_, extra) => seg(sel(f, opts, cur_, extra), opts, cur_);
+  const segC = (chg, opts, cur_, extra) => seg(selC(chg, opts, cur_, extra), opts, cur_, /disabled/.test(extra || ''));
+  const jaSel = f => segSel('c:' + f, [[1, 'Ja'], [0, 'Rauslassen']], partOn(c, f.replace('On', '')) ? 1 : 0, 'data-dirty="1" data-num="1"');
+  const dur = `<div class="aufb"><div class="atot"><label>Gesamtdauer der Stunde</label><div class="atin">${inp('c:total', 'number', c.total, 'min="20" max="180" step="1" data-dirty="1"')}<span>Minuten</span></div><div class="qd">${[60, 75, 90, 120].map(m => `<button class="qdb${+c.total === m ? ' on' : ''}" data-a="setTotal" data-v="${m}">${m}</button>`).join('')}</div><p class="muted">Die Gesamtdauer bleibt fest – ändert sich ein Baustein, passen sich die Asanas an (bei den Asanas selbst die übrigen).</p></div>
 <div class="strip astrip">${stripSeg}</div>
 <div class="alist"><div class="ahd"><span>Baustein</span><span>Einstellung</span><span>Dauer</span></div>
-${aRow('einl', 'Einleitung', 'Ankommen und Motto', '<span class="muted">–</span>', true)}
-${aRow('atem', 'Atemübung', 'Atemteil nach der Einleitung', sel('c:breath', [['aus', 'Rauslassen (kein Atemteil)'], ['atem', 'Atemübung'], ['atem_wahr', 'Atemübung mit Wahrnehmungsübung'], ['gemischt', 'Gemischt (im Wechsel)'], ['zufall', 'Zufällig']], c.breath, 'data-dirty="1"'), c.breath !== 'aus')}
-${aRow('mantra', 'Mantra', 'eigener Block nach der Atemübung', sel('c:mantra', [['aus', 'Rauslassen'], ['immer', 'Aufnehmen (in jeder Stunde)'], ['wechsel', 'Gemischt (im Wechsel)'], ['zufall', 'Zufällig']], c.mantra || 'aus', 'data-dirty="1"'), mantraMode(c) !== 'aus')}
-${aRow('haupt', 'Hauptteil', 'Mobilisation, Asanas (Stand / Balance, Flow) und Ausgleich', '<span class="aln">Mobilisation</span>' + sel('c:mobi', [['sitz', 'Im Sitzen'], ['liegen', 'Im Liegen'], ['stand', 'Im Stehen'], ['aus', 'Gar nicht (Rauslassen)']], c.mobi || 'sitz', 'data-dirty="1"'), true)}
-${aRow('shakti', 'Shakti Naam', 'Block zwischen Mobilisation und Asanas', sel('c:shakti', [[0, 'Nein'], [1, 'Ja']], c.shakti ? 1 : 0, 'data-dirty="1" data-num="1"'), !!c.shakti)}
-${aRow('kraft', 'Kraftübungen', 'innerhalb der Asanas (rot markiert)', sel('c:kraftN', [[0, 'Keine (0)'], [1, '1 Übung'], [2, '2 Übungen'], [3, '3 Übungen']], c.kraft ? (c.kraftN || 1) : 0, 'data-dirty="1" data-num="1"'), !!c.kraft)}
-${aRow('schluss', 'Schluss', 'Nachspüren', '<span class="muted">–</span>', true)}
-${aRow('shava', 'Shavasana', 'Schlussentspannung', '<span class="muted">–</span>', true)}
-</div><p class="muted">Bei „Gemischt / Zufällig“ geht die Mantra-Zeit in Stunden ohne Mantra in den Hauptteil.</p></div>`;
+${aRow('einl', 'Einleitung', 'Ankommen und Motto', jaSel('einlOn'), partOn(c, 'einl'))}
+${aRow('atem', 'Atemübung', 'Atemteil nach der Einleitung', segC('atemOn', [[1, 'Ja'], [0, 'Rauslassen']], c.breath !== 'aus' ? 1 : 0), c.breath !== 'aus')}
+<div class="ar sub atsub${c.breath !== 'aus' ? '' : ' off'}"><div class="an"><i class="sk-atem"></i><div><b>↳ Wahrnehmungsübung</b><small>im Atemteil, die Zeit wird geteilt</small></div></div><div class="as">${segC('wahrMode', [['immer', 'Ja'], ['aus', 'Rauslassen'], ['wechsel', 'Abwechselnd (im Wechsel)', 'wechsel'], ['zufall', 'Zufällig', 'zufall']], ({ atem: 'aus', atem_wahr: 'immer', gemischt: 'wechsel', zufall: 'zufall' })[c.breath] || 'aus', c.breath === 'aus' ? 'disabled' : '')}</div><div class="am muted">–</div></div>
+${aRow('mantra', 'Mantra', 'eigener Block nach der Atemübung', segSel('c:mantra', [['aus', 'Rauslassen'], ['immer', 'Ja'], ['wechsel', 'Abwechselnd (im Wechsel)', 'wechsel'], ['zufall', 'Zufällig', 'zufall']], c.mantra || 'aus', 'data-dirty="1"'), mantraMode(c) !== 'aus')}
+<div class="agrp"><span>Hauptteil</span><b>${d.haupt} Min.</b></div>
+${aRow('mobi', 'Mobilisation', 'erster Übungsblock', segSel('c:mobi', [['sitz', 'Im Sitzen', 'sitz'], ['liegen', 'Im Liegen', 'liegen'], ['stand', 'Im Stehen', 'stand'], ['wechsel', 'Abwechselnd (Sitzen, Liegen, Stehen im Wechsel)', 'wechsel'], ['zufall', 'Zufällig (Sitzen, Liegen oder Stehen je Stunde)', 'zufall'], ['aus', 'Rauslassen']], c.mobi || 'sitz', 'data-dirty="1"'), c.mobi !== 'aus', 'ing')}
+${aRow('shakti', 'Shakti Naam', 'Block nach der Mobilisation', segSel('c:shaktiMode', [['aus', 'Rauslassen'], ['immer', 'Ja'], ['wechsel', 'Abwechselnd (im Wechsel)', 'wechsel'], ['zufall', 'Zufällig', 'zufall']], c.shakti ? (c.shaktiMode || 'immer') : 'aus', 'data-dirty="1"'), !!c.shakti, 'ing')}
+${aRow('asana', 'Asanas (Hauptteil)', 'Flow, Stand und Balance', '<span class="muted">–</span>', true, 'ing')}
+<div class="ar sub ing${kn ? '' : ' off'}"><div class="an"><i class="sk-kraft"></i><div><b>↳ davon Kraftübungen</b><small>innerhalb der Asanas, rot markiert</small></div></div><div class="as">${segSel('c:kraftN', [[0, 'Rauslassen'], [1, '1'], [2, '2'], [3, '3'], ['zufall', 'Zufällig (1 bis 3 je Stunde)', 'zufall']], c.kraft && c.kraftRnd ? 'zufall' : kn, 'data-dirty="1"')}</div><div class="am muted">${kn ? (c.kraftRnd ? '1–3 je Stunde' : '≈ ' + kn * 3 + ' Min.') : '–'}</div></div>
+${aRow('ausgl', 'Ausgleich / Cool down', 'Boden, Rückenlage', jaSel('ausglOn'), partOn(c, 'ausgl'), 'ing')}
+${aRow('schluss', 'Schluss', 'Nachspüren', jaSel('schlussOn'), partOn(c, 'schluss'))}
+${aRow('shava', 'Shavasana', 'Schlussentspannung', jaSel('shavaOn'), partOn(c, 'shava'))}
+</div><p class="muted">Bei „Gemischt / Zufällig“ geht die Mantra-Zeit in Stunden ohne Mantra in die Asanas.</p></div>`;
   const chipsC = (field, map) => Object.keys(map).map(k => `<label class="fchip${(c[field] || []).includes(k) ? ' on' : ''}"><input type="checkbox" data-a="cTog" data-f2="${field}" data-v="${k}" ${(c[field] || []).includes(k) ? 'checked' : ''}> ${esc(map[k])}</label>`).join('');  const mottoExtra = m.mode === 'uebermotto'
     ? fld('Übermotto', sel('c:motto.preset', Object.keys(PRESETS).map(k => [k, PRESETS[k].t]).concat([['frei', 'Eigenes Übermotto (Freitext) …']]), m.preset, 'data-dirty="1"')) + (m.preset === 'frei' ? fld('Eigenes Übermotto', inp('c:motto.free', 'text', m.free, 'placeholder="z. B. Reise durch den Herbst" data-dirty="1"')) : '')
     : m.mode === 'eigen' ? fld('Einzelmottos (eine Zeile pro Stunde, optional „Titel | Kernsatz“)', `<textarea data-f="c:motto.eigen" rows="6" data-dirty="1" placeholder="Kraft sammeln&#10;Loslassen | Ich darf loslassen.">${esc(m.eigen)}</textarea>`, 'wide') : '';
@@ -217,16 +228,16 @@ ${aRow('shava', 'Shavasana', 'Schlussentspannung', '<span class="muted">–</spa
 ${fld(c.single ? 'Name der Einzelstunde' : 'Programmname', inp('c:name', 'text', c.name, 'class="h1in"'), 'wide')}
 ${fld('Motto-Art', `<div class="radios">${[['eigen', 'Selbst wählen'], ['auto', 'Automatisch (Einzelmottos)'], ['uebermotto', 'Übermotto + passende Einzelmottos']].map(([v, l]) => `<label class="chk"><input type="radio" name="mm" data-f="c:motto.mode" value="${v}" ${m.mode === v ? 'checked' : ''} data-dirty="1"> ${l}</label>`).join('')}</div>`, 'wide')}
 ${mottoExtra}
-</div><div class="bar"><button class="ghost" data-a="saveTpl" title="${c.single ? 'Einzelstunde' : 'Rahmen und Stunden'} als Vorlage speichern">★ Als Vorlage speichern</button></div></section>
+</div></div></section>
 <section class="panel"><h2 class="ph">${pn(2, c.single ? 'Datum' : 'Termine & Rhythmus', c.single ? 'Wann findet die Einzelstunde statt?' : 'Wie viele Stunden, wann und wie oft?')}</h2><div class="grid">
 ${c.single ? '' : fld('Anzahl Stunden', inp('c:count', 'number', c.count, 'min="1" max="40" data-dirty="1"'))}
 ${fld(c.single ? 'Datum' : 'Startdatum (1. Stunde)', inp('c:start', 'date', c.start))}
-${c.single ? '' : fld('Rhythmus', sel('c:rhythm', [['weekly', 'Wöchentlich'], ['biweekly', 'Zweiwöchentlich'], ['days', 'Ausgewählte Wochentage']], c.rhythm || 'weekly', 'data-dirty="1"'))}
+${c.single ? '' : fld('Rhythmus', segSel('c:rhythm', [['weekly', 'Wöchentlich'], ['biweekly', 'Zweiwöchentlich'], ['days', 'Ausgewählte Wochentage']], c.rhythm || 'weekly', 'data-dirty="1"'))}
 ${c.single ? '' : (c.rhythm === 'days') ? fld('Wochentage (jede Woche)', `<div class="fchips">${[[1, 'Mo'], [2, 'Di'], [3, 'Mi'], [4, 'Do'], [5, 'Fr'], [6, 'Sa'], [0, 'So']].map(([n, l]) => `<label class="fchip${(c.days || []).includes(n) ? ' on' : ''}"><input type="checkbox" data-a="toggleDay" data-k="${n}" ${(c.days || []).includes(n) ? 'checked' : ''}> ${l}</label>`).join('')}</div>`) : ''}
 ${c.single ? '' : fld('Pausen / Ferien (Datum oder „von bis“, getrennt mit ;)', inp('c:pauses', 'text', c.pauses, 'placeholder="27.10.2026; 22.12.2026 bis 05.01.2027"'), 'wide')}
 </div></section>
 <section class="panel"><h2 class="ph">${pn(3, 'Zielgruppe & Einschränkungen', 'Für wen ist das Programm? Übungen mit Belastung für die gewählten Bereiche werden nicht vorgeschlagen.')}</h2><div class="grid">
-${fld('Gruppe', sel('c:level', Object.keys(LEVELS).map(k => [k, LEVELS[k]]), c.level, 'data-dirty="1"'))}
+${fld('Gruppe', segSel('c:level', Object.keys(LEVELS).map(k => [k, LEVELS[k]]), c.level, 'data-dirty="1"'))}
 ${fld('Einschränkungen / Gebrechen berücksichtigen', `<div class="fchips">${gebs}</div>`, 'wide')}
 </div></section>
 <section class="panel span2"><h2 class="ph">${pn(4, 'Stundenaufbau & Dauer', 'Wie lang ist eine Stunde und wie ist sie aufgebaut?')}</h2><div>
@@ -236,7 +247,7 @@ ${dur}
 ${fld('Yogastil', `<div class="fchips">${chipsC('st', STILE)}</div>`, 'wide')}
 ${fld('Körperregion', `<div class="fchips">${chipsC('reg', KAT.reg)}</div>`, 'wide')}
 </div></section>
-</div><div class="bar noprint"><button class="primary" data-a="plan">🎲 ${c.single ? 'Vorgaben auf die Einzelstunde anwenden' : 'Rahmen auf die Stunden anwenden'}</button>${c.single ? '' : '<button data-a="dates">📅 Termine neu berechnen</button>'}
+</div><div class="bar noprint"><button class="primary" data-a="plan">🎲 ${c.single ? 'Vorgaben auf die Einzelstunde anwenden' : 'Rahmen auf die Stunden anwenden'}</button>${c.single ? '' : '<button data-a="dates">📅 Termine neu berechnen</button>'}<button class="ghost" data-a="saveTpl" title="${c.single ? 'Einzelstunde' : 'Rahmen und Stunden'} als Vorlage speichern">★ ${c.single ? 'Als Einzelstunden-Vorlage' : 'Als Programm-Vorlage'}</button>
 ${state.settings.apiKey ? '<button data-a="aiMottos">🤖 Mottos per KI vorschlagen</button>' : ''}<span class="muted">Legt Übungen und Texte für alle Stunden neu an. Stunden mit Status „Fertig“ bleiben unverändert.</span></div>
 <div id="dirtyBanner" class="banner noprint ${c.dirty ? '' : 'hide'}">Rahmen geändert – mit „Rahmen auf die Stunden anwenden“ übernehmen.</div>
 ${c.sessions.length ? '<p class="muted noprint">Die Stundenübersicht findest du oben in der Kopfzeile neben „Ausgabe / Versand“.</p>' : '<p class="muted">Noch keine Stunden angelegt – klicke „Rahmen auf die Stunden anwenden“.</p>'}`;
@@ -330,6 +341,47 @@ function txField(s, k, label, rows) {
   return `<div class="fld wide"><label>${label} ${WPM[k] ? `<button class="btn-neu" data-a="regenTx" data-id="${id}" data-k="${k}" title="Text mit anderer Formulierung neu erzeugen">↻ Neu</button><button class="btn-neu" data-a="tplOpen" data-id="${id}" data-k="${k}" title="Vorlage aus „Textvorlagen“ einfügen">📋 Vorlage</button><button class="btn-neu" data-a="txClear" data-id="${id}" data-k="${k}" title="Text leeren">🗑 Leeren</button><button class="btn-neu sm2" data-a="tplSaveFrom" data-id="${id}" data-k="${k}" title="Diesen Text als eigene Vorlage speichern">💾 Als Vorlage</button>` : ''} <span class="tw" data-twk="${k}" data-sid="${id}">${twText(s, k)}</span></label>${WPM[k] ? txDurCtl(s, k) : ''}${ui.tplPick && ui.tplPick.sid === id && ui.tplPick.k === k ? tplPickPanel(s, k) : ''}<div class="hlw"><div class="hlbd" aria-hidden="true"></div><textarea data-f="s:${id}:tx.${k}" data-tx="${k}" data-sid="${id}" rows="${rows}">${esc(s.tx[k] || '')}</textarea></div></div>`;
 }
 const bcls = k => isCustomKey(k) ? 'x' : k;
+const MOBI_ICONS = {
+  sitz: '<circle cx="12" cy="4.5" r="2.2"/><path d="M12 7v7M7 10.5l5 1.5 5-1.5M12 14l-5.5 4.5h11L12 14z"/>',
+  liegen: '<circle cx="4.5" cy="14" r="2.2"/><path d="M7 14h12.5M19.5 14l-1.5-5M13.5 14l1.5-5"/>',
+  stand: '<circle cx="12" cy="4.5" r="2.2"/><path d="M12 7v8M12 15l-3.5 6M12 15l3.5 6M7 10.5L12 9l5 1.5"/>',
+  wechsel: '<path d="M5 12a7 7 0 0 1 12-5M19 12a7 7 0 0 1-12 5M17 3v4h-4M7 21v-4h4"/>',
+  zufall: '<rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="9" cy="9" r="1.1" fill="currentColor"/><circle cx="15" cy="9" r="1.1" fill="currentColor"/><circle cx="12" cy="12" r="1.1" fill="currentColor"/><circle cx="9" cy="15" r="1.1" fill="currentColor"/><circle cx="15" cy="15" r="1.1" fill="currentColor"/>'
+};
+const sgIcon = k => MOBI_ICONS[k] ? `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MOBI_ICONS[k]}</svg>` : '';
+const isOffLabel = l => /^(Rauslassen|Keine|Gar nicht|Nein)/i.test(String(l));
+// Buttons für eine Stunden-Einstellung (Aus-Option steht ganz rechts und wird bei Auswahl leicht rot)
+function sGrp(opts, cur_, act, id, k, dis) {
+  return `<div class="seg">${opts.filter(o => !isOffLabel(o[1])).concat(opts.filter(o => isOffLabel(o[1]))).map(o => `<button type="button" class="sgb${o[2] ? ' sgi' : ''}${isOffLabel(o[1]) ? ' sgoff' : ''}${String(o[0]) === String(cur_) ? ' on' : ''}" data-a="${act}" data-id="${id}" data-b="${k}" data-v="${esc(o[0])}" title="${esc(o[1])}"${dis ? ' disabled' : ''}>${o[2] ? sgIcon(o[2]) : esc(o[1])}</button>`).join('')}</div>`;
+}
+// Blockplanung der Stunde: dieselbe Gliederung wie im Rahmen (Baustein, Einstellung, Dauer) – gilt nur für diese Stunde
+function sessBlocks(c, s) {
+  const id = s.id, ord = order(s), mobiMode = s.mobiMode || 'sitz';
+  const ONOFF = [[1, 'Ja'], [0, 'Rauslassen']];
+  const minCell = k => { const m = s.bm[k]; const isEx = bty(s, k) === 'ex';
+    const f = isEx ? inp(`s:${id}:bm.${k}.min`, 'number', m.min == null ? 0 : m.min, 'min="0" max="120" step="0.5" data-chg="bmmin" data-sid="' + id + '" data-b="' + k + '"') : inp(`s:${id}:dur.${k}`, 'number', s.dur[k] == null ? 5 : s.dur[k], 'min="0" max="120" data-chg="bmmin" data-sid="' + id + '" data-b="' + k + '"');
+    return `<div class="am">${f}<span>Min.</span></div>`; };
+  const row = (k, label, sub, setting, on, cls) => `<div class="ar${on ? '' : ' off'}${cls ? ' ' + cls : ''}"><div class="an"><i class="sk-${abOf(s, k)}"></i><div><b>${esc(label)}</b><small>${sub}</small></div></div><div class="as">${setting}</div>${on ? minCell(k) : '<div class="am muted">–</div>'}</div>`;
+  const out = [];
+  ord.forEach(k => {
+    const m = s.bm[k]; if (!m) return; const on = m.on !== false, ab = abOf(s, k), name = bn(s, k), custom = isCustomKey(k);
+    let setting = sGrp(ONOFF, on ? 1 : 0, 'sbOn', id, k), sub = '';
+    if (ab === 'mobi') { setting = sGrp([['sitz', 'Im Sitzen', 'sitz'], ['liegen', 'Im Liegen', 'liegen'], ['stand', 'Im Stehen', 'stand'], ['aus', 'Rauslassen']], on ? mobiMode : 'aus', 'sbMobi', id, k); sub = 'erster Übungsblock'; }
+    else if (ab === 'einl') sub = 'Ankommen und Motto'; else if (ab === 'atem') sub = 'Atemteil nach der Einleitung'; else if (ab === 'mantra') sub = 'eigener Block nach der Atemübung';
+    else if (ab === 'shakti') sub = 'Block nach der Mobilisation'; else if (ab === 'asana' && !custom) sub = 'Flow, Stand und Balance'; else if (ab === 'ausgl') sub = 'Boden, Rückenlage'; else if (ab === 'schluss') sub = 'Nachspüren'; else if (ab === 'shava') sub = 'Schlussentspannung'; else if (custom) sub = 'eigener Block';
+    out.push(row(k, name, sub, setting, on, on ? '' : ''));
+    if (ab === 'atem' && k === 'atem') {
+      const wOn = !!(s.atem && s.atem.w);
+      out.push(`<div class="ar sub${on ? '' : ' off'}"><div class="an"><i class="sk-atem"></i><div><b>↳ Wahrnehmungsübung</b><small>im Atemteil, die Zeit wird geteilt</small></div></div><div class="as">${sGrp(ONOFF, wOn ? 1 : 0, 'sbWahr', id, k, !on)}</div><div class="am muted">–</div></div>`);
+    }
+    if (ab === 'asana' && !custom) {
+      const kn = (s.blk.asana || []).filter(i => (exById(i.id) || {}).c === 'kraft').length;
+      out.push(`<div class="ar sub${on ? '' : ' off'}"><div class="an"><i class="sk-kraft"></i><div><b>↳ davon Kraftübungen</b><small>innerhalb der Asanas, rot markiert</small></div></div><div class="as">${sGrp([[1, '1'], [2, '2'], [3, '3'], [0, 'Rauslassen']], Math.min(kn, 3), 'sbKraft', id, k, !on)}</div><div class="am muted">${kn ? '≈ ' + kn * 3 + ' Min.' : '–'}</div></div>`);
+    }
+  });
+  const parts = partsOf(s).map(p => `<i class="${p[2]}" style="flex:${Math.max(p[1], 0.01)}" title="${esc(p[0])}: ${fmtMin(p[1])} Min.">${p[1] >= 6 ? esc(p[0]) : ''}</i>`).join('');
+  return `<div class="aufb sess"><div class="strip astrip">${parts}</div><div class="alist"><div class="ahd"><span>Baustein</span><span>Einstellung</span><span>Dauer</span></div>${out.join('')}</div></div>`;
+}
 function defPanel(c, s) {
   const id = s.id, open = ui.open.has('def:' + id), ord = order(s);
   const rows = ord.map((k, ix) => {
@@ -344,10 +396,11 @@ function defPanel(c, s) {
 <td class="dtd">${dur}</td>
 <td>${custom ? `<button class="ghost sm danger" data-a="delBlock" data-id="${id}" data-b="${k}" title="Eigenen Block löschen">🗑</button>` : ''}</td></tr>`;
   }).join('');
-  return `<details class="panel mini noprint" data-id="def:${id}" ${open ? 'open' : ''}><summary>Ablauf & Blöcke dieser Stunde definieren <span class="muted">· Art, Name, Dauer, Reihenfolge und eigene Blöcke</span></summary>
-<table class="deft"><thead><tr><th>An</th><th></th><th>Ablaufart</th><th>Blockart</th><th>Name</th><th>Dauer (Min.)</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+  return `<details class="panel mini noprint" data-id="def:${id}" ${open ? 'open' : ''}><summary>Blockplanung dieser Stunde <span class="muted">· Bausteine, Einstellungen und Dauer wie im Rahmen</span></summary>
+${sessBlocks(c, s)}
+<details class="defx" data-id="defx:${id}" ${ui.open.has('defx:' + id) ? 'open' : ''}><summary>Erweitert: Namen, Ablauf- und Blockart, Reihenfolge, eigene Blöcke</summary><table class="deft"><thead><tr><th>An</th><th></th><th>Ablaufart</th><th>Blockart</th><th>Name</th><th>Dauer (Min.)</th><th></th></tr></thead><tbody>${rows}</tbody></table></details>
 <div class="bar"><button class="sm" data-a="addBlock" data-id="${id}" data-t="text">＋ Textblock hinzufügen</button><button class="sm" data-a="addBlock" data-id="${id}" data-t="ex">＋ Übungsblock hinzufügen</button><span class="grow"></span>
-<span>Summe: <b id="bmsum-${id}">${sessionTotal(s)}</b> Min. <span class="muted">(Rahmen: ${c.durMode === 'gesamt' ? c.total : sessionTotal({ dur: c.durs })} Min.)</span></span></div>
+<span>Summe: <b id="bmsum-${id}">${sessionTotal(s)}</b> Min. <span class="muted">(Rahmen: ${c.total} Min.)</span></span></div>
 <div class="bar"><button class="sm" data-a="fitS" data-id="${id}">⚖ Übungsminuten an die Blockzeiten anpassen</button><button class="sm" data-a="bmReset" data-id="${id}">↺ Standard wiederherstellen (eigene Blöcke entfallen)</button></div></details>`;
 }
 function fltPanel(c, s) {
@@ -466,11 +519,11 @@ ${items.length ? `<div class="xhead"><div>Übung</div><div>↓ Leichtere Alterna
 }
 const DOC_GRP = {
   p: { keys: ['ueb', 'uebS', 'anaP'], title: 'Programm', ic: 'prog', hint: 'Blätter über alle Stunden des Programms (nur bei allen gewählten Stunden)' },
-  s: { keys: ['uebE', 'std', 'blatt', 'alt', 'uebw', 'detS', 'spick', 'hands', 'anaS'], title: 'Einzelstunde', ic: 'stunde', hint: 'Je gewählter Stunde ein Blatt – Ausdruck nach Stunde sortiert' },
+  s: { keys: ['prax', 'uebE', 'std', 'blatt', 'alt', 'uebw', 'detS', 'spick', 'hands', 'anaS'], title: 'Einzelstunde', ic: 'stunde', hint: 'Je gewählter Stunde ein Blatt – Ausdruck nach Stunde sortiert' },
   a: { keys: ['mat', 'geb', 'detail', 'katall'], title: 'Allgemein', ic: 'katalog', hint: 'Nachschlage-Listen, gelten für die gewählten Stunden' }
 };
 const DOC_OPT = {
-  ueb: ['Kompakte Übersicht', 'Tabelle aller Stunden im Querformat'], uebE: ['Stundenübersicht der Stunde', 'Verlauf und alle Kacheln, eine Seite je Stunde (Querformat)'], uebS: ['Stundenübersicht', 'Alle Stunden mit Verlauf und Kacheln (Querformat)'], anaP: ['Programmanalyse', 'Auswertung über das ganze Programm'],
+  ueb: ['Kompakte Übersicht', 'Tabelle aller Stunden im Querformat'], prax: ['Praxisblatt (nach Vorlage)', 'Eine Seite je Stunde: Zeiten, Textzeilen und Asanas als Strichmännchen'], uebE: ['Stundenübersicht der Stunde', 'Verlauf und alle Kacheln, eine Seite je Stunde (Querformat)'], uebS: ['Stundenübersicht', 'Alle Stunden mit Verlauf und Kacheln (Querformat)'], anaP: ['Programmanalyse', 'Auswertung über das ganze Programm'],
   std: ['Stundenpläne mit Texten', 'Ablauf, Texte, Übungstabelle und Material'], blatt: ['Strichmännchen-Blätter', 'Übungsfolge als Kacheln (Querformat)'], alt: ['Alternativenblatt', 'Leichtere Alternativen zu den Übungen'],
   uebw: ['Blatt Übungsauswahl', 'Kacheln mit Beschreibung wie im Katalog'], detS: ['Detailbeschreibungen der Stunde', 'Technik, Wirkung, Varianten der Übungen dieser Stunde'], spick: ['Spickzettel', 'Ablauf mit Zeiten auf einer Seite'], hands: ['Hands-on Blatt', 'Adjustment, Support und Assistance'], anaS: ['Einzelstundenanalyse', 'Kennzahlen und Verteilungen je Stunde'],
   mat: ['Materialliste', 'Matte und Hilfsmittel mit Übungen'], geb: ['Gebrechenliste', 'Übungen und für wen nicht geeignet'], detail: ['Detailbeschreibungen', 'Technik, Wirkung, Varianten je Übung'], katall: ['Übungskatalog gesamt', 'Alle Übungen des Katalogs mit Beschreibung']
@@ -571,7 +624,7 @@ function startCourse(c) { state.courses.unshift(c); planCourse(c); ui.view = 'co
 function sessionOf(id) { const c = cur(); return { c, s: c.sessions.find(x => x.id === id) }; }
 function regenIfNotEdited(c, s, k) { if (!s.txEdited[k]) genTexts(c, s, idxOf(c, s), [k]), s.txEdited[k] = false; }
 // ---- Status: Änderungen setzen die Stunde (bzw. den Rahmen) automatisch auf „In Planung“ ----
-const MUT = new Set(['mv', 'rm', 'alt', 'togAlt', 'cntBlk', 'rerollBlk', 'fitBlk', 'fitS', 'pkpick', 'pkbrpick', 'pkmanpick', 'tglw', 'addBlock', 'delBlock', 'mvBlock', 'bmReset', 'bmOff', 'tplUse', 'txClear', 'aiTx', 'bothAll']);
+const MUT = new Set(['mv', 'rm', 'alt', 'togAlt', 'cntBlk', 'rerollBlk', 'fitBlk', 'fitS', 'pkpick', 'pkbrpick', 'pkmanpick', 'tglw', 'addBlock', 'delBlock', 'mvBlock', 'bmReset', 'bmOff', 'sbOn', 'sbWahr', 'sbMobi', 'sbKraft', 'tplUse', 'txClear', 'aiTx', 'bothAll']);
 const MUTC = new Set(['toggleGeb', 'toggleDay', 'cTog']);
 function setStatusDom(f, v) { document.querySelectorAll(`select[data-f="${f}"]`).forEach(n => { n.value = v; n.className = n.className.replace(/stat-\w+/, 'stat-' + v); }); }
 function touch(s) {
@@ -593,6 +646,19 @@ const A = {
   nav(d) { ui.view = d.v; ui.courseId = null; ui.tplSel = null; ui.saveSess = null; if (d.v === 'courses') ui.pTab = 'list'; if (d.v === 'singles') ui.sTab = 'list'; render(); },
   open(d) { ui.view = 'course'; ui.courseId = d.id; ui.tab = 'frame'; ui.open = new Set(['set', 'ovw']); const oc = state.courses.find(x => x.id === d.id); if (oc && oc.single) { ui.doc.ueb = false; ui.doc.sel = '0'; } else if (ui.doc.sel === '0' && oc) { ui.doc.sel = 'all'; ui.doc.ueb = true; } render(); },
   tab(d) { ui.tab = d.v; render(); },
+  segPick(d, el) { const w = el.closest('.seg'), s = w && w.querySelector('select'); if (!s || el.disabled) return; s.value = d.v; s.dispatchEvent(new Event('change', { bubbles: true })); setTimeout(render, 0); },
+  setTotal(d) {
+    const c = cur(); c.total = +d.v;
+    // Jeder Knopf löst seinen Standard komplett aus (auch beim erneuten Klick): 60 ohne Mantra und Shakti Naam · 75 mit Mantra · 90 mit Mantra und Wahrnehmungsübung (Ja) · 120 alles ein
+    const PRE = { 60: { mantra: 'aus', breath: 'gemischt', shakti: 0 }, 75: { mantra: 'immer', breath: 'gemischt', shakti: 0 }, 90: { mantra: 'immer', breath: 'atem_wahr', shakti: 0 }, 120: { mantra: 'immer', breath: 'atem_wahr', shakti: 1 } }[c.total];
+    if (PRE) {
+      c.mantra = PRE.mantra; c.breath = PRE.breath; c.breathPrev = PRE.breath; c.shakti = PRE.shakti; c.shaktiMode = PRE.shakti ? 'immer' : 'aus';
+      if (!(+c.durs.atem > 1)) c.durs.atem = 5; if (c.shakti && !(+c.durs.shakti > 1)) c.durs.shakti = 8;
+      ['einl', 'schluss', 'shava', 'ausgl'].forEach(k => { c[k + 'On'] = 1; });
+      if (c.mobi === 'aus') c.mobi = 'sitz';
+      if (!c.kraft) { c.kraft = true; c.kraftN = 1; c.durs.kraft = 3; }
+    }
+    fitDurs(c, 'total'); c.dirty = true; touchC(c); save(); render(); scheduleFrameApply(c); },
   newCourse() { startCourse(defaultCourseFixed({ name: 'Neues Programm ' + fmtDate(todayIso()) })); },
   fromTpl(d) {
     const bi = d.id.startsWith('builtin:') ? +d.id.slice(8) : -1, src = bi < 0 ? state.courses.find(c => c.id === d.id) : null;
@@ -646,7 +712,7 @@ const A = {
     save(); render(); toast('Status aller Stunden: ' + STATUS[v]);
   },
   anFix(d) { anFix(d); },
-  docSel(d) { const c = cur(), n = c.sessions.length; let s = docSelIdx(c, ui.doc); if (d.v === 'all') s = s.length === n ? [] : c.sessions.map((x, k) => k); else { const k = +d.v, p = s.indexOf(k); p < 0 ? s.push(k) : s.splice(p, 1); s.sort((x, y) => x - y); } ui.doc.sel = s.length === n ? 'all' : s; render(); },
+  docSel(d) { const c = cur(), n = c.sessions.length; let s = docSelIdx(c, ui.doc); if (d.v === 'all') s = s.length === n ? [] : c.sessions.map((x, k) => k); else { const k = +d.v; if (s.length === n && n > 1) s = [k]; /* war „Alle“ gewählt: erst nur diese Stunde, weitere kommen per Klick dazu */ else { const p = s.indexOf(k); p < 0 ? s.push(k) : s.splice(p, 1); s.sort((x, y) => x - y); } } ui.doc.sel = s.length === n ? 'all' : s; render(); },
   docGrp(d) { DOC_GRP[d.g].keys.forEach(k => { ui.doc[k] = d.v === '1'; }); render(); },
   anGo(d) { ui.sel = d.id; ui.tab = 'sessionAn'; render(); window.scrollTo(0, 0); },
   cTog(d) { const c = cur(), f = d.f2; c[f] = c[f] || []; const i = c[f].indexOf(d.v); i < 0 ? c[f].push(d.v) : c[f].splice(i, 1); c.dirty = true; save(); render(); },
@@ -769,6 +835,8 @@ const A = {
   resetAll(d, el) { if (confirmTwice(el, 'all', 'ALLE Programme, Vorlagen und Bewertungen löschen?')) { state = defaults(); save(); ui.view = 'courses'; render(); } }
 };
 const CH = {
+  atemOn(el) { const c = cur(); if (+el.value) c.breath = c.breathPrev && c.breathPrev !== 'aus' ? c.breathPrev : 'gemischt'; else { if (c.breath !== 'aus') c.breathPrev = c.breath; c.breath = 'aus'; } breathChanged(c); },
+  wahrMode(el) { const c = cur(); if (c.breath === 'aus') return; c.breath = { aus: 'atem', immer: 'atem_wahr', wechsel: 'gemischt', zufall: 'zufall' }[el.value] || 'gemischt'; c.breathPrev = c.breath; breathChanged(c); },
   txdur(el) { const { c, s } = sessionOf(el.dataset.sid), k = el.dataset.k, v = parseFloat(el.value); s.txd = s.txd || {}; if (!(v > 0) || v === +s.dur[k]) delete s.txd[k]; else s.txd[k] = Math.min(60, v); touch(s); genTexts(c, s, idxOf(c, s), [k]); save(); render(); toast('Text auf ' + fmtMin(txDur(s, k)) + ' Min. (ca. ' + Math.round(txDur(s, k) * WPM[k]) + ' Wörter) angepasst.'); },
   aiProv(el) { const st = state.settings, p = AI_PROV[el.value] ? el.value : 'anthropic'; st.provider = p; st.model = AI_PROV[p].model; st.baseUrl = AI_PROV[p].url; save(); render(); },
   mtitle(el) {
@@ -834,6 +902,7 @@ const CH = {
       syncHaupt(s);
     }
     if (k === 'mantra' && bon(s, k) && !(s.mantra && s.mantra.id)) s.mantra = { id: pickMantra(c, s) };
+    if (bon(s, k) && bty(s, k) === 'text' && !(+s.dur[k] > 0)) s.dur[k] = { einl: 5, schluss: 3, shava: 10 }[abOf(s, k)] || 5;
     if (k === 'atem' && bon(s, k)) { if (!(+s.dur.atem > 0)) s.dur.atem = 5; if (!s.atem.a) { const ctx = mkCtx(c, s, Math.random); ctx.have = new Set(blkIds(s)); s.atem.a = pickBreath(ctx, 'atem') || 'bauchatmung'; } }
     genTexts(c, s, idxOf(c, s)); save(); render();
   },
@@ -851,6 +920,10 @@ const CH = {
   }
 };
 // Zeitänderung im Rahmen automatisch auf die Stunden übertragen (Fertig/gesperrt und individuell geplante Stunden bleiben)
+function breathChanged(c) {
+  if (c.breath !== 'aus' && !(+c.durs.atem > 1)) c.durs.atem = 5;
+  fitDurs(c, 'mode'); c.dirty = true; touchC(c); save(); render(); scheduleFrameApply(c);
+}
 function applyFrameDur(c) {
   let n = 0, skip = 0;
   c.sessions.forEach((s, i) => {
@@ -872,14 +945,18 @@ function setField(el) {
   if (c && r.o === c && !['status', 'name', 'email', 'emailSubject'].includes(r.p)) touchC(c);
   if (c && r.o === c) {
     if (el.dataset.dirty) c.dirty = true;
-    if (r.p === 'kraftN') { c.kraftN = +v || 0; c.kraft = c.kraftN > 0; if (c.kraft) c.durs.kraft = c.kraftN * 3; }
-    const durChg = r.p === 'total' || /^durs\./.test(r.p) || r.p === 'kraftN' || r.p === 'mantra' || r.p === 'breath' || r.p === 'mobi' || r.p === 'shakti';
+    if (r.p === 'kraftN') {
+      if (v === 'zufall') { c.kraftRnd = 1; c.kraft = true; c.kraftN = 2; c.durs.kraft = 6; c.kraftSeed = Math.floor(Math.random() * 1e9); }
+      else { c.kraftRnd = 0; c.kraftN = +v || 0; c.kraft = c.kraftN > 0; if (c.kraft) c.durs.kraft = c.kraftN * 3; }
+    }
+    const durChg = r.p === 'total' || /^durs\./.test(r.p) || r.p === 'kraftN' || r.p === 'mantra' || r.p === 'breath' || r.p === 'mobi' || r.p === 'shaktiMode' || /^(einl|schluss|shava|ausgl)On$/.test(r.p);
     if (r.p === 'total') fitDurs(c, 'total');
     else if (/^durs\./.test(r.p)) fitDurs(c, r.p.slice(5));
-    else if (r.p === 'kraftN' || r.p === 'mantra' || r.p === 'breath' || r.p === 'mobi' || r.p === 'shakti') {
-      if (r.p === 'shakti') { c.shakti = !!v; if (c.shakti && !(+c.durs.shakti > 1)) c.durs.shakti = 8; } if (r.p === 'breath' && v !== 'aus' && !(+c.durs.atem > 1)) c.durs.atem = 5; fitDurs(c, 'mode'); }
+    else if (r.p === 'kraftN' || r.p === 'mantra' || r.p === 'breath' || r.p === 'mobi' || r.p === 'shaktiMode' || /^(einl|schluss|shava|ausgl)On$/.test(r.p)) {
+      if (r.p === 'mobi' && v === 'zufall') c.mobiSeed = Math.floor(Math.random() * 1e9);
+      if (r.p === 'shaktiMode') { c.shakti = v !== 'aus' ? 1 : 0; c.shaktiSeed = Math.floor(Math.random() * 1e9); if (c.shakti && !(+c.durs.shakti > 1)) c.durs.shakti = 8; } if (r.p === 'breath' && v !== 'aus' && !(+c.durs.atem > 1)) c.durs.atem = 5; fitDurs(c, 'mode'); }
     if (r.p === 'total' || /^durs\./.test(r.p)) refreshFields();
-    if (r.p === 'kraftN' || r.p === 'mantra' || r.p === 'breath' || r.p === 'mobi' || r.p === 'shakti') { save(); render(); }
+    if (r.p === 'kraftN' || r.p === 'mantra' || r.p === 'breath' || r.p === 'mobi' || r.p === 'shaktiMode' || /^(einl|schluss|shava|ausgl)On$/.test(r.p)) { save(); render(); }
     if (durChg) scheduleFrameApply(c);
   }
   // Datum bleibt überall gleich: Einzelstunde = Startdatum der Vorgaben; bei Programmen gilt das für die 1. Stunde
@@ -1117,6 +1194,26 @@ A.bmOff = function (d) { const { c, s } = sessionOf(d.id), k = d.b; s.bm[k].on =
 Object.assign(A, SINGLE_ACTIONS);
 Object.assign(A, MANTRA_ACTIONS);
 Object.assign(A, TXVORL_ACTIONS);
+Object.assign(A, {
+  sbOn(d) { const el = document.createElement('input'); el.type = 'checkbox'; el.dataset.f = 's:' + d.id + ':bm.' + d.b + '.on'; el.dataset.sid = d.id; el.dataset.b = d.b; el.checked = d.v === '1'; CH.bmon(el); },
+  sbWahr(d) {
+    const { c, s } = sessionOf(d.id); if (d.v === '1') { if (!s.atem.w) { const ctx = mkCtx(c, s, Math.random); ctx.have = new Set(blkIds(s)); s.atem.w = pickBreath(ctx, 'wahr') || 'bodenkontakt'; } } else s.atem.w = '';
+    genTexts(c, s, idxOf(c, s), ['atem']); save(); render();
+  },
+  sbMobi(d) {
+    const { c, s } = sessionOf(d.id);
+    if (d.v === 'aus') { A.sbOn({ id: d.id, b: 'mobi', v: '0' }); return; }
+    if (s.bm.mobi.on === false) A.sbOn({ id: d.id, b: 'mobi', v: '1' });
+    s.mobiMode = d.v; s.bmCustom = true; if (Object.values(MOBI_MODES).includes(s.bm.mobi.name)) s.bm.mobi.name = MOBI_MODES[d.v];
+    s.blk.mobi = []; rerollBlock(c, s, 'mobi'); genTexts(c, s, idxOf(c, s)); save(); render();
+  },
+  sbKraft(d) {
+    const { c, s } = sessionOf(d.id), n = +d.v, items = s.blk.asana || (s.blk.asana = []), ks = items.filter(i => (exById(i.id) || {}).c === 'kraft');
+    while (ks.length > n) { const k = ks.pop(); items.splice(items.indexOf(k), 1); }
+    if (ks.length < n) { const ctx = mkCtx(c, s, Math.random); ctx.have = new Set(blkIds(s)); pickN(poolOf('kraft'), n - ks.length, ctx).forEach(e => items.push(mkItem(e))); }
+    s.kN = n; items.sort((a, b) => seqIdx(a.id) - seqIdx(b.id)); s.bmCustom = true; save(); render();
+  }
+});
 Object.assign(CH, TXVORL_CH);
 Object.assign(A, rcpActions);
 Object.assign(A, { tglw: CH.tglw, pkbr: CH.pkbr, pkbrpick: CH.pkbrpick });
