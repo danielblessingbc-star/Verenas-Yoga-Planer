@@ -9,7 +9,7 @@ const GEBRECHEN = {
 };
 const CATS = {
   mobi_sitz: 'Mobilisation im Sitzen', mobi_stand: 'Mobilisation im Stand', flow: 'Flow / Aufwärmen im Stand',
-  stand: 'Asanas im Stand', balance: 'Balance', kraft: 'Kraftübung', boden: 'Ausgleich (Rückenlage, Boden)'
+  stand: 'Asanas im Stand', balance: 'Balance', kraft: 'Kraftübung', boden: 'Ausgleich (Rückenlage, Boden)', shakti: 'Shakti Naam'
 };
 
 const EX = [];

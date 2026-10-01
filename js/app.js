@@ -3,7 +3,7 @@ const KEY = 'yogaplaner.v1';
 const $ = s => document.querySelector(s);
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
-function defaults() { return { v: 1, courses: [], ratings: {}, customEx: [], settings: { apiKey: '', model: 'claude-sonnet-5-5', email: '', recipients: [] } }; }
+function defaults() { return { v: 1, courses: [], ratings: {}, customEx: [], textTpl: [], settings: { apiKey: '', model: 'claude-sonnet-5-5', email: '', recipients: [] } }; }
 function loadState() {
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && Array.isArray(s.courses)) return Object.assign(defaults(), s, { settings: Object.assign(defaults().settings, s.settings || {}) }); } catch (e) { }
   return defaults();
@@ -67,10 +67,10 @@ function download(name, text, mime) {
 // Sicherheitsabfrage ohne Browser-Dialog (confirm() wird in manchen Umgebungen unterdrückt): erster Klick scharf schalten, zweiter Klick bestätigt
 let armed = { key: null, timer: null, el: null, html: '' };
 function disarm() { clearTimeout(armed.timer); if (armed.el && document.contains(armed.el)) { armed.el.innerHTML = armed.html; armed.el.classList.remove('armed'); } armed = { key: null, timer: null, el: null, html: '' }; }
-function confirmTwice(el, key, msg) {
+function confirmTwice(el, key, msg, label) {
   if (armed.key === key) { disarm(); return true; }
   disarm(); armed.key = key;
-  if (el && el.tagName === 'BUTTON') { armed.el = el; armed.html = el.innerHTML; el.textContent = '⚠ Wirklich löschen?'; el.classList.add('armed'); }
+  if (el && el.tagName === 'BUTTON') { armed.el = el; armed.html = el.innerHTML; el.textContent = label || '⚠ Wirklich löschen?'; el.classList.add('armed'); }
   toast(msg + ' – zur Bestätigung nochmal klicken.', 4500);
   armed.timer = setTimeout(disarm, 4500); return false;
 }
@@ -85,6 +85,7 @@ function render() {
   else if (ui.view === 'singles') body = viewSingles();
   else if (ui.view === 'catalog') body = viewCatalog();
   else if (ui.view === 'mantras') body = viewMantras();
+  else if (ui.view === 'texts') body = viewTexts();
   else if (ui.view === 'settings') body = viewSettings();
   else { ui.view = 'courses'; body = viewCourses(); }
   $('#app').innerHTML = nav() + '<main>' + body + '</main>';
@@ -121,6 +122,7 @@ function refreshFields() {
 }
 // Piktogramme der Kopfzeile (Linien-Symbole)
 const HI = {
+  textvorl: '<path d="M6 3.5h8.5L18 7v13.5H6z"/><path d="M14 3.5V7h4"/><path d="M9 11.5h6M9 14.5h6M9 17.5h3.5"/>',
   prog: '<path d="M4 6h16v13H4z"/><path d="M4 10h16M8 3v4M16 3v4"/><path d="M8 14h3M13 14h3"/>',
   stunde: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/>',
   katalog: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
@@ -158,7 +160,7 @@ function nav() {
       + (isP ? `<button class="hact" data-a="newCourse">＋ Neues Programm</button>${act('fromTpl', '＋ Programm aus Vorlagen' + cnt(nt), 'data-a="ptab" data-v="fromTpl"')}${act('build', '＋ Programm aus Einzelstunden', 'data-a="ptab" data-v="build"')}`
         : `<button class="hact" data-a="newSingle">＋ Neue Einzelstunde</button>${act('fromTpl', '＋ Einzelstunde aus Vorlage' + cnt(nt), 'data-a="stab" data-v="fromTpl"')}`) + '</div>';
   }
-  return `<header class="noprint hdr${c ? (isS ? ' c-single' : ' c-prog') : ''}"><div class="hrow"><div class="brand">${LOTUS}Verenas Yoga Planomat<small class="ver" title="Programmversion">${typeof APP_VER !== 'undefined' ? APP_VER : ''}</small></div>${b('courses', 'Programme', 'prog')}${b('singles', 'Stunden', 'stunde')}${b('catalog', 'Übungskatalog', 'katalog')}${b('mantras', 'Mantras', 'mantra')}${c ? '<span class="hname ' + (isS ? 'is-single' : 'is-prog') + '\" title="' + esc(c.name) + '\">' + '<b>' + esc(c.name) + '</b></span>' : ''}<span class="grow"></span><button class="tab gear${ui.view === 'settings' ? ' on' : ''}" data-a="nav" data-v="settings" title="Einstellungen & Backup" aria-label="Einstellungen & Backup">${hicon('zahnrad')}</button></div>${ctx}</header>`;
+  return `<header class="noprint hdr${c ? (isS ? ' c-single' : ' c-prog') : ''}"><div class="hrow"><div class="brand">${LOTUS}Verenas Yoga Planomat<small class="ver" title="Programmversion">${typeof APP_VER !== 'undefined' ? APP_VER : ''}</small></div>${b('courses', 'Programme', 'prog')}${b('singles', 'Stunden', 'stunde')}${b('catalog', 'Übungskatalog', 'katalog')}${b('mantras', 'Mantras', 'mantra')}${b('texts', 'Textvorlagen', 'textvorl')}${c ? '<span class="hname ' + (isS ? 'is-single' : 'is-prog') + '\" title="' + esc(c.name) + '\">' + '<b>' + esc(c.name) + '</b></span>' : ''}<span class="grow"></span><button class="tab gear${ui.view === 'settings' ? ' on' : ''}" data-a="nav" data-v="settings" title="Einstellungen & Backup" aria-label="Einstellungen & Backup">${hicon('zahnrad')}</button></div>${ctx}</header>`;
 }
 function viewCourses() {
   const pt = ui.pTab || 'list', cs = state.courses.filter(c => !c.template && !c.single), ts = state.courses.filter(c => c.template && !c.single);
@@ -186,8 +188,24 @@ ${ui.tab === 'frame' ? '' : '<button class="ghost" data-a="saveTpl" title="Als V
 function frameView(c) {
   const d = c.durs, m = c.motto;
   const gebs = Object.keys(GEBRECHEN).map(k => `<label class="fchip${c.gebrechen.includes(k) ? ' on' : ''}"><input type="checkbox" data-a="toggleGeb" data-k="${k}" ${c.gebrechen.includes(k) ? 'checked' : ''}> ${esc(GEBRECHEN[k])}</label>`).join('');
-  const DL = { einl: 'Einleitung', atem: 'Atemübung', mantra: 'Mantra', haupt: 'Hauptteil', kraft: 'Kraftübung', schluss: 'Schluss', shava: 'Shavasana' };
-  const dur = `<div class="fld wide"><label>Dauer je Stunde – die Gesamtdauer bleibt fest, alle Teile passen sich an</label><div class="durrow"><div class="durtot"><small>Gesamt (Min.)</small>${inp('c:total', 'number', c.total, 'min="20" max="180" step="1" data-dirty="1"')}</div><span class="eq">=</span>${durKeys(c).map(k => [k, DL[k]]).map(([k, l], i) => `${i ? '<span class="pl">+</span>' : ''}<div><small>${l}</small>${inp('c:durs.' + k, 'number', d[k], 'min="1" max="150" data-dirty="1"')}</div>`).join('')}</div><p class="muted">Änderst du einen Teil, passt sich der Hauptteil an (beim Hauptteil selbst die übrigen Teile). Atemübung, Mantra und Kraftübung bekommen ihr eigenes Zeitfeld, sobald sie aufgenommen sind. Bei „Gemischt/Zufällig“ geht die Mantra-Zeit in Stunden ohne Mantra in den Hauptteil.</p></div>`;
+  const DL = { einl: 'Einleitung', atem: 'Atemübung', mantra: 'Mantra', haupt: 'Hauptteil', shakti: 'Shakti Naam', kraft: 'Kraftübung', schluss: 'Schluss', shava: 'Shavasana' };
+  // Stundenaufbau & Dauer: übersichtlich als Liste der Bausteine (Einstellung + Minuten) mit farbigem Verlauf
+  const STK = { einl: 'einl', atem: 'atem', mantra: 'mantra', haupt: 'asana', shakti: 'shakti', kraft: 'kraft', schluss: 'schluss', shava: 'shava' };
+  const aMin = k => `<div class="am"><input type="number" data-f="c:durs.${k}" data-num="1" min="1" max="150" value="${d[k]}" data-dirty="1"><span>Min.</span></div>`;
+  const aRow = (k, label, sub, setting, on) => `<div class="ar${on ? '' : ' off'}"><div class="an"><i class="sk-${STK[k]}"></i><div><b>${label}</b><small>${sub}</small></div></div><div class="as">${setting}</div>${on ? aMin(k) : '<div class="am muted">–</div>'}</div>`;
+  const stripSeg = durKeys(c).map(k => `<i class="sk-${STK[k]}" style="flex:${Math.max(+d[k] || 0, 0.01)}" title="${DL[k]}: ${d[k]} Min.">${d[k] >= 6 ? DL[k] : ''}</i>`).join('');
+  const dur = `<div class="aufb"><div class="atot"><label>Gesamtdauer der Stunde</label><div class="atin">${inp('c:total', 'number', c.total, 'min="20" max="180" step="1" data-dirty="1"')}<span>Minuten</span></div><p class="muted">Die Gesamtdauer bleibt fest – ändert sich ein Baustein, passt sich der Hauptteil an (beim Hauptteil die übrigen).</p></div>
+<div class="strip astrip">${stripSeg}</div>
+<div class="alist"><div class="ahd"><span>Baustein</span><span>Einstellung</span><span>Dauer</span></div>
+${aRow('einl', 'Einleitung', 'Ankommen und Motto', '<span class="muted">–</span>', true)}
+${aRow('atem', 'Atemübung', 'Atemteil nach der Einleitung', sel('c:breath', [['aus', 'Rauslassen (kein Atemteil)'], ['atem', 'Atemübung'], ['atem_wahr', 'Atemübung mit Wahrnehmungsübung'], ['gemischt', 'Gemischt (im Wechsel)'], ['zufall', 'Zufällig']], c.breath, 'data-dirty="1"'), c.breath !== 'aus')}
+${aRow('mantra', 'Mantra', 'eigener Block nach der Atemübung', sel('c:mantra', [['aus', 'Rauslassen'], ['immer', 'Aufnehmen (in jeder Stunde)'], ['wechsel', 'Gemischt (im Wechsel)'], ['zufall', 'Zufällig']], c.mantra || 'aus', 'data-dirty="1"'), mantraMode(c) !== 'aus')}
+${aRow('haupt', 'Hauptteil', 'Mobilisation, Asanas (Stand / Balance, Flow) und Ausgleich', '<span class="aln">Mobilisation</span>' + sel('c:mobi', [['sitz', 'Im Sitzen'], ['liegen', 'Im Liegen'], ['stand', 'Im Stehen'], ['aus', 'Gar nicht (Rauslassen)']], c.mobi || 'sitz', 'data-dirty="1"'), true)}
+${aRow('shakti', 'Shakti Naam', 'Block zwischen Mobilisation und Asanas', sel('c:shakti', [[0, 'Nein'], [1, 'Ja']], c.shakti ? 1 : 0, 'data-dirty="1" data-num="1"'), !!c.shakti)}
+${aRow('kraft', 'Kraftübungen', 'innerhalb der Asanas (rot markiert)', sel('c:kraftN', [[0, 'Keine (0)'], [1, '1 Übung'], [2, '2 Übungen'], [3, '3 Übungen']], c.kraft ? (c.kraftN || 1) : 0, 'data-dirty="1" data-num="1"'), !!c.kraft)}
+${aRow('schluss', 'Schluss', 'Nachspüren', '<span class="muted">–</span>', true)}
+${aRow('shava', 'Shavasana', 'Schlussentspannung', '<span class="muted">–</span>', true)}
+</div><p class="muted">Bei „Gemischt / Zufällig“ geht die Mantra-Zeit in Stunden ohne Mantra in den Hauptteil.</p></div>`;
   const chipsC = (field, map) => Object.keys(map).map(k => `<label class="fchip${(c[field] || []).includes(k) ? ' on' : ''}"><input type="checkbox" data-a="cTog" data-f2="${field}" data-v="${k}" ${(c[field] || []).includes(k) ? 'checked' : ''}> ${esc(map[k])}</label>`).join('');  const mottoExtra = m.mode === 'uebermotto'
     ? fld('Übermotto', sel('c:motto.preset', Object.keys(PRESETS).map(k => [k, PRESETS[k].t]).concat([['frei', 'Eigenes Übermotto (Freitext) …']]), m.preset, 'data-dirty="1"')) + (m.preset === 'frei' ? fld('Eigenes Übermotto', inp('c:motto.free', 'text', m.free, 'placeholder="z. B. Reise durch den Herbst" data-dirty="1"')) : '')
     : m.mode === 'eigen' ? fld('Einzelmottos (eine Zeile pro Stunde, optional „Titel | Kernsatz“)', `<textarea data-f="c:motto.eigen" rows="6" data-dirty="1" placeholder="Kraft sammeln&#10;Loslassen | Ich darf loslassen.">${esc(m.eigen)}</textarea>`, 'wide') : '';
@@ -211,11 +229,8 @@ ${c.single ? '' : fld('Pausen / Ferien (Datum oder „von bis“, getrennt mit ;
 ${fld('Gruppe', sel('c:level', Object.keys(LEVELS).map(k => [k, LEVELS[k]]), c.level, 'data-dirty="1"'))}
 ${fld('Einschränkungen / Gebrechen berücksichtigen', `<div class="fchips">${gebs}</div>`, 'wide')}
 </div></section>
-<section class="panel span2"><h2 class="ph">${pn(4, 'Stundenaufbau & Dauer', 'Wie lang ist eine Stunde und wie ist sie aufgebaut?')}</h2><div class="grid">
+<section class="panel span2"><h2 class="ph">${pn(4, 'Stundenaufbau & Dauer', 'Wie lang ist eine Stunde und wie ist sie aufgebaut?')}</h2><div>
 ${dur}
-${fld('Atemteil', sel('c:breath', [['atem', 'Atemübung'], ['atem_wahr', 'Atemübung mit Wahrnehmungsübung'], ['gemischt', 'Gemischt (im Wechsel)'], ['zufall', 'Zufällig']], c.breath, 'data-dirty="1"'))}
-${fld('Mantra (eigener Block nach der Atemübung)', sel('c:mantra', [['aus', 'Rauslassen'], ['immer', 'Aufnehmen (in jeder Stunde)'], ['wechsel', 'Gemischt (im Wechsel)'], ['zufall', 'Zufällig']], c.mantra || 'aus', 'data-dirty="1"'))}
-${fld('Kraftübungen im Hauptteil', sel('c:kraftN', [[0, 'Keine (0)'], [1, '1 Übung'], [2, '2 Übungen'], [3, '3 Übungen']], c.kraft ? (c.kraftN || 1) : 0, 'data-dirty="1" data-num="1"'))}
 </div></section>
 <section class="panel span2"><h2 class="ph">${pn(5, 'Übungsauswahl', 'Schränkt ein, aus welchen Übungen für alle Stunden gewählt wird. Mehrfachauswahl möglich, leer = alle.')}</h2><div class="grid">
 ${fld('Yogastil', `<div class="fchips">${chipsC('st', STILE)}</div>`, 'wide')}
@@ -286,7 +301,7 @@ function sessionsView(c) {
   return `<p class="muted noprint">Einzelstundenplanung: Übungen, Zeiten und Texte der gewählten Stunde. Rahmen (Termine, Dauer, Gruppe, Mottos) ändern → <a data-a="tab" data-v="frame" style="cursor:pointer;text-decoration:underline">Rahmenplanung</a>.</p>
 <div class="selbar noprint"><button class="ghost" data-a="prevS" ${idx === 0 ? 'disabled' : ''}>◀</button><div class="pills">${pills}</div><button class="ghost" data-a="nextS" ${idx === c.sessions.length - 1 ? 'disabled' : ''}>▶</button></div>
 ${sessionCard(c, s, idx)}`;
-}const BLOCKS = [['mobi', 'Mobilisation im Sitzen', ['mobi_sitz']], ['aufw', 'Aufwärmen + Flow im Stand', ['mobi_stand', 'flow']], ['asana', 'Asanas im Stand / Balance', ['stand', 'balance']], ['kraft', 'Kraftübung', ['kraft']], ['ausgl', 'Ausgleich / Cool down', ['boden']]];
+}const BLOCKS = [['mobi', 'Mobilisation im Sitzen', ['mobi_sitz']], ['asana', 'Asanas (Hauptteil)', ['mobi_stand', 'flow', 'stand', 'balance']], ['ausgl', 'Ausgleich / Cool down', ['boden']]];
 function twText(s, k) {
   if (!WPM[k]) return `≈ ${wc(s.tx[k] || '')} Wörter`;
   const w = wc(s.tx[k] || ''), min = txDur(s, k), tgt = Math.round(min * WPM[k]);
@@ -312,7 +327,7 @@ function txDurCtl(s, k) {
 }
 function txField(s, k, label, rows) {
   const id = s.id;
-  return `<div class="fld wide"><label>${label} ${WPM[k] ? `<button class="btn-neu" data-a="regenTx" data-id="${id}" data-k="${k}" title="Text mit anderer Formulierung neu erzeugen">↻ Neu</button>` : ''} <span class="tw" data-twk="${k}" data-sid="${id}">${twText(s, k)}</span></label>${WPM[k] ? txDurCtl(s, k) : ''}<div class="hlw"><div class="hlbd" aria-hidden="true"></div><textarea data-f="s:${id}:tx.${k}" data-tx="${k}" data-sid="${id}" rows="${rows}">${esc(s.tx[k] || '')}</textarea></div></div>`;
+  return `<div class="fld wide"><label>${label} ${WPM[k] ? `<button class="btn-neu" data-a="regenTx" data-id="${id}" data-k="${k}" title="Text mit anderer Formulierung neu erzeugen">↻ Neu</button><button class="btn-neu" data-a="tplOpen" data-id="${id}" data-k="${k}" title="Vorlage aus „Textvorlagen“ einfügen">📋 Vorlage</button><button class="btn-neu" data-a="txClear" data-id="${id}" data-k="${k}" title="Text leeren">🗑 Leeren</button><button class="btn-neu sm2" data-a="tplSaveFrom" data-id="${id}" data-k="${k}" title="Diesen Text als eigene Vorlage speichern">💾 Als Vorlage</button>` : ''} <span class="tw" data-twk="${k}" data-sid="${id}">${twText(s, k)}</span></label>${WPM[k] ? txDurCtl(s, k) : ''}${ui.tplPick && ui.tplPick.sid === id && ui.tplPick.k === k ? tplPickPanel(s, k) : ''}<div class="hlw"><div class="hlbd" aria-hidden="true"></div><textarea data-f="s:${id}:tx.${k}" data-tx="${k}" data-sid="${id}" rows="${rows}">${esc(s.tx[k] || '')}</textarea></div></div>`;
 }
 const bcls = k => isCustomKey(k) ? 'x' : k;
 function defPanel(c, s) {
@@ -374,12 +389,12 @@ function blockCard(c, s, k) {
   } else if (type === 'atem' && k === 'atem') {
     mins = `${s.dur.atem} Min.`;
     sum = `<span class="mts">${brTile(s.atem.a)}${s.atem.w ? brTile(s.atem.w) : ''}${textTile('atem')}</span><span class="muted"> ${esc([(BR.find(b => b.id === s.atem.a) || {}).n, s.atem.w && (BR.find(b => b.id === s.atem.w) || {}).n].filter(Boolean).join(' + '))}</span>`;
-    body = `<div class="bslots">${brSlot(s, 'atem')}${brSlot(s, 'wahr')}</div>${txField(s, 'atem', 'Anleitungstext', 9)}`;
+    body = `<div class="bslots">${brSlot(s, 'atem')}${brSlot(s, 'wahr')}</div>${txField(s, 'atem', 'Anleitungstext', 9)}<div class="bar"><button class="ghost sm" data-a="bmOff" data-id="${id}" data-b="atem">✕ Atemteil in dieser Stunde rauslassen</button></div>`;
   } else if (type === 'mantra') {
     const mm = s.mantra && manById(s.mantra.id);
-    mins = ` Min.`;
+    mins = `${fmtMin(s.dur[k] == null ? 0 : s.dur[k])} Min.`;
     sum = `<span class="mts">${manTile(s)}${textTile('mantra')}</span><span class="muted"> ${esc(mm ? mm.n : 'kein Mantra gewählt')}</span>`;
-    body = `<div class="bslots">${manSlot(s)}</div>${txField(s, 'mantra', 'Anleitungstext', 9)}`;
+    body = `<div class="bslots">${manSlot(s)}</div>${txField(s, 'mantra', 'Anleitungstext', 9)}<div class="bar"><button class="ghost sm" data-a="bmOff" data-id="${id}" data-b="mantra">✕ Mantra in dieser Stunde rauslassen</button></div>`;
   } else {
     mins = `${fmtMin(s.dur[k] == null ? 0 : s.dur[k])} Min.`;
     const txt = (s.tx[k] || '').replace(/\s+/g, ' ').trim();
@@ -556,7 +571,7 @@ function startCourse(c) { state.courses.unshift(c); planCourse(c); ui.view = 'co
 function sessionOf(id) { const c = cur(); return { c, s: c.sessions.find(x => x.id === id) }; }
 function regenIfNotEdited(c, s, k) { if (!s.txEdited[k]) genTexts(c, s, idxOf(c, s), [k]), s.txEdited[k] = false; }
 // ---- Status: Änderungen setzen die Stunde (bzw. den Rahmen) automatisch auf „In Planung“ ----
-const MUT = new Set(['mv', 'rm', 'alt', 'togAlt', 'cntBlk', 'rerollBlk', 'fitBlk', 'fitS', 'pkpick', 'pkbrpick', 'pkmanpick', 'tglw', 'addBlock', 'delBlock', 'mvBlock', 'bmReset', 'aiTx', 'bothAll']);
+const MUT = new Set(['mv', 'rm', 'alt', 'togAlt', 'cntBlk', 'rerollBlk', 'fitBlk', 'fitS', 'pkpick', 'pkbrpick', 'pkmanpick', 'tglw', 'addBlock', 'delBlock', 'mvBlock', 'bmReset', 'bmOff', 'tplUse', 'txClear', 'aiTx', 'bothAll']);
 const MUTC = new Set(['toggleGeb', 'toggleDay', 'cTog']);
 function setStatusDom(f, v) { document.querySelectorAll(`select[data-f="${f}"]`).forEach(n => { n.value = v; n.className = n.className.replace(/stat-\w+/, 'stat-' + v); }); }
 function touch(s) {
@@ -589,11 +604,14 @@ const A = {
   dup(d) { const c = state.courses.find(x => x.id === d.id); const n = cloneCourse(c, { name: c.name + ' (Kopie)' }); state.courses.unshift(n); save(); render(); },
   del(d, el) { const c = state.courses.find(x => x.id === d.id); if (c && confirmTwice(el, 'del' + d.id, `„${c.name}“ löschen?`)) { state.courses = state.courses.filter(x => x !== c); if (ui.courseId === c.id) { ui.view = c.single ? 'singles' : 'courses'; ui.courseId = null; } save(); render(); } },
   saveTpl() { const c = cur(); state.courses.unshift(cloneCourse(c, { name: 'Vorlage: ' + c.name, template: true })); save(); toast('Als Vorlage gespeichert (Startseite → Vorlagen).'); },
-  plan() {
-    const c = cur(); if (c.sessions.some(s => !s.locked) && c.sessions.some(s => s.tx && Object.values(s.txEdited || {}).some(Boolean)) && !confirm('Manuell bearbeitete Texte in nicht gesperrten Stunden werden überschrieben. Fortfahren?')) return;
+  plan(d, el) {
+    const c = cur(), textsEdited = c.sessions.some(s => !s.locked) && c.sessions.some(s => s.tx && Object.values(s.txEdited || {}).some(Boolean));
     const edited = c.sessions.filter(s => s.status === 'in_planung' && !s.locked).length;
-    if ((edited || c.status === 'fertig') && !confirm(edited ? `${edited} Stunde(n) haben eigene Änderungen (Status „In Planung“) und werden dabei neu befüllt. Stunden mit Status „Fertig“ (und gesperrte Stunden) bleiben unverändert. Fortfahren?` : 'Der Rahmen hat den Status „Fertig“. Die Stunden trotzdem neu anlegen?')) return;
-    planCourse(c); save(); render(); toast('Rahmen auf die Stunden angewendet.');
+    if (edited || textsEdited || c.status === 'fertig') {
+      const msg = edited || textsEdited ? `${edited ? edited + ' Stunde(n) mit eigenen Änderungen' : 'Von Hand bearbeitete Texte'} werden neu befüllt/überschrieben (Stunden mit Status „Fertig“ und gesperrte Stunden bleiben)` : 'Der Rahmen hat den Status „Fertig“ – Stunden trotzdem neu anlegen';
+      if (!confirmTwice(el, 'plan', msg, '⚠ Ja, jetzt anwenden')) return;
+    }
+    planCourse(c); ui.sel = c.sessions[0] && c.sessions[0].id; ui.tab = 'sessions'; save(); render(); window.scrollTo(0, 0); toast('Rahmen auf die Stunden angewendet – weiter mit der Einzelstundenplanung.');
   },
   dates() { const c = cur(); calcDates(c); save(); render(); },
   addBlock(d) {
@@ -694,7 +712,7 @@ const A = {
     save(); render();
   },
   rerollBlk(d) { const { c, s } = sessionOf(d.id); rerollBlock(c, s, d.b); save(); render(); },
-  fitBlk(d) { const { c, s } = sessionOf(d.id), B = blockBudgets(c, +s.dur.haupt || 45); fitItems(s.blk[d.b], d.b === 'kraft' ? s.blk.kraft.length * 3 : B[d.b]); save(); render(); },
+  fitBlk(d) { const { c, s } = sessionOf(d.id), B = blockBudgets(c, +s.dur.haupt || 45); fitItems(s.blk[d.b], B[d.b] || (s.bm[d.b] && s.bm[d.b].min)); save(); render(); },
   fitS(d) { const { c, s } = sessionOf(d.id); fitSession(c, s); save(); render(); },
   fitAll() { const c = cur(); c.sessions.forEach(s => { if (!s.locked) fitSession(c, s); }); save(); render(); toast('Zeiten angeglichen.'); },
   gotoSA(d) { ui.sel = d.id; ui.tab = 'sessionAn'; render(); window.scrollTo(0, 0); },
@@ -816,6 +834,7 @@ const CH = {
       syncHaupt(s);
     }
     if (k === 'mantra' && bon(s, k) && !(s.mantra && s.mantra.id)) s.mantra = { id: pickMantra(c, s) };
+    if (k === 'atem' && bon(s, k)) { if (!(+s.dur.atem > 0)) s.dur.atem = 5; if (!s.atem.a) { const ctx = mkCtx(c, s, Math.random); ctx.have = new Set(blkIds(s)); s.atem.a = pickBreath(ctx, 'atem') || 'bauchatmung'; } }
     genTexts(c, s, idxOf(c, s)); save(); render();
   },
   bmname(el) {
@@ -854,12 +873,13 @@ function setField(el) {
   if (c && r.o === c) {
     if (el.dataset.dirty) c.dirty = true;
     if (r.p === 'kraftN') { c.kraftN = +v || 0; c.kraft = c.kraftN > 0; if (c.kraft) c.durs.kraft = c.kraftN * 3; }
-    const durChg = r.p === 'total' || /^durs\./.test(r.p) || r.p === 'kraftN' || r.p === 'mantra';
+    const durChg = r.p === 'total' || /^durs\./.test(r.p) || r.p === 'kraftN' || r.p === 'mantra' || r.p === 'breath' || r.p === 'mobi' || r.p === 'shakti';
     if (r.p === 'total') fitDurs(c, 'total');
     else if (/^durs\./.test(r.p)) fitDurs(c, r.p.slice(5));
-    else if (r.p === 'kraftN' || r.p === 'mantra') fitDurs(c, 'mode');
+    else if (r.p === 'kraftN' || r.p === 'mantra' || r.p === 'breath' || r.p === 'mobi' || r.p === 'shakti') {
+      if (r.p === 'shakti') { c.shakti = !!v; if (c.shakti && !(+c.durs.shakti > 1)) c.durs.shakti = 8; } if (r.p === 'breath' && v !== 'aus' && !(+c.durs.atem > 1)) c.durs.atem = 5; fitDurs(c, 'mode'); }
     if (r.p === 'total' || /^durs\./.test(r.p)) refreshFields();
-    if (r.p === 'kraftN' || r.p === 'mantra') { save(); render(); }
+    if (r.p === 'kraftN' || r.p === 'mantra' || r.p === 'breath' || r.p === 'mobi' || r.p === 'shakti') { save(); render(); }
     if (durChg) scheduleFrameApply(c);
   }
   // Datum bleibt überall gleich: Einzelstunde = Startdatum der Vorgaben; bei Programmen gilt das für die 1. Stunde
@@ -874,7 +894,13 @@ function setField(el) {
     refreshFields();
   }
   if (r.o && r.o.bm && /^bm\.\w+\.min$/.test(r.p)) { const c2 = cur(); r.o.bmCustom = true; syncHaupt(r.o); if (c2) updateSums(c2, r.o); refreshFields(); }
-  if (/^blk\.\w+\.\d+\.min$/.test(r.p)) { const it = getP(r.o, r.p.replace(/\.min$/, '')); if (it) { syncRep(it); refreshFields(); } }
+  if (/^blk\.\w+\.\d+\.min$/.test(r.p)) {
+    const it = getP(r.o, r.p.replace(/\.min$/, '')); if (it) syncRep(it);
+    // Minuten einer Übung geändert → Blockzeit und damit die Gesamtzeit der Stunde folgen der Summe
+    const bk = r.p.split('.')[1], c2 = cur();
+    if (r.o.bm && r.o.bm[bk] && bty(r.o, bk) === 'ex') { r.o.bm[bk].min = sumMin(r.o.blk[bk] || []); r.o.bmCustom = true; syncHaupt(r.o); if (c2) updateSums(c2, r.o); }
+    refreshFields();
+  }
   if (el.dataset.sum) { const c2 = cur(), s2 = c2 && c2.sessions.find(x => x.id === el.dataset.sid); if (s2) updateSums(c2, s2); }
   if (el.dataset.dirty) { const b = $('#dirtyBanner'); if (b) b.classList.remove('hide'); }
 }
@@ -886,7 +912,7 @@ function resetSession(c, s) {
   fillSession(c, s, idx, { motto: mottos[idx] || s.motto });
 }
 // ---- Status „Fertig“: Einzelplanung ist gesperrt, Änderungsversuch fragt nach ----
-const LOCKED_OK = new Set(['noop', 'ovFilter', 'selS', 'gotoS', 'gotoSA','prevS', 'nextS', 'tab', 'nav', 'tglb', 'bAll', 'exinfo', 'lock', 'frameView', 'fltTog', 'fltGeb', 'fltReset', 'preview', 'print', 'mail', 'eml', 'html', 'copy', 'pdf', 'rate']);
+const LOCKED_OK = new Set(['noop', 'ovFilter', 'tplOpen', 'selS', 'gotoS', 'gotoSA','prevS', 'nextS', 'tab', 'nav', 'tglb', 'bAll', 'exinfo', 'lock', 'frameView', 'fltTog', 'fltGeb', 'fltReset', 'preview', 'print', 'mail', 'eml', 'html', 'copy', 'pdf', 'rate']);
 function sidOfEl(el) {
   const m = (el.dataset.f || '').match(/^s:([^:]+):/);
   return m ? m[1] : (el.dataset.sid || el.dataset.dsid || el.dataset.id || (ui.pk && el.closest && el.closest('#pkpanel') ? ui.pk.sid : null));
@@ -993,7 +1019,7 @@ function closePicker() { const p = $('#pkpanel'); if (p) p.remove(); ui.pk = nul
 function openPicker(btn, d) {
   closePicker();
   const c = cur(), s = c.sessions.find(x => x.id === d.sid); if (!s) return;
-  const cats = catsOf(s, d.b), all = poolOf(...cats).sort((a, b) => seqIdx(a.id) - seqIdx(b.id));
+  const all = poolFor(s, d.b).sort((a, b) => seqIdx(a.id) - seqIdx(b.id));
   const curId = d.i === '' ? null : s.blk[d.b][+d.i].id;
   // nur Übungen anzeigen, die Vorfilter (Rahmen/Gruppe/Einschränkungen) UND Filter der Stunde erfüllen; „nur manuell wählbare“ sind hier ausdrücklich wählbar
   const pctx = mkCtx(c, s, Math.random); pctx.flt = Object.assign({}, fltDefault(), pctx.flt || {}, { allowMan: true });
@@ -1087,8 +1113,11 @@ function importFile(file) {
 }
 
 // Atem-Kacheln-Aktionen (liegen im CH-Objekt definiert, werden per data-a aufgerufen)
+A.bmOff = function (d) { const { c, s } = sessionOf(d.id), k = d.b; s.bm[k].on = false; s.bmCustom = true; syncHaupt(s); genTexts(c, s, idxOf(c, s)); save(); render(); toast((k === 'atem' ? 'Atemteil' : 'Mantra') + ' ausgeblendet – wieder einschaltbar unter „Ablauf & Blöcke definieren“.', 5000); };
 Object.assign(A, SINGLE_ACTIONS);
 Object.assign(A, MANTRA_ACTIONS);
+Object.assign(A, TXVORL_ACTIONS);
+Object.assign(CH, TXVORL_CH);
 Object.assign(A, rcpActions);
 Object.assign(A, { tglw: CH.tglw, pkbr: CH.pkbr, pkbrpick: CH.pkbrpick });
 normalizeState();

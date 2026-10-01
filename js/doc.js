@@ -108,7 +108,7 @@ const fmtMin = v => (Math.round(v * 2) / 2).toString().replace('.', ',');
 
 // Übungsblöcke in Reihenfolge der Stunde; Kraft am Boden gehört (falls vorhanden) zum Ausgleich-Block
 function exRows(s) {
-  const fk = (bon(s, 'kraft') && bty(s, 'kraft') === 'ex') ? (s.blk.kraft || []).filter(i => onFloor(exById(i.id))) : [];
+  const fk = [];
   const merge = fk.length && bon(s, 'ausgl') && bty(s, 'ausgl') === 'ex';
   const rows = [];
   order(s).forEach(k => {
@@ -121,7 +121,7 @@ function exRows(s) {
   return rows;
 }
 const rowsMin = rs => rs.reduce((a, r) => a + r.min, 0);
-const groupHeading = rs => rs.every(r => EXKEYS.includes(r.k)) ? 'Mobi, Aufwärmen, Asanas, Ausgleich' : rs.map(r => r.name).join(', ');
+const groupHeading = rs => rs.every(r => EXKEYS.includes(r.k)) ? 'Mobilisation, Asanas, Ausgleich' : rs.map(r => r.name).join(', ');
 
 function exCell(it) {
   const e = exById(it.id); if (!e) return '';
@@ -132,7 +132,7 @@ function exCell(it) {
 }
 const rowTable = rs => `<table class="flowt">${rs.map(r => `<tr><td class="lab">${esc(r.name)}<br><span class="pr">(${fmtMin(r.min)} Min.)</span></td><td>${r.items.map(exCell).join('')}</td></tr>`).join('')}</table>`;
 function kraftBox(s) {
-  return ((bon(s, 'kraft') && bty(s, 'kraft') === 'ex') ? (s.blk.kraft || []) : []).map(it => {
+  return blkAll(s).filter(i => (exById(i.id) || {}).c === 'kraft').map(it => {
     const e = exById(it.id); if (!e) return '';
     return `<div class="box"><b>Kraft: ${esc(e.n)}</b>${e.how ? ' – ' + esc(e.how) : ''}${SHOW_REPS ? ' ' + esc(it.rep || e.reps || '') : ''}${e.w ? `<br><b>Wirkung:</b> ${esc(e.w)}` : ''}${e.ev ? `<br><b>Leichtere Variante / Hinweis:</b> ${esc(e.ev)}` : ''}</div>`;
   }).join('');
@@ -201,7 +201,7 @@ ${rowTable(rs)}${kraftBox(s)}${showAlt(c) ? altList(s) : ''}${pageFoot(c)}</sect
 }function courseSub(c) {
   const T = sessionTotal(c.sessions[0] || { dur: courseDur(c) });
   const rh = { weekly: 'wöchentlich', biweekly: 'zweiwöchentlich', days: 'an ausgewählten Wochentagen' }[c.rhythm || 'weekly'];
-  const bits = [LEVELS[c.level], `${c.single ? 'Einzelstunde' : c.sessions.length + ' Stunden'} à ${T} Min.${c.single ? '' : ' (' + rh + ')'}`, { atem: 'Atemübungen', atem_wahr: 'Atem- + Wahrnehmungsübungen', gemischt: 'Atem- und Wahrnehmungsübungen im Wechsel', zufall: 'Atem- und Wahrnehmungsübungen (zufällig)' }[c.breath]];
+  const bits = [LEVELS[c.level], `${c.single ? 'Einzelstunde' : c.sessions.length + ' Stunden'} à ${T} Min.${c.single ? '' : ' (' + rh + ')'}`, { aus: 'ohne Atemteil', atem: 'Atemübungen', atem_wahr: 'Atem- + Wahrnehmungsübungen', gemischt: 'Atem- und Wahrnehmungsübungen im Wechsel', zufall: 'Atem- und Wahrnehmungsübungen (zufällig)' }[c.breath]];
   if (c.kraft) bits.push('mit Kraftübung');
   if ((c.gebrechen || []).length) bits.push('Rücksicht auf: ' + c.gebrechen.map(g => GEBRECHEN[g]).join(', '));
   if (c.motto.mode === 'uebermotto') bits.unshift('Übermotto: ' + (c.motto.preset === 'frei' && c.motto.free ? c.motto.free : (PRESETS[c.motto.preset] || {}).t));
@@ -210,14 +210,14 @@ ${rowTable(rs)}${kraftBox(s)}${showAlt(c) ? altList(s) : ''}${pageFoot(c)}</sect
 function renderOverview(c) {
   const rows = c.sessions.map((s, i) => `<tr><td>${i + 1}</td><td>${esc(fmtDateW(s.date))}</td><td><b>${esc(s.motto.title)}</b></td>
 <td>${esc(s.tx.focus || s.motto.focus)}<br><i>→ „${esc(s.tx.kern || s.motto.kern)}“</i></td>
-<td>${esc([exName(s.atem.a), s.atem.w && exName(s.atem.w)].filter(Boolean).join(' + '))}</td>
-<td>${esc(joinNames(s.blk.asana.concat(s.blk.kraft, s.blk.ausgl)))}</td></tr>`).join('');
+<td>${esc([s.atem.a && exName(s.atem.a), s.atem.w && exName(s.atem.w)].filter(Boolean).join(' + '))}</td>
+<td>${esc(joinNames((s.blk.asana || []).concat(s.blk.ausgl || [])))}</td></tr>`).join('');
   return `<section class="paper land ov">${LOTUS.replace('class="lotus"', 'class="lotus wm"')}<h1>Übersicht ${esc(c.name)}</h1><p class="sub">${esc(courseSub(c))}</p>
 <table><thead><tr><th>Nr.</th><th>Datum</th><th>Titel</th><th>Fokus</th><th>Atem</th><th>Asanas</th></tr></thead><tbody>${rows}</tbody></table>
 <p class="arc">${esc(c.sessions.map(s => s.motto.title).join(' → '))}</p>${pageFoot(c)}</section>`;
 }
 // Stundenübersicht (wie in der App): je Stunde Datum, Titel, farbiger Verlauf und alle Übungen als Kacheln
-const OV_BC = { einl: '#b9a684', atem: '#6fb8bd', mantra: '#d4d8e2', mobi: '#d4b483', aufw: '#86b394', asana: '#4f8a6e', kraft: '#b0443a', ausgl: '#cf8fa3', schluss: '#cdb463', shava: '#7d8fa8' };
+const OV_BC = { einl: '#b9a684', atem: '#6fb8bd', mantra: '#d4d8e2', mobi: '#d4b483', shakti: '#8e6bb8', aufw: '#86b394', asana: '#4f8a6e', kraft: '#b0443a', ausgl: '#cf8fa3', schluss: '#cdb463', shava: '#7d8fa8' };
 function renderStundenUeb(c, only) {
   const mt = (col, svg, nm, pk) => `<span class="mx" style="background:${col}33;border-color:${col}"><span class="fg">${svg}${pk ? '<b class="pk">★</b>' : ''}</span><span class="nm">${esc(nm)}</span></span>`;
   const cards = c.sessions.map((s, i) => {
@@ -274,7 +274,7 @@ function overviewText(c) {
   const lines = [`${c.name}`, courseSub(c), ''];
   c.sessions.forEach((s, i) => {
     lines.push(`${i + 1}. ${fmtDateW(s.date)} – ${s.motto.title}`, `   Fokus: ${s.tx.focus || s.motto.focus}`,
-      `   Atem: ${[exName(s.atem.a), s.atem.w && exName(s.atem.w)].filter(Boolean).join(' + ')}`, `   Asanas: ${joinNames(s.blk.asana.concat(s.blk.kraft, s.blk.ausgl))}`, '');
+      `   Atem: ${[s.atem.a && exName(s.atem.a), s.atem.w && exName(s.atem.w)].filter(Boolean).join(' + ') || '–'}`, `   Asanas: ${joinNames((s.blk.asana || []).concat(s.blk.ausgl || []))}`, '');
   });
   return lines.join('\n');
 }
