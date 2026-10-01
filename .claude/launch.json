@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "yoga-planer",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8765", "--directory", "C:\\Users\\Daniel\\Desktop\\Google Drive\\Claude Code\\Yogkurs"],
+      "port": 8765
+    }
+  ]
+}

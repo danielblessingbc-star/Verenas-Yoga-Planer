@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yogakurs-Planer</title>
+<style>
+:root{
+  --bg:#f6f3ee; --card:#fff; --ink:#2b2a28; --muted:#7a766f; --line:#e4dfd6;
+  --accent:#5b7b6a; --accent-ink:#fff; --accent-soft:#e3ece6; --danger:#b4492f;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#1c1d1b; --card:#262826; --ink:#ecebe6; --muted:#9a978f; --line:#3a3c39;
+    --accent:#86a996; --accent-ink:#14201a; --accent-soft:#2c3a32; --danger:#e07a5f; }
+}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 10px;width:100%}
+textarea{resize:vertical;min-height:60px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 12px}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.danger:hover{border-color:var(--danger);color:var(--danger)}
+button.ghost{border-color:transparent;background:transparent;padding:4px 8px;color:var(--muted)}
+button.ghost:hover{color:var(--ink);background:var(--accent-soft)}
+
+.layout{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+aside{background:var(--card);border-right:1px solid var(--line);padding:20px 16px;position:sticky;top:0;height:100vh;overflow:auto}
+aside h1{font-size:18px;margin:0 0 16px;letter-spacing:.3px}
+.course-item{display:block;width:100%;text-align:left;margin-bottom:6px;padding:10px 12px}
+.course-item.active{background:var(--accent-soft);border-color:var(--accent)}
+.course-item small{display:block;color:var(--muted)}
+.side-actions{margin-top:18px;display:grid;gap:6px}
+main{padding:28px clamp(16px,4vw,48px);max-width:1000px;width:100%}
+.row{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:12px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:16px 0}
+.bar .grow{flex:1}
+h2{margin:0 0 4px;font-size:24px}
+.crumb{color:var(--muted);font-size:13px;margin-bottom:6px}
+.crumb a{color:var(--accent);cursor:pointer;text-decoration:underline}
+
+.session{display:grid;grid-template-columns:54px 1fr auto;gap:12px;align-items:center;background:var(--card);
+  border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px}
+.session .no{font-size:22px;font-weight:600;color:var(--accent);text-align:center;line-height:1}
+.session .no small{display:block;font-size:10px;color:var(--muted);font-weight:400;margin-top:2px}
+.session .title{font-weight:600;cursor:pointer}
+.session .title:hover{color:var(--accent)}
+.session .meta{color:var(--muted);font-size:13px}
+.chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.chip{font-size:11px;padding:1px 8px;border-radius:99px;background:var(--accent-soft);color:var(--ink)}
+.actions{display:flex;gap:2px}
+
+.block{display:grid;grid-template-columns:150px 1fr 80px auto;gap:8px;align-items:start;background:var(--card);
+  border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:10px;margin-bottom:8px}
+.block .notes{grid-column:2 / 4}
+.totals{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;background:var(--accent-soft);margin:12px 0}
+.totals.over{background:color-mix(in srgb,var(--danger) 18%,var(--card))}
+.progress{flex:1;height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent)}
+.totals.over .progress i{background:var(--danger)}
+.empty{padding:32px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:12px}
+
+.plan-session{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px;break-inside:avoid}
+.plan-session h3{margin:0 0 2px}
+.plan-session table{width:100%;border-collapse:collapse;margin-top:8px}
+.plan-session td{padding:5px 6px;border-top:1px solid var(--line);vertical-align:top}
+.plan-session td.min{white-space:nowrap;width:60px;color:var(--muted)}
+.plan-session td.ph{width:140px;font-weight:600}
+
+@media (max-width:760px){
+  .layout{grid-template-columns:1fr}
+  aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}
+  .block{grid-template-columns:1fr 80px auto}
+  .block .notes{grid-column:1 / -1}
+  .block select{grid-column:1 / -1}
+  .session{grid-template-columns:44px 1fr}
+  .session .actions{grid-column:1 / -1}
+}
+@media print{
+  body{background:#fff;color:#000}
+  aside,.bar,.no-print,.crumb{display:none!important}
+  .layout{display:block}
+  main{padding:0;max-width:none}
+  .plan-session{border:1px solid #bbb;background:#fff}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside>
+    <h1>🧘 Yogakurs-Planer</h1>
+    <div id="courseList"></div>
+    <div class="side-actions">
+      <button class="primary" id="newCourse">+ Neuer Kurs</button>
+      <button id="exportBtn">Sichern (JSON)</button>
+      <button id="importBtn">Laden (JSON)</button>
+      <input type="file" id="importFile" accept="application/json" hidden>
+    </div>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<datalist id="poseList">
+  <option value="Berghaltung (Tadasana)"><option value="Sonnengruß A"><option value="Sonnengruß B">
+  <option value="Herabschauender Hund"><option value="Krieger I"><option value="Krieger II"><option value="Krieger III">
+  <option value="Dreieck"><option value="Seitlicher Winkel"><option value="Baum"><option value="Stuhl">
+  <option value="Kobra"><option value="Heuschrecke"><option value="Brücke"><option value="Rad">
+  <option value="Kind"><option value="Katze-Kuh"><option value="Taube"><option value="Schmetterling">
+  <option value="Vorbeuge sitzend"><option value="Drehsitz"><option value="Schulterstand"><option value="Pflug">
+  <option value="Shavasana"><option value="Wechselatmung (Nadi Shodhana)"><option value="Ujjayi-Atmung"><option value="Kapalabhati">
+</datalist>
+
+<script>
+const PHASES = {
+  "Ankommen":"#8a9a5b","Atemübung":"#5b8fa8","Aufwärmen":"#c9a227","Sonnengruß":"#d98c3f",
+  "Stehende Asanas":"#b4623a","Balance":"#7d5ba6","Bodenarbeit":"#a8566e","Rückbeugen":"#4f8a7b",
+  "Dehnung":"#6f7fb5","Meditation":"#6e6e8f","Endentspannung":"#5b7b6a","Sonstiges":"#8c8880"
+};
+const TEMPLATE_75 = [
+  ["Ankommen",5,"Ankommen, Intention setzen"],["Atemübung",7,""],["Aufwärmen",10,""],
+  ["Stehende Asanas",25,""],["Balance",8,""],["Dehnung",10,""],["Endentspannung",10,"Shavasana"]
+];
+const KEY = "yogakurs-planer-v1";
+const uid = () => Math.random().toString(36).slice(2,10);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+let state = load();
+let view = { courseId: state.courses[0]?.id || null, sessionId: null, mode: "overview" };
+
+function load(){
+  try{ const s = JSON.parse(localStorage.getItem(KEY)); if(s && Array.isArray(s.courses)) return s; }catch(e){}
+  return seed();
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+function seed(){
+  const mk = (title,theme,blocks) => ({id:uid(),title,theme,intention:"",date:"",duration:75,notes:"",
+    blocks:blocks.map(([phase,minutes,notes])=>({id:uid(),phase,minutes,title:"",notes}))});
+  return { courses:[{
+    id:uid(), name:"Beispiel: Yoga für Einsteiger (6 Wochen)", level:"Anfänger", description:"Sanfter Einstieg in Atmung, Grundhaltungen und Entspannung.",
+    startDate:"", defaultDuration:75,
+    sessions:[ mk("Ankommen & Atmen","Bauchatmung, Berghaltung",TEMPLATE_75),
+               mk("Wirbelsäule mobilisieren","Katze-Kuh, Kobra, Kind",TEMPLATE_75) ]
+  }]};
+}
+const course = () => state.courses.find(c => c.id === view.courseId);
+const session = () => course()?.sessions.find(s => s.id === view.sessionId);
+const total = s => s.blocks.reduce((a,b)=>a + (Number(b.minutes)||0), 0);
+
+function sessionDate(c, i){
+  const s = c.sessions[i];
+  const d = s.date || (c.startDate ? addDays(c.startDate, i*7) : "");
+  if(!d) return "";
+  return new Date(d + "T12:00").toLocaleDateString("de-DE",{weekday:"short",day:"2-digit",month:"2-digit",year:"numeric"});
+}
+function addDays(iso, n){ const d = new Date(iso+"T12:00"); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+
+/* ---------- Rendering ---------- */
+function render(){
+  renderSide();
+  const c = course();
+  const main = document.getElementById("main");
+  if(!c){ main.innerHTML = `<div class="empty">Noch kein Kurs vorhanden. Lege links einen neuen Kurs an.</div>`; return; }
+  if(view.mode === "session" && session()) main.innerHTML = sessionHTML(c, session());
+  else if(view.mode === "plan") main.innerHTML = planHTML(c);
+  else { view.mode = "overview"; main.innerHTML = overviewHTML(c); }
+}
+function renderSide(){
+  document.getElementById("courseList").innerHTML = state.courses.map(c =>
+    `<button class="course-item ${c.id===view.courseId?"active":""}" data-act="openCourse" data-id="${c.id}">
+      ${esc(c.name||"Unbenannter Kurs")}<small>${c.sessions.length} Stunden${c.level?" · "+esc(c.level):""}</small></button>`).join("");
+}
+function overviewHTML(c){
+  const rows = c.sessions.map((s,i)=>{
+    const phases = [...new Set(s.blocks.map(b=>b.phase))];
+    const d = sessionDate(c,i);
+    return `<div class="session">
+      <div class="no">${i+1}<small>Stunde</small></div>
+      <div>
+        <div class="title" data-act="openSession" data-id="${s.id}">${esc(s.title||"Ohne Titel")}</div>
+        <div class="meta">${d?esc(d)+" · ":""}${total(s)} / ${s.duration||c.defaultDuration} Min${s.theme?" · "+esc(s.theme):""}</div>
+        <div class="chips">${phases.map(p=>`<span class="chip">${esc(p)}</span>`).join("")}</div>
+      </div>
+      <div class="actions">
+        <button class="ghost" title="Nach oben" data-act="moveSession" data-id="${s.id}" data-dir="-1">↑</button>
+        <button class="ghost" title="Nach unten" data-act="moveSession" data-id="${s.id}" data-dir="1">↓</button>
+        <button class="ghost" title="Duplizieren" data-act="dupSession" data-id="${s.id}">⧉</button>
+        <button class="ghost" data-act="openSession" data-id="${s.id}">Bearbeiten</button>
+        <button class="ghost danger" title="Löschen" data-act="delSession" data-id="${s.id}">✕</button>
+      </div></div>`;
+  }).join("");
+  return `
+    <h2>${esc(c.name||"Unbenannter Kurs")}</h2>
+    <div class="row" style="margin-top:14px">
+      <div style="grid-column:1/-1"><label>Kursname</label><input data-field="name" value="${esc(c.name)}"></div>
+      <div><label>Level</label><input data-field="level" value="${esc(c.level)}" placeholder="z. B. Anfänger"></div>
+      <div><label>Start (Stunde 1)</label><input type="date" data-field="startDate" value="${esc(c.startDate)}"></div>
+      <div><label>Standarddauer (Min)</label><input type="number" min="5" step="5" data-field="defaultDuration" value="${c.defaultDuration}"></div>
+    </div>
+    <label>Kursbeschreibung / roter Faden</label>
+    <textarea data-field="description">${esc(c.description)}</textarea>
+    <div class="bar">
+      <button class="primary" data-act="addSession">+ Stunde hinzufügen</button>
+      <button data-act="showPlan">Gesamtplan / Drucken</button>
+      <span class="grow"></span>
+      <button class="danger" data-act="delCourse">Kurs löschen</button>
+    </div>
+    ${rows || `<div class="empty">Noch keine Stunden. Füge die erste Stunde hinzu.</div>`}`;
+}
+function sessionHTML(c, s){
+  const i = c.sessions.indexOf(s);
+  const prev = c.sessions[i-1], next = c.sessions[i+1];
+  return `
+    <div class="crumb"><a data-act="backOverview">← ${esc(c.name)}</a></div>
+    <h2>Stunde ${i+1}${s.title?": "+esc(s.title):""}</h2>
+    <div class="meta" style="color:var(--muted)">${esc(sessionDate(c,i))}</div>
+    <div class="row" style="margin-top:14px">
+      <div style="grid-column:1/-1"><label>Titel</label><input data-sfield="title" value="${esc(s.title)}"></div>
+      <div><label>Thema / Schwerpunkt</label><input data-sfield="theme" value="${esc(s.theme)}"></div>
+      <div><label>Datum (leer = automatisch)</label><input type="date" data-sfield="date" value="${esc(s.date)}"></div>
+      <div><label>Dauer (Min)</label><input type="number" min="5" step="5" data-sfield="duration" value="${s.duration||c.defaultDuration}"></div>
+    </div>
+    <label>Intention / Lernziel</label>
+    <textarea data-sfield="intention">${esc(s.intention)}</textarea>
+    <div id="totals"></div>
+    <div id="blocks">${s.blocks.map(blockHTML).join("") || `<div class="empty">Noch keine Abschnitte.</div>`}</div>
+    <div class="bar">
+      <button class="primary" data-act="addBlock">+ Abschnitt</button>
+      <button data-act="applyTemplate">Standard-Ablauf einfügen (75 Min)</button>
+    </div>
+    <label>Notizen (Musik, Material, Hinweise)</label>
+    <textarea data-sfield="notes">${esc(s.notes)}</textarea>
+    <div class="bar">
+      <button data-act="backOverview">Zur Übersicht</button>
+      <span class="grow"></span>
+      ${prev?`<button data-act="openSession" data-id="${prev.id}">← Stunde ${i}</button>`:""}
+      ${next?`<button data-act="openSession" data-id="${next.id}">Stunde ${i+2} →</button>`:""}
+    </div>
+    ${(setTimeout(updateTotals,0),"")}`;
+}
+function blockHTML(b){
+  return `<div class="block" data-bid="${b.id}" style="border-left-color:${PHASES[b.phase]||"var(--accent)"}">
+    <select data-bfield="phase">${Object.keys(PHASES).map(p=>`<option ${p===b.phase?"selected":""}>${p}</option>`).join("")}</select>
+    <input data-bfield="title" list="poseList" placeholder="Übung / Haltung / Sequenz" value="${esc(b.title)}">
+    <input data-bfield="minutes" type="number" min="0" step="1" value="${b.minutes}" title="Minuten">
+    <div class="actions">
+      <button class="ghost" data-act="moveBlock" data-id="${b.id}" data-dir="-1">↑</button>
+      <button class="ghost" data-act="moveBlock" data-id="${b.id}" data-dir="1">↓</button>
+      <button class="ghost danger" data-act="delBlock" data-id="${b.id}">✕</button>
+    </div>
+    <textarea class="notes" data-bfield="notes" placeholder="Anleitung, Varianten, Hilfsmittel …" style="min-height:40px">${esc(b.notes)}</textarea>
+  </div>`;
+}
+function updateTotals(){
+  const el = document.getElementById("totals"); const c = course(), s = session();
+  if(!el || !s) return;
+  const t = total(s), goal = Number(s.duration)||c.defaultDuration, diff = t-goal;
+  el.className = "totals" + (diff>0?" over":"");
+  el.innerHTML = `<strong>${t} / ${goal} Min</strong>
+    <div class="progress"><i style="width:${Math.min(100,goal?t/goal*100:0)}%"></i></div>
+    <span>${diff===0?"passt genau":diff>0?diff+" Min zu viel":-diff+" Min übrig"}</span>`;
+}
+function planHTML(c){
+  return `<div class="crumb"><a data-act="backOverview">← Zurück</a></div>
+    <h2>${esc(c.name)}</h2>
+    <div style="color:var(--muted)">${esc(c.level)}${c.description?" · "+esc(c.description):""}</div>
+    <div class="bar"><button class="primary" onclick="window.print()">Drucken / Als PDF speichern</button></div>
+    ${c.sessions.map((s,i)=>`<div class="plan-session">
+      <h3>Stunde ${i+1}: ${esc(s.title)}</h3>
+      <div style="color:var(--muted);font-size:13px">${esc(sessionDate(c,i))}${sessionDate(c,i)?" · ":""}${total(s)} Min${s.theme?" · "+esc(s.theme):""}</div>
+      ${s.intention?`<p style="margin:8px 0 0"><em>${esc(s.intention)}</em></p>`:""}
+      <table>${s.blocks.map(b=>`<tr><td class="min">${b.minutes} Min</td><td class="ph">${esc(b.phase)}</td>
+        <td>${esc(b.title)}${b.notes?`<div style="color:var(--muted);font-size:13px;white-space:pre-wrap">${esc(b.notes)}</div>`:""}</td></tr>`).join("")}</table>
+      ${s.notes?`<p style="font-size:13px;color:var(--muted);white-space:pre-wrap">Notizen: ${esc(s.notes)}</p>`:""}
+    </div>`).join("")}`;
+}
+
+/* ---------- Aktionen ---------- */
+const newSession = c => ({id:uid(),title:"",theme:"",intention:"",date:"",duration:c.defaultDuration,notes:"",blocks:[]});
+const move = (arr, id, dir) => {
+  const i = arr.findIndex(x=>x.id===id), j = i+dir;
+  if(i<0 || j<0 || j>=arr.length) return false;
+  [arr[i],arr[j]] = [arr[j],arr[i]]; return true;
+};
+const actions = {
+  openCourse:(id)=>{ view={courseId:id,sessionId:null,mode:"overview"}; },
+  openSession:(id)=>{ view.sessionId=id; view.mode="session"; window.scrollTo(0,0); },
+  backOverview:()=>{ view.mode="overview"; view.sessionId=null; },
+  showPlan:()=>{ view.mode="plan"; },
+  addSession:()=>{ const c=course(), s=newSession(c); c.sessions.push(s); view.sessionId=s.id; view.mode="session"; },
+  dupSession:(id)=>{ const c=course(), i=c.sessions.findIndex(s=>s.id===id);
+    const copy=JSON.parse(JSON.stringify(c.sessions[i])); copy.id=uid(); copy.date=""; copy.title+=" (Kopie)";
+    copy.blocks.forEach(b=>b.id=uid()); c.sessions.splice(i+1,0,copy); },
+  delSession:(id)=>{ if(!confirm("Diese Stunde löschen?")) return; const c=course(); c.sessions=c.sessions.filter(s=>s.id!==id); },
+  moveSession:(id,el)=>{ move(course().sessions,id,+el.dataset.dir); },
+  delCourse:()=>{ if(!confirm("Den gesamten Kurs löschen?")) return;
+    state.courses = state.courses.filter(c=>c.id!==view.courseId);
+    view={courseId:state.courses[0]?.id||null,sessionId:null,mode:"overview"}; },
+  addBlock:()=>{ session().blocks.push({id:uid(),phase:"Stehende Asanas",minutes:5,title:"",notes:""}); },
+  applyTemplate:()=>{ const s=session(); if(s.blocks.length && !confirm("Vorhandene Abschnitte ersetzen?")) return;
+    s.blocks=TEMPLATE_75.map(([phase,minutes,notes])=>({id:uid(),phase,minutes,title:"",notes})); s.duration=75; },
+  delBlock:(id)=>{ const s=session(); s.blocks=s.blocks.filter(b=>b.id!==id); },
+  moveBlock:(id,el)=>{ move(session().blocks,id,+el.dataset.dir); }
+};
+document.addEventListener("click", e=>{
+  const el = e.target.closest("[data-act]"); if(!el) return;
+  actions[el.dataset.act]?.(el.dataset.id, el); save(); render();
+});
+// Eingaben: ohne Neurendern (Fokus bleibt erhalten)
+document.addEventListener("input", e=>{
+  const t = e.target, c = course(); if(!c) return;
+  if(t.dataset.field){ c[t.dataset.field] = t.type==="number" ? Number(t.value) : t.value; if(t.dataset.field==="name") renderSide(); }
+  else if(t.dataset.sfield){ const s=session(); s[t.dataset.sfield] = t.type==="number" ? Number(t.value) : t.value; if(t.dataset.sfield==="duration") updateTotals(); }
+  else if(t.dataset.bfield){
+    const box=t.closest("[data-bid]"), b=session().blocks.find(x=>x.id===box.dataset.bid);
+    b[t.dataset.bfield] = t.dataset.bfield==="minutes" ? (Number(t.value)||0) : t.value;
+    if(t.dataset.bfield==="phase") box.style.borderLeftColor = PHASES[t.value];
+    if(t.dataset.bfield==="minutes") updateTotals();
+  } else return;
+  save();
+});
+document.getElementById("newCourse").onclick = ()=>{
+  const c={id:uid(),name:"Neuer Kurs",level:"",description:"",startDate:"",defaultDuration:75,sessions:[]};
+  state.courses.push(c); view={courseId:c.id,sessionId:null,mode:"overview"}; save(); render();
+};
+document.getElementById("exportBtn").onclick = ()=>{
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:"application/json"}));
+  a.download="yogakurse-"+new Date().toISOString().slice(0,10)+".json"; a.click(); URL.revokeObjectURL(a.href);
+};
+document.getElementById("importBtn").onclick = ()=>document.getElementById("importFile").click();
+document.getElementById("importFile").onchange = e=>{
+  const f=e.target.files[0]; if(!f) return;
+  f.text().then(t=>{
+    try{
+      const s=JSON.parse(t); if(!Array.isArray(s.courses)) throw 0;
+      if(!confirm("Aktuelle Daten durch die Datei ersetzen?")) return;
+      state=s; view={courseId:state.courses[0]?.id||null,sessionId:null,mode:"overview"}; save(); render();
+    }catch(_){ alert("Ungültige Datei."); }
+  });
+  e.target.value="";
+};
+render();
+</script>
+</body>
+</html>
