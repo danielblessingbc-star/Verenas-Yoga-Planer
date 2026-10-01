@@ -4,6 +4,7 @@ const isSingle = c => !!(c && c.single);
 const deepCopy = o => JSON.parse(JSON.stringify(o));
 
 function viewSingles() {
+  if (ui.sTab === 'playMin' || ui.sTab === 'playDet') return viewPlayers(ui.sTab);
   const pt = ui.sTab || 'list', ss = state.courses.filter(c => c.single && !c.template), ts = state.courses.filter(c => c.single && c.template);
   const card = c => { const s = c.sessions[0] || {}; return `<div class="card course"><div class="grow"><a class="title" data-a="open" data-id="${c.id}">${esc(c.name)}</a>
 <div class="meta">${esc((s.motto || {}).title || '')} · ${esc(LEVELS[c.level])} · ${c.sessions[0] ? sessionTotal(c.sessions[0]) : c.total} Min.${s.date ? ' · ' + esc(fmtDateW(s.date)) : ''}${s.status ? ' · ' + esc(STATUS[s.status] || '') : ''}</div></div>

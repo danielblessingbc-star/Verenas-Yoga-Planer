@@ -69,6 +69,9 @@ const POSES = {};
 })();
 
 function figureParts(key, ground) {
+  if (key === 'ratlos') { // Standardsymbol für eigene Übungen: ahnungsloser Strichmensch mit Fragezeichen
+    return figureParts('stand', ground) + '<path d="M64 14c0-8 14-8 14 0c0 7-7 7-7 15" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="71" cy="37" r="2.2" fill="currentColor"/>';
+  }
   const p = POSES[key] || POSES.stand;
   const [h, n, pe, eR, hR, eL, hL, kR, fR, kL, fL] = p;
   const M = (a) => a.join(' ');
@@ -123,3 +126,5 @@ Object.assign(ICONS, {
 });
 
 const TEXTICON = '<svg class="fig" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M24 8h36l18 18v66H24z"/><path d="M60 8v18h18"/><path d="M34 46h34M34 58h34M34 70h22"/></g></svg>';
+
+POSES.ratlos = POSES.stand; // Auswahl im Katalog; Zeichnung (mit Fragezeichen) siehe figureParts

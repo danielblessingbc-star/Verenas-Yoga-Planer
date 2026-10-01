@@ -158,7 +158,7 @@ function nav() {
     const nl = state.courses.filter(x => isP ? (!x.template && !x.single) : (x.single && !x.template)).length, nt = state.courses.filter(x => x.template && (isP ? !x.single : x.single)).length + (isP ? BUILTIN.length : 0);
     ctx = `<div class="hctx is-actions">${tab('list', (isP ? 'Vorhandene Programme' : 'Vorhandene Einzelstunden') + cnt(nl))}<span class="hsep"></span>`
       + (isP ? `<button class="hact" data-a="newCourse">＋ Neues Programm</button>${act('fromTpl', '＋ Programm aus Vorlagen' + cnt(nt), 'data-a="ptab" data-v="fromTpl"')}${act('build', '＋ Programm aus Einzelstunden', 'data-a="ptab" data-v="build"')}`
-        : `<button class="hact" data-a="newSingle">＋ Neue Einzelstunde</button>${act('fromTpl', '＋ Einzelstunde aus Vorlage' + cnt(nt), 'data-a="stab" data-v="fromTpl"')}`) + '</div>';
+        : `<button class="hact" data-a="newSingle">＋ Neue Einzelstunde</button>${act('fromTpl', '＋ Einzelstunde aus Vorlage' + cnt(nt), 'data-a="stab" data-v="fromTpl"')}${act('playMin', '▶ Minimalistischer Player', 'data-a="stab" data-v="playMin"')}${act('playDet', '▶ Detailplayer', 'data-a="stab" data-v="playDet"')}`) + '</div>';
   }
   return `<header class="noprint hdr${c ? (isS ? ' c-single' : ' c-prog') : ''}"><div class="hrow"><div class="brand">${LOTUS}Verenas Yoga Planomat<small class="ver" title="Programmversion">${typeof APP_VER !== 'undefined' ? APP_VER : ''}</small></div>${b('courses', 'Programme', 'prog')}${b('singles', 'Stunden', 'stunde')}${b('catalog', 'Übungskatalog', 'katalog')}${b('mantras', 'Mantras', 'mantra')}${b('texts', 'Textvorlagen', 'textvorl')}${c ? '<span class="hname ' + (isS ? 'is-single' : 'is-prog') + '\" title="' + esc(c.name) + '\">' + '<b>' + esc(c.name) + '</b></span>' : ''}<span class="grow"></span><button class="tab gear${ui.view === 'settings' ? ' on' : ''}" data-a="nav" data-v="settings" title="Einstellungen & Backup" aria-label="Einstellungen & Backup">${hicon('zahnrad')}</button></div>${ctx}</header>`;
 }
@@ -247,7 +247,7 @@ ${dur}
 ${fld('Yogastil', `<div class="fchips">${chipsC('st', STILE)}</div>`, 'wide')}
 ${fld('Körperregion', `<div class="fchips">${chipsC('reg', KAT.reg)}</div>`, 'wide')}
 </div></section>
-</div><div class="bar noprint"><button class="primary" data-a="plan">🎲 ${c.single ? 'Vorgaben auf die Einzelstunde anwenden' : 'Rahmen auf die Stunden anwenden'}</button>${c.single ? '' : '<button data-a="dates">📅 Termine neu berechnen</button>'}<button class="ghost" data-a="saveTpl" title="${c.single ? 'Einzelstunde' : 'Rahmen und Stunden'} als Vorlage speichern">★ ${c.single ? 'Als Einzelstunden-Vorlage' : 'Als Programm-Vorlage'}</button>
+</div><div class="bar noprint"><button class="primary" data-a="plan">🎲 ${c.single ? 'Vorgaben auf die Einzelstunde anwenden' : 'Rahmen auf die Stunden anwenden'}</button>${c.single ? '' : '<button data-a="dates">📅 Termine neu berechnen</button>'}<button class="ghost" data-a="saveTpl" title="${c.single ? 'Einzelstunde' : 'Rahmen und Stunden'} als Vorlage speichern">★ ${c.single ? 'Als Einzelstunden-Vorlage' : 'Als Programm-Vorlage'}</button>${c.single ? '' : `<button class="ghost" data-a="saveAllSingles" title="Jede Stunde dieses Programms unter „Stunden“ als eigene Einzelstunde speichern">⧉ Alle Stunden als Einzelstunden speichern</button>`}
 ${state.settings.apiKey ? '<button data-a="aiMottos">🤖 Mottos per KI vorschlagen</button>' : ''}<span class="muted">Legt Übungen und Texte für alle Stunden neu an. Stunden mit Status „Fertig“ bleiben unverändert.</span></div>
 <div id="dirtyBanner" class="banner noprint ${c.dirty ? '' : 'hide'}">Rahmen geändert – mit „Rahmen auf die Stunden anwenden“ übernehmen.</div>
 ${c.sessions.length ? '<p class="muted noprint">Die Stundenübersicht findest du oben in der Kopfzeile neben „Ausgabe / Versand“.</p>' : '<p class="muted">Noch keine Stunden angelegt – klicke „Rahmen auf die Stunden anwenden“.</p>'}`;
@@ -477,7 +477,7 @@ ${offBlocks.length ? `<p class="muted">Ausgeblendete Blöcke: ${esc(offBlocks.jo
 ${sessSaveForm(s)}
 <div class="bar"><button data-a="reroll" data-id="${id}">🎲 Alle Übungen neu würfeln</button><button data-a="texts" data-id="${id}">✍ Texte neu (Vorlage)</button>
 ${state.settings.apiKey ? `<button data-a="aiTx" data-id="${id}">🤖 Texte per KI</button>` : ''}<button data-a="lock" data-id="${id}">${s.locked ? '🔓 Entsperren' : '🔒 Sperren'}</button>
-<button data-a="preview" data-id="${id}">👁 Vorschau</button><button data-a="saveSessTpl" data-id="${id}" title="Diese Stunde unter einem Namen als Vorlage speichern">★ Als Einzelstunden-Vorlage</button><button data-a="saveSessSingle" data-id="${id}" title="Diese Stunde als eigene Einzelstunde speichern (Seite Stunden)">⧉ Als Einzelstunde speichern</button></div></section>`;
+<button data-a="preview" data-id="${id}">👁 Vorschau</button><button data-a="plPlay" data-id="${c.id}" data-sid="${id}" data-m="min" title="Minimalistischer Player">▶ Player</button><button data-a="plPlay" data-id="${c.id}" data-sid="${id}" data-m="det" title="Detailplayer mit Anleitungen und Texten">▶ Detailplayer</button><button data-a="saveSessTpl" data-id="${id}" title="Diese Stunde unter einem Namen als Vorlage speichern">★ Als Einzelstunden-Vorlage</button><button data-a="saveSessSingle" data-id="${id}" title="Diese Stunde als eigene Einzelstunde speichern (Seite Stunden)">⧉ Als Einzelstunde speichern</button></div></section>`;
 }
 function optLabel(e, c) {
   return `${e.n}${e.lv > 1 ? ' [' + (e.lv === 2 ? 'Mittel' : 'Fortg.') + ']' : ''}${contra(e, c.gebrechen) ? ' ⚠' : ''}${rating(e.id) === 0 ? ' ✕' : ''}${rating(e.id) >= 4 ? ' ★' : ''}`;
@@ -541,6 +541,10 @@ function docPanel(c) {
 <div class="outblocks noprint"><section class="panel"><h3 class="oh">📁 Dateiausleitung</h3><p class="muted">Speichert die gewählten Blätter als Datei auf deinem Rechner.</p>
 <div class="bar"><button class="primary" data-a="pdfSave">⬇ PDF speichern (A4, direkt)</button><button data-a="docx">⬇ Word (.docx)</button><button data-a="html">⬇ HTML-Datei</button><button data-a="print">🖨 Drucken / PDF über Druckdialog</button></div>
 <p class="muted">„PDF speichern“ erzeugt die Datei direkt, ohne Druckdialog (Seiten als Bilder, Text nicht markierbar). Für ein PDF mit markierbarem Text: Druckdialog und dort „Als PDF speichern“ wählen.</p></section>
+<section class="panel"><h3 class="oh">🎬 Video-Ausleitung (iPhone)</h3><p class="muted">Erzeugt aus den gewählten Stunden Videos der Player-Sequenz (MP4, Querformat) – für iPhone und iPad, direkt in „Dateien“ oder „Fotos“ abspielbar. Pro Stunde eine Datei.</p>
+<div class="vidopt"><span class="muted">Auflösung:</span><div class="seg">${[[720, '1280 × 720 (kleiner)'], [1080, '1920 × 1080 (schärfer)']].map(([v, l]) => `<button type="button" class="sgb${(ui.vidRes === 1080 ? 1080 : 720) === v ? ' on' : ''}" data-a="vidRes" data-v="${v}">${l}</button>`).join('')}</div></div>
+<div class="bar"><button class="primary" data-a="vidExport" data-m="min">🎬 Video minimalistisch</button><button data-a="vidExport" data-m="det">🎬 Video mit Details</button></div>
+<p class="muted" id="vidProg">Das Erzeugen dauert je nach Stundenlänge etwa 10 bis 60 Sekunden pro Stunde. Der Browser-Tab muss dabei geöffnet bleiben.</p></section>
 <section class="panel"><h3 class="oh">✉ E-Mail-Ausleitung</h3><div class="grid">
 <div class="fld wide"><label>E-Mail an – Empfänger auswählen (Verwaltung unter ⚙ Einstellungen)</label><div class="fchips">${rcpList().length ? rcpList().map(r => '<label class="fchip' + ((c.mailTo || []).includes(r.id) ? ' on' : '') + '" title="' + esc(r.email) + '"><input type="checkbox" data-a="rcpTog" data-id="' + r.id + '" ' + ((c.mailTo || []).includes(r.id) ? 'checked' : '') + '> ' + esc(r.name || r.email) + '</label>').join('') : '<span class="muted">Noch keine weiteren Empfänger – unter ⚙ Einstellungen anlegen.</span>'}</div></div>
 ${fld('Weitere Adresse(n) (mit Komma getrennt)', inp('c:email', 'text', c.email, 'placeholder="name@example.de"'))}
@@ -647,6 +651,14 @@ const A = {
   open(d) { ui.view = 'course'; ui.courseId = d.id; ui.tab = 'frame'; ui.open = new Set(['set', 'ovw']); const oc = state.courses.find(x => x.id === d.id); if (oc && oc.single) { ui.doc.ueb = false; ui.doc.sel = '0'; } else if (ui.doc.sel === '0' && oc) { ui.doc.sel = 'all'; ui.doc.ueb = true; } render(); },
   tab(d) { ui.tab = d.v; render(); },
   segPick(d, el) { const w = el.closest('.seg'), s = w && w.querySelector('select'); if (!s || el.disabled) return; s.value = d.v; s.dispatchEvent(new Event('change', { bubbles: true })); setTimeout(render, 0); },
+  saveAllSingles(d, el) {
+    const c = cur(), n = c.sessions.length; if (!n) return;
+    if (!confirmTwice(el, 'allsing', `${n} Einzelstunden unter „Stunden“ anlegen (Name: Programm – Einzelmotto (Tag))`, '⚠ Ja, jetzt speichern')) return;
+    const made = c.sessions.map(s => { const t = deepCopy(c); t.id = uid(); t.single = true; t.template = false; t.count = 1; t.created = todayIso(); t.name = `${c.name} – ${(s.motto && s.motto.title) || 'Stunde'}${s.date ? ' (' + fmtDateW(s.date) + ')' : ''}`;
+      const ns = deepCopy(s); ns.id = uid(); ns.locked = false; if (ns.date) t.start = ns.date; t.sessions = [ns]; return t; });
+    made.reverse().forEach(t => state.courses.unshift(t)); save(); render();
+    toast(`${n} Einzelstunden gespeichert (Seite „Stunden“ → Vorhandene Einzelstunden).`, 6000);
+  },
   setTotal(d) {
     const c = cur(); c.total = +d.v;
     // Jeder Knopf löst seinen Standard komplett aus (auch beim erneuten Klick): 60 ohne Mantra und Shakti Naam · 75 mit Mantra · 90 mit Mantra und Wahrnehmungsübung (Ja) · 120 alles ein
@@ -835,6 +847,7 @@ const A = {
   resetAll(d, el) { if (confirmTwice(el, 'all', 'ALLE Programme, Vorlagen und Bewertungen löschen?')) { state = defaults(); save(); ui.view = 'courses'; render(); } }
 };
 const CH = {
+  pkNewCat(el) { const f = document.getElementById('pkNewFig'); if (f) f.className = 'pkfig cat-' + el.value; },
   atemOn(el) { const c = cur(); if (+el.value) c.breath = c.breathPrev && c.breathPrev !== 'aus' ? c.breathPrev : 'gemischt'; else { if (c.breath !== 'aus') c.breathPrev = c.breath; c.breath = 'aus'; } breathChanged(c); },
   wahrMode(el) { const c = cur(); if (c.breath === 'aus') return; c.breath = { aus: 'atem', immer: 'atem_wahr', wechsel: 'gemischt', zufall: 'zufall' }[el.value] || 'gemischt'; c.breathPrev = c.breath; breathChanged(c); },
   txdur(el) { const { c, s } = sessionOf(el.dataset.sid), k = el.dataset.k, v = parseFloat(el.value); s.txd = s.txd || {}; if (!(v > 0) || v === +s.dur[k]) delete s.txd[k]; else s.txd[k] = Math.min(60, v); touch(s); genTexts(c, s, idxOf(c, s), [k]); save(); render(); toast('Text auf ' + fmtMin(txDur(s, k)) + ' Min. (ca. ' + Math.round(txDur(s, k) * WPM[k]) + ' Wörter) angepasst.'); },
@@ -989,7 +1002,7 @@ function resetSession(c, s) {
   fillSession(c, s, idx, { motto: mottos[idx] || s.motto });
 }
 // ---- Status „Fertig“: Einzelplanung ist gesperrt, Änderungsversuch fragt nach ----
-const LOCKED_OK = new Set(['noop', 'ovFilter', 'tplOpen', 'selS', 'gotoS', 'gotoSA','prevS', 'nextS', 'tab', 'nav', 'tglb', 'bAll', 'exinfo', 'lock', 'frameView', 'fltTog', 'fltGeb', 'fltReset', 'preview', 'print', 'mail', 'eml', 'html', 'copy', 'pdf', 'rate']);
+const LOCKED_OK = new Set(['noop', 'ovFilter', 'tplOpen', 'vidRes', 'vidExport', 'plPlay', 'plClose', 'plToggle', 'plPrev', 'plNext', 'plRestart', 'selS', 'gotoS', 'gotoSA','prevS', 'nextS', 'tab', 'nav', 'tglb', 'bAll', 'exinfo', 'lock', 'frameView', 'fltTog', 'fltGeb', 'fltReset', 'preview', 'print', 'mail', 'eml', 'html', 'copy', 'pdf', 'rate']);
 function sidOfEl(el) {
   const m = (el.dataset.f || '').match(/^s:([^:]+):/);
   return m ? m[1] : (el.dataset.sid || el.dataset.dsid || el.dataset.id || (ui.pk && el.closest && el.closest('#pkpanel') ? ui.pk.sid : null));
@@ -1109,7 +1122,9 @@ function openPicker(btn, d) {
     return `<button class="pko cat-${p.c}${p.id === curId ? ' cur' : ''}" data-a="pkpick" data-id="${p.id}" ${bad ? 'disabled' : ''} data-q="${esc(norm(p.n + ' ' + (p.sa || '')))}"><span class="pkf">${figureSVG(p.pose)}${peakStar(p)}</span><div class="pkinfo"><div class="pkname"><b>${esc(p.n)}</b>${p.sa ? `<small class="sa">${esc(p.sa)}</small>` : ''}</div>${meta}<div class="pkch">${stRegChips(p)}</div>${warn.length ? `<div class="pkwarn">⚠ ${esc(warn.join(', '))}</div>` : ''}</div></button>`;
   }).join('');
   const panel = document.createElement('div'); panel.id = 'pkpanel';
-  panel.innerHTML = `<input type="search" id="pkq" placeholder="Übung suchen …" autocomplete="off">${filtered > 0 ? `<div class="muted pknote">${pool.length} passende Übungen · ${filtered} durch Vorfilter/Filter ausgeblendet</div>` : ''}<div class="pkgrid">${rows}</div>`;
+  const ab0 = abOf(s, d.b), defCat = ab0 === 'asana' ? 'stand' : ab0 === 'mobi' ? ({ sitz: 'mobi_sitz', liegen: 'boden', stand: 'mobi_stand' })[s.mobiMode || 'sitz'] : ab0 === 'shakti' ? 'shakti' : ab0 === 'ausgl' ? 'boden' : (catsOf(s, d.b)[0] || 'stand');
+  const newForm = `<div class="pknew"><button class="ghost sm" data-a="pkNewOpen" id="pkNewBtn">＋ Eigene Übung hinzufügen</button><div class="pknf" id="pkNewForm" hidden><div class="pkfig cat-${defCat}" id="pkNewFig">${figureSVG('ratlos')}</div><div class="pkfields"><input type="text" id="pknn" placeholder="Name der Übung" autocomplete="off"><select id="pknc" data-chg="pkNewCat">${Object.keys(CATS).map(k => `<option value="${k}"${k === defCat ? ' selected' : ''}>${esc(CATS[k])}</option>`).join('')}</select><small class="muted">Neue Übungen bekommen das Standardsymbol (ratloser Strichmensch mit Fragezeichen) in der Farbe der Kategorie und erscheinen auch im Übungskatalog.</small><div class="bar"><button class="primary sm" data-a="pkNewAdd">Übung anlegen und verwenden</button></div></div></div></div>`;
+  panel.innerHTML = `<input type="search" id="pkq" placeholder="Übung suchen …" autocomplete="off">${filtered > 0 ? `<div class="muted pknote">${pool.length} passende Übungen · ${filtered} durch Vorfilter/Filter ausgeblendet</div>` : ''}<div class="pkgrid">${rows}</div>${newForm}`;
   document.body.appendChild(panel);
   const r = btn.getBoundingClientRect(), w = Math.min(640, window.innerWidth - 16);
   panel.style.width = w + 'px'; panel.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + 'px';
@@ -1194,6 +1209,17 @@ A.bmOff = function (d) { const { c, s } = sessionOf(d.id), k = d.b; s.bm[k].on =
 Object.assign(A, SINGLE_ACTIONS);
 Object.assign(A, MANTRA_ACTIONS);
 Object.assign(A, TXVORL_ACTIONS);
+Object.assign(A, PLAYER_ACTIONS);
+Object.assign(A, VIDEO_ACTIONS);
+Object.assign(A, {
+  pkNewOpen() { const f = document.getElementById('pkNewForm'); if (!f) return; f.hidden = !f.hidden; if (!f.hidden) { const i = document.getElementById('pknn'); if (i) i.focus(); f.scrollIntoView({ block: 'nearest' }); } },
+  pkNewAdd() {
+    const p = ui.pk, nm = (document.getElementById('pknn') || {}).value || '', cat = (document.getElementById('pknc') || {}).value || 'stand'; if (!p) return;
+    if (!nm.trim()) { toast('Bitte einen Namen eingeben.'); return; }
+    const e = { id: 'c_' + uid(), n: nm.trim(), c: cat, lv: 1, m: 2, pose: 'ratlos', t: [], x: [], e: '', h: '', s: 1, o: 1000 + state.customEx.length, custom: true };
+    state.customEx.push(e); A.pkpick({ id: e.id }); toast('Eigene Übung „' + e.n + '“ angelegt und eingefügt.');
+  }
+});
 Object.assign(A, {
   sbOn(d) { const el = document.createElement('input'); el.type = 'checkbox'; el.dataset.f = 's:' + d.id + ':bm.' + d.b + '.on'; el.dataset.sid = d.id; el.dataset.b = d.b; el.checked = d.v === '1'; CH.bmon(el); },
   sbWahr(d) {
