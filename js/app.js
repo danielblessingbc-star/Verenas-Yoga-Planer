@@ -11,7 +11,26 @@ function loadState() {
 let state = loadState(), saveT;
 function save() {
   clearTimeout(saveT);
-  saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { toast('Speichern im Browser nicht möglich – bitte Backup herunterladen.'); } }, 150);
+  saveT = setTimeout(() => {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(state));
+      // Google Sheets Backup
+      if (typeof saveToGoogleSheets === 'function' && state.courses && state.courses.length > 0) {
+        state.courses.forEach(course => {
+          if (course.sessions) {
+            course.sessions.forEach(session => {
+              saveToGoogleSheets(
+                course.name + ' - ' + (session.name || 'Sitzung'),
+                course.level || 'gemischt',
+                course.motto?.preset || 'Allgemein',
+                JSON.stringify({ course: course.name, session: session.name, total: session.T })
+              );
+            });
+          }
+        });
+      }
+    } catch (e) { toast('Speichern im Browser nicht möglich – bitte Backup herunterladen.'); }
+  }, 150);
 }
 const ui = {
   view: 'courses', courseId: null, tab: 'plan', open: new Set(['set', 'ovw']), sel: null, bopen: new Set(),
@@ -1246,6 +1265,21 @@ Object.assign(A, { tglw: CH.tglw, pkbr: CH.pkbr, pkbrpick: CH.pkbrpick });
 normalizeState();
 document.head.insertAdjacentHTML('beforeend', `<style id="docCss">${DOC_CSS}</style>`);
 render();
+
+// Google Sheets Auto-Load beim Start
+if (typeof loadFromGoogleSheets === 'function') {
+  setTimeout(async () => {
+    try {
+      const sheetData = await loadFromGoogleSheets();
+      if (sheetData && Array.isArray(sheetData) && sheetData.length > 1) {
+        console.log('✅ Google Sheets Daten geladen');
+        toast('Daten von Google Sheets geladen', 2000);
+      }
+    } catch (e) {
+      console.log('ℹ Google Sheets nicht verfügbar oder kein Backup');
+    }
+  }, 500);
+}
 
 
 
