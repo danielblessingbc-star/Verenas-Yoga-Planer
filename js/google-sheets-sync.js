@@ -1,4 +1,4 @@
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwhKN-Bhf6JT6zX1QJ-kl5cenAIcJoVoPD4wuC5J-q2A_GSSvRdXs5kIW97SrrDo2MeJw/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz-J7vzZUZFMY7u2pp-z2lE1Jf8nL8f7_8bdttp-KYrM4QSLnGNd90dFrBKUzorygfDJg/exec';
 
 async function saveToGoogleSheets(uebung, stufe, kategorie, notizen) {
   try {
