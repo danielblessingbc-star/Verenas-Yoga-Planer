@@ -96,14 +96,9 @@ function seqWrapRows(s, key, items, rows) {
       + `<button class="ghost sm" data-a="seqGrpMv" data-id="${s.id}" data-b="${key}" data-bid="${u.seq}" data-d="1" ${k === units.length - 1 ? 'disabled' : ''} title="Ganze Sequenz nach unten">▼</button></div>${html}</div>`;
   }).join('');
 }
-// Kachelreihen (zugeklappter Block, Übersicht): zusammengehörige Sequenz-Übungen stehen in einer farbigen Kapsel mit Sequenz-Symbol (ohne Text)
+// Kachelreihen (zugeklappter Block, Übersicht, Stundenübersicht): Sequenz-Kacheln sehen aus wie normale Asanas, nur der Rahmen ist etwas dicker (Klasse sq)
 function seqTiles(items, fn) {
-  return seqUnits(items).map(u => {
-    const html = u.its.map((it, n) => fn(it, u.from + n)).join('');
-    if (!u.seq) return html;
-    const f = u.its[0], t = SEQ_TYPES[f.seqType] ? f.seqType : 'asana';
-    return `<span class="mtg t-${t}" title="Sequenz „${esc(f.seqName || '')}“ (${SEQ_TYPES[t].n}) · ${sqCount(u.its.length)} · gehören zusammen">${hicon('sequenz')}${html}</span>`;
-  }).join('');
+  return items.map((it, j) => { const h = fn(it, j); return it.seq && h ? h.replace('class="mt ', 'class="mt sq ') : h; }).join('');
 }
 // Alle Übungen eines Sequenzblocks aus der Stunde entfernen (egal in welchem Stundenblock sie stehen)
 const seqPurge = (s, bid) => Object.keys(s.blk || {}).forEach(k => { s.blk[k] = (s.blk[k] || []).filter(i => i.seq !== bid); });
