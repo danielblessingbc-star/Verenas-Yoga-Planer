@@ -1,8 +1,22 @@
 /* KI-generierte Stunde: Seite unter „Stunden“. Vorgaben wie in der Einzelstundenplanung (Name, Motto, Datum, Gruppe, Einschränkungen, Dauer)
    plus Freitext. Die KI wählt Motto, Stil, Körperregion, Atem, Mantra, Mobilisation, Kraft und Wunschübungen; die Übungen selbst kommen
    immer aus dem Katalog (regelbasiert, mit Einschränkungen). Danach schreibt die KI die Texte der Stunde. */
-const AIGEN_EXAMPLE = 'Eine ruhige Abendstunde für meine Seniorengruppe zum Thema Loslassen. Schwerpunkt auf Hüfte und unterem Rücken, überwiegend im Sitzen und Liegen, keine Kraftübungen. Zum Anfang ein kurzes Ankommen mit dem Atem, am Ende eine ausführliche Tiefenentspannung. Wenn möglich die Taube in der sanften Variante und die Kindhaltung einbauen. Ein Mantra bitte weglassen. Die Texte sollen sehr ruhig, einfach und warm klingen.';
+const AIGEN_EXAMPLES = {
+  anf: 'Eine sanfte Einsteigerstunde für Menschen ohne Yoga-Erfahrung zum Thema Ankommen und den eigenen Körper kennenlernen. Einfache Haltungen im Stehen und Sitzen und viel Mobilisation, jede Übung langsam und klar, mit ausreichend Pausen. Keine Kraftübungen und kein Mantra. Die Kindhaltung und den Berg (Tadasana) bitte einbauen. Am Ende eine kurze, einfache Entspannung. Die Texte sollen ermutigend sein und ohne Fachbegriffe auskommen.',
+  mittel: 'Eine fließende Stunde für Teilnehmende mit etwas Erfahrung zum Thema Kraft und Stabilität. Schwerpunkt auf Beinen, Rumpf und Balance, gern mit Krieger II und dem Baum. Zwei Kraftübungen, zum Ankommen ein kurzes Mantra. Am Ende ein Cool down für Hüfte und Rücken und eine ausführliche Endentspannung. Die Texte sollen klar und motivierend sein.',
+  fort: 'Eine fordernde Stunde für Fortgeschrittene zum Thema Hingabe und Intensität. Längere Haltezeiten und anspruchsvolle Übungen im Stand und in der Balance, als Höhepunkt eine Peak Pose, zum Beispiel die Taube in der tieferen Variante. Drei Kraftübungen, ein dynamischer Anteil, danach ausführliche Gegenhaltungen und eine lange Tiefenentspannung. Atem und Mantra bewusst einbinden. Die Texte sollen präzise sein und dürfen Fachbegriffe verwenden.',
+  gemischt: 'Eine Stunde für eine gemischte Gruppe aus Anfängern und Geübten zum Thema Verbundenheit. Die Übungen sollen sich in einer leichteren und einer fordernderen Variante üben lassen. Ruhiger Einstieg, Schwerpunkt auf Hüfte und Rücken, in der Mitte etwas Balance. Eine Kraftübung, das Mantra bitte weglassen. Am Ende eine Tiefenentspannung. Die Texte sollen einladend sein und beide Varianten nennen.',
+  sen: 'Eine ruhige Abendstunde für meine Seniorengruppe zum Thema Loslassen. Schwerpunkt auf Hüfte und unterem Rücken, überwiegend im Sitzen und Liegen, keine Kraftübungen. Zum Anfang ein kurzes Ankommen mit dem Atem, am Ende eine ausführliche Tiefenentspannung. Wenn möglich die Taube in der sanften Variante und die Kindhaltung einbauen. Ein Mantra bitte weglassen. Die Texte sollen sehr ruhig, einfach und warm klingen.'
+};
+const AIGEN_EXAMPLE = AIGEN_EXAMPLES.sen;
 const aiGenDefault = () => ({ name: '', motto: '', date: todayIso(), level: 'sen', geb: [], total: 75, prompt: '' });
+
+// Beispiel-Prompt je Stufe: Auswahl der Stufe (Standard: gewählte Gruppe), Übernehmen setzt Text und Gruppe
+function aiExBox(pre, EX, g) {
+  const lv = EX[ui[pre + 'Ex']] ? ui[pre + 'Ex'] : (EX[g.level] ? g.level : 'sen');
+  return `<div class="aigex"><b>Beispiel für einen Prompt</b><div class="qd">${Object.keys(LEVELS).filter(k => EX[k]).map(k => `<button class="qdb${k === lv ? ' on' : ''}" data-a="${pre}ExLvl" data-v="${k}">${esc(LEVELS[k])}</button>`).join('')}</div><p>${esc(EX[lv])}</p><button class="ghost sm" data-a="${pre}Example">Beispiel übernehmen (setzt die Gruppe auf „${esc(LEVELS[lv])}“)</button></div>`;
+}
+const aiExTake = (pre, EX, g) => { const lv = EX[ui[pre + 'Ex']] ? ui[pre + 'Ex'] : (EX[g.level] ? g.level : 'sen'); g.prompt = EX[lv]; g.level = lv; ui[pre + 'Ex'] = null; render(); };
 
 function viewAiGen() {
   const g = ui.aiGen = ui.aiGen || aiGenDefault(), busy = !!ui.aiGenBusy;
@@ -23,7 +37,7 @@ ${fld('Einschränkungen / Gebrechen berücksichtigen', `<div class="fchips">${ge
 <section class="panel span2"><h2 class="ph">${pn(4, 'Dauer', 'Gesamtdauer der Stunde. Die Aufteilung auf die Bausteine ergibt sich daraus und lässt sich danach in den Vorgaben ändern.')}</h2><div class="atin">${inp('u:aiGen.total', 'number', g.total, 'min="20" max="180" step="1"')}<span>Minuten</span></div><div class="qd">${[60, 75, 90, 120].map(m => `<button class="qdb${+g.total === m ? ' on' : ''}" data-a="aiGenTotal" data-v="${m}">${m}</button>`).join('')}</div></section>
 <section class="panel span2"><h2 class="ph">${pn(5, 'Beschreibung der Stunde', 'Freitext für die KI: Thema, Stimmung, Schwerpunkt, Wunschübungen, Atem, Mantra, Tonfall der Texte.')}</h2>
 <div class="fld wide"><label>Dein Wunsch an die KI</label><textarea data-f="u:aiGen.prompt" rows="8" placeholder="Beschreibe die Stunde, z. B. Thema, Schwerpunkt, Stimmung, besondere Wünsche …">${esc(g.prompt)}</textarea></div>
-<div class="aigex"><b>Beispiel für einen Prompt</b><p>${esc(AIGEN_EXAMPLE)}</p><button class="ghost sm" data-a="aiGenExample">Beispiel in das Textfeld übernehmen</button></div>
+${aiExBox('aiGen', AIGEN_EXAMPLES, g)}
 <p class="muted">Die KI steuert: Motto und Kernsatz, Fokus, Yogastil, Körperregion, Atemteil, Mantra, Art der Mobilisation, Anzahl Kraftübungen, Wunschübungen und die Texte. Wunschübungen werden nur eingebaut, wenn sie im Katalog stehen und zu den Einschränkungen passen. Gesendet werden nur dein Text und die Vorgaben, keine Teilnehmerdaten.</p>
 </section>
 </div>
@@ -74,7 +88,8 @@ function aiGenApply(c, p) {
 const AIGEN_ACTIONS = {
   aiGenGeb(d) { const g = ui.aiGen, i = g.geb.indexOf(d.k); i < 0 ? g.geb.push(d.k) : g.geb.splice(i, 1); render(); },
   aiGenTotal(d) { ui.aiGen.total = +d.v; render(); },
-  aiGenExample() { ui.aiGen.prompt = AIGEN_EXAMPLE; render(); },
+  aiGenExample() { aiExTake('aiGen', AIGEN_EXAMPLES, ui.aiGen); },
+  aiGenExLvl(d) { ui.aiGenEx = d.v; render(); },
   async aiGenCreate() {
     const g = ui.aiGen; if (!g || ui.aiGenBusy) return;
     if (!(g.prompt || '').trim()) { toast('Bitte beschreibe die Stunde im Textfeld.'); return; }
@@ -104,7 +119,14 @@ const AIGEN_ACTIONS = {
 
 
 // ---------- Ganzes Programm per KI ----------
-const AIPROG_EXAMPLE = 'Ein Herbstprogramm für meine Seniorengruppe über 8 Wochen unter dem Übermotto „Ankommen und Loslassen“. Die Stunden sollen sanft beginnen und sich langsam steigern: am Anfang Atem und Mobilisation, in der Mitte ein Schwerpunkt auf Hüfte und Rücken, gegen Ende Gleichgewicht und Standfestigkeit. In jeder Stunde eine ausführliche Tiefenentspannung am Schluss, ein Mantra nur in jeder zweiten Stunde. Keine Kraftübungen. In Stunde 4 bitte die Taube in der sanften Variante, in Stunde 7 den Baum einbauen. Die Texte sollen ruhig, einfach und warm klingen.';
+const AIPROG_EXAMPLES = {
+  anf: 'Ein Einsteigerprogramm über 8 Wochen für Menschen ohne Yoga-Erfahrung unter dem Übermotto „Yoga entdecken“. Jede Stunde lernt die Gruppe ein bis zwei neue Grundhaltungen kennen, die in den Folgestunden wiederkehren und sich langsam steigern. Anfangs nur Atem, Mobilisation und einfache Haltungen im Stehen, ab der Mitte etwas Balance. Keine Kraftübungen, kein Mantra. Am Ende jeder Stunde eine kurze Entspannung. In Stunde 3 bitte die Kindhaltung, in Stunde 6 den Baum einbauen. Die Texte sollen ermutigend und ohne Fachbegriffe sein.',
+  mittel: 'Ein Programm über 10 Wochen für Teilnehmende mit etwas Erfahrung unter dem Übermotto „Kraft und Stabilität“. Die Stunden bauen aufeinander auf: zuerst Stand und Beine, dann Rumpf und Balance, zum Schluss kleine Flows. Zwei Kraftübungen je Stunde, ein Mantra nur in jeder zweiten Stunde. Immer ein Cool down und eine ausführliche Endentspannung. In Stunde 5 bitte Krieger II, in Stunde 9 den Baum als Höhepunkt. Die Texte sollen klar und motivierend sein.',
+  fort: 'Ein fordernder Programmzyklus über 8 Wochen für Fortgeschrittene unter dem Übermotto „Hingabe und Intensität“. Von Stunde zu Stunde steigen Haltezeiten und Anspruch, jede Stunde hat eine Peak Pose, in den letzten drei Stunden sind es die anspruchsvollsten. Drei Kraftübungen, ein dynamischer Anteil, ausführliche Gegenhaltungen und eine lange Tiefenentspannung. Atem und Mantra in jeder Stunde. In Stunde 4 bitte die Taube in der tieferen Variante. Die Texte sollen präzise sein und dürfen Fachbegriffe nutzen.',
+  gemischt: 'Ein Programm über 8 Wochen für eine gemischte Gruppe aus Anfängern und Geübten unter dem Übermotto „Gemeinsam in Bewegung“. Alle Übungen sollen in einer leichteren und einer fordernderen Variante möglich sein. Die Stunden wechseln zwischen ruhigen Stunden mit Hüfte und Rücken und aktiveren Stunden mit Stand und Balance. Eine Kraftübung je Stunde, das Mantra nur in jeder dritten Stunde. Immer eine Tiefenentspannung am Schluss. Die Texte sollen einladend sein und beide Varianten nennen.',
+  sen: 'Ein Herbstprogramm für meine Seniorengruppe über 8 Wochen unter dem Übermotto „Ankommen und Loslassen“. Die Stunden sollen sanft beginnen und sich langsam steigern: am Anfang Atem und Mobilisation, in der Mitte ein Schwerpunkt auf Hüfte und Rücken, gegen Ende Gleichgewicht und Standfestigkeit. In jeder Stunde eine ausführliche Tiefenentspannung am Schluss, ein Mantra nur in jeder zweiten Stunde. Keine Kraftübungen. In Stunde 4 bitte die Taube in der sanften Variante, in Stunde 7 den Baum einbauen. Die Texte sollen ruhig, einfach und warm klingen.'
+};
+const AIPROG_EXAMPLE = AIPROG_EXAMPLES.sen;
 const aiProgDefault = () => ({ name: '', motto: '', count: 8, start: todayIso(), rhythm: 'weekly', days: [], pauses: '', level: 'sen', geb: [], total: 75, texts: false, prompt: '' });
 function viewAiProg() {
   const g = ui.aiProg = ui.aiProg || aiProgDefault(), busy = !!ui.aiProgBusy;
@@ -132,7 +154,7 @@ ${fld('Einschränkungen / Gebrechen berücksichtigen', `<div class="fchips">${ge
 <section class="panel span2"><h2 class="ph">${pn(4, 'Dauer', 'Gesamtdauer jeder Stunde. Die Aufteilung auf die Bausteine ergibt sich daraus und lässt sich danach in der Rahmenplanung ändern.')}</h2><div class="atin">${inp('u:aiProg.total', 'number', g.total, 'min="20" max="180" step="1"')}<span>Minuten</span></div><div class="qd">${[60, 75, 90, 120].map(m => `<button class="qdb${+g.total === m ? ' on' : ''}" data-a="aiProgTotal" data-v="${m}">${m}</button>`).join('')}</div></section>
 <section class="panel span2"><h2 class="ph">${pn(5, 'Beschreibung des Programms', 'Freitext für die KI: Thema, Verlauf über die Stunden, Schwerpunkte, Wunschübungen je Stunde, Atem, Mantra, Tonfall.')}</h2>
 <div class="fld wide"><label>Dein Wunsch an die KI</label><textarea data-f="u:aiProg.prompt" rows="9" placeholder="Beschreibe das Programm, z. B. Thema, Verlauf, Schwerpunkte, besondere Wünsche …">${esc(g.prompt)}</textarea></div>
-<div class="aigex"><b>Beispiel für einen Prompt</b><p>${esc(AIPROG_EXAMPLE)}</p><button class="ghost sm" data-a="aiProgExample">Beispiel in das Textfeld übernehmen</button></div>
+${aiExBox('aiProg', AIPROG_EXAMPLES, g)}
 <label class="chk"><input type="checkbox" data-f="u:aiProg.texts" ${g.texts ? 'checked' : ''}> Texte aller Stunden per KI schreiben lassen (${n} weitere KI-Aufrufe, dauert länger und kostet mehr; sonst entstehen die Texte aus den eingebauten Bausteinen)</label>
 <p class="muted">Die KI steuert: Übermotto, Einzelmotto mit Kernsatz und Fokus je Stunde, Yogastil, Körperregion, Atemteil, Mantra, Mobilisation, Anzahl Kraftübungen und Wunschübungen je Stunde. Wunschübungen werden nur eingebaut, wenn sie im Katalog stehen und zu den Einschränkungen passen. Gesendet werden nur dein Text und die Vorgaben, keine Teilnehmerdaten.</p>
 </section>
@@ -156,7 +178,8 @@ Object.assign(AIGEN_ACTIONS, {
   aiProgGeb(d) { const g = ui.aiProg, i = g.geb.indexOf(d.k); i < 0 ? g.geb.push(d.k) : g.geb.splice(i, 1); render(); },
   aiProgDay(d) { const g = ui.aiProg, k = +d.k, i = g.days.indexOf(k); i < 0 ? g.days.push(k) : g.days.splice(i, 1); render(); },
   aiProgTotal(d) { ui.aiProg.total = +d.v; render(); },
-  aiProgExample() { ui.aiProg.prompt = AIPROG_EXAMPLE; render(); },
+  aiProgExample() { aiExTake('aiProg', AIPROG_EXAMPLES, ui.aiProg); },
+  aiProgExLvl(d) { ui.aiProgEx = d.v; render(); },
   async aiProgCreate() {
     const g = ui.aiProg; if (!g || ui.aiProgBusy) return;
     if (!(g.prompt || '').trim()) { toast('Bitte beschreibe das Programm im Textfeld.'); return; }
