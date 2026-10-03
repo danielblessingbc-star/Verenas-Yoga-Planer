@@ -46,6 +46,7 @@ const KAT_GROUPS = ['pos', 'dir', 'wirk', 'en', 'chakra', 'ziel', 'reg', 'mus', 
     tadasana: { pos: ['stehen'] }, adho_mukha: { pos: ['umkehr'], dir: ['vor'] },
     gewichtsverlagerung: { pos: ['stehen', 'balance'] }
   };
+  if (typeof FIG_KAT !== 'undefined') Object.assign(OVERRIDE, FIG_KAT); // Haltung/Richtung der ergänzenden Übungen (erweiterung.js)
   const inRe = (re, id) => re.test(id);
   const stage1 = e => {
     const p = e.pose, t = e.t || [], id = e.id, c = e.c;

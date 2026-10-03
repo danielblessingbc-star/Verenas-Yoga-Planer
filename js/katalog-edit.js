@@ -5,6 +5,15 @@ const EX_ORIG = new Map(EX.map(e => [e.id, JSON.parse(JSON.stringify(e))]));
 const BR_ORIG = new Map(BR.map(b => [b.id, JSON.parse(JSON.stringify(b))]));
 const POSE_KEYS = Object.keys(POSES).filter(k => k !== 'ratlos').concat('ratlos');
 const ICON_KEYS = Object.keys(ICONS);
+// Auswahl der Strichmännchen: Gruppenfilter + Name als Tooltip (die weiteren Figuren stehen in figuren.js)
+const POSE_FILTERS = [['', 'Alle'], ['own', 'Grundfiguren']].concat(Object.keys(FIG_GROUPS).map(g => [g, FIG_GROUPS[g]]));
+const poseName = k => { const i = FIG_INFO[k]; return i ? i[0] + (i[1] ? ' – ' + i[1] : '') : k; };
+function posePickerHTML(sel, act) {
+  const f = (typeof ui !== 'undefined' && ui.poseGrp) || '';
+  const keys = POSE_KEYS.filter(k => !f || String(FIG_INFO[k] ? FIG_INFO[k][2] : 'own') === f);
+  return `<div class="chiprow posefilter">${POSE_FILTERS.map(([g, t]) => `<button type="button" class="chipsel${f === g ? ' on' : ''}" data-a="poseGrp" data-g="${g}">${esc(t)}</button>`).join('')}</div>` +
+    `<div class="xpick">${keys.map(k => `<button type="button" class="xp${sel === k ? ' on' : ''}" data-a="${act}" data-v="${esc(k)}" title="${esc(poseName(k))}">${figureSVG(k)}</button>`).join('')}</div>`;
+}
 const VOCAB_COLORS = ['#c9a227', '#5b8fb9', '#9c6ba0', '#6aa86b', '#d0805a', '#4aa3a2', '#b86b77', '#8a8f3c'];
 const clone_ = o => JSON.parse(JSON.stringify(o));
 let vocabAdded = [];

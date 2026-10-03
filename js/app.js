@@ -596,7 +596,7 @@ function chipRow(type, group, list, selected, field) {
 function exEditForm(o) {
   const d = ui.exDraft, br = exIsBR(o.id);
   const cats = br ? { atem: 'Atemübung', wahr: 'Wahrnehmungsübung' } : CATS;
-  const sym = br ? ICON_KEYS.map(k => `<button type="button" class="xp${d.ic === k ? ' on' : ''}" data-a="exPickSym" data-v="${esc(k)}" title="${esc(k)}">${iconSVG(k)}</button>`) : POSE_KEYS.map(k => `<button type="button" class="xp${d.pose === k ? ' on' : ''}" data-a="exPickSym" data-v="${esc(k)}" title="${esc(k)}">${figureSVG(k)}</button>`);
+  const sym = br ? ICON_KEYS.map(k => `<button type="button" class="xp${d.ic === k ? ' on' : ''}" data-a="exPickSym" data-v="${esc(k)}" title="${esc(k)}">${iconSVG(k)}</button>`) : null;
   const kats = br ? '' : `<div class="kats exkats"><b>Weitere Kategorien</b> <small class="muted">🔒 = manuell gesetzt, bleibt wie eingestellt · ohne Schloss = wird aus Haltung, Art und Schlagworten berechnet</small>${KAT_GROUPS.map(g => {
     const cur_ = katEff(o, g), man = katManual(o, g), arr = Array.isArray(cur_) ? cur_ : (cur_ ? [cur_] : []);
     return `<div class="kl"><span class="kt${man ? ' lock' : ''}">${man ? '🔒 ' : ''}${esc(KATTITLE[g])}</span>${man ? `<button type="button" class="ghost sm" data-a="grpAuto" data-g="${g}" title="Manuellen Wert verwerfen und neu berechnen">↻ Neu berechnen</button>` : ''}${chipRow('kat', g, KAT[g], arr, g)}</div>`;
@@ -607,7 +607,7 @@ ${fld('Art', sel('u:exDraft.c', Object.keys(cats).map(k => [k, cats[k]]), d.c))}
 ${fld('Ab Stufe', sel('u:exDraft.lv', [[1, 'Anfänger'], [2, 'Mittel'], [3, 'Fortgeschritten']], d.lv, 'data-num="1"'))}${fld('Dauer (Min.)', inp('u:exDraft.m', 'number', d.m, 'min="0.5" max="30" step="0.5"'))}
 <div class="fld"><label>&nbsp;</label><label class="chk"><input type="checkbox" data-f="u:exDraft.s" ${d.s ? 'checked' : ''}> für Senioren geeignet</label></div>
 <div class="fld wide"><label>Beschreibung</label><textarea data-f="u:exDraft.d" rows="3">${esc(d.d)}</textarea></div></div>
-<div class="fld"><label>Symbol</label><div class="xpick">${sym.join('')}</div></div>
+<div class="fld"><label>Symbol</label>${sym ? `<div class="xpick">${sym.join('')}</div>` : posePickerHTML(d.pose, 'exPickSym')}</div>
 <div class="fld"><label>Yogastile</label>${chipRow('stile', '', STILE, d.st, 'st')}</div>
 <div class="fld"><label>Vorsicht bei</label>${chipRow('geb', '', GEBRECHEN, d.x, 'x')}</div>
 ${br ? '' : `<div class="fld"><label>Neue Art anlegen</label><small class="muted">Übungen mit eigener Art erscheinen im Katalog, werden aber nicht automatisch für Programme vorgeschlagen (nur manuell wählbar).</small>${chipRow('cats', '', {}, [], 'c')}</div>`}
@@ -666,7 +666,7 @@ ${fld('Yogastil', sel('u:cat.st', [['', 'Alle']].concat(Object.keys(STILE).map(k
 <details class="panel" data-id="newex" ${ui.open.has('newex') ? 'open' : ''}><summary>＋ Eigene Übung hinzufügen</summary><div class="grid">
 ${fld('Name', inp('u:newEx.n', 'text', n.n))}${fld('Kategorie', sel('u:newEx.c', Object.keys(CATS).map(k => [k, CATS[k]]), n.c))}
 ${fld('Ab Stufe', sel('u:newEx.lv', [[1, 'Anfänger'], [2, 'Mittel'], [3, 'Fortgeschritten']], n.lv, 'data-num="1"'))}${fld('Dauer (Min.)', inp('u:newEx.m', 'number', n.m, 'min="1" max="10" step="0.5"'))}
-<div class="fld wide"><label>Symbol (Strichmännchen)</label><div class="xpick">${POSE_KEYS.map(k => `<button type="button" class="xp${n.pose === k ? ' on' : ''}" data-a="newPose" data-v="${esc(k)}" title="${esc(k)}">${figureSVG(k)}</button>`).join('')}</div></div>
+<div class="fld wide"><label>Symbol (Strichmännchen)</label>${posePickerHTML(n.pose, 'newPose')}</div>
 ${fld('Schlagworte (z. B. kraft balance herz)', inp('u:newEx.tags', 'text', n.tags))}
 ${fld('Leichtere Alternative', sel('u:newEx.e', [['', '–']].concat(exAll().map(e => [e.id, e.n])), n.e))}
 <div class="fld wide"><label>Vorsicht bei</label><div class="checks">${Object.keys(GEBRECHEN).map(k => `<label class="chk"><input type="checkbox" data-a="toggleNewX" data-k="${k}" ${n.x.includes(k) ? 'checked' : ''}> ${esc(GEBRECHEN[k])}</label>`).join('')}</div></div></div>
@@ -1343,6 +1343,7 @@ Object.assign(A, {
   exEditResetBtn(d, el) { if (confirmTwice(el, 'exr' + d.id, 'Auf Original zurücksetzen?', '⚠ Wirklich zurücksetzen?')) { exEditReset(d.id); if (ui.exEdit === d.id) ui.exEdit = null; render(); toast('Übung auf Original zurückgesetzt.'); } },
   exPickSym(d) { if (exIsBR(ui.exEdit)) ui.exDraft.ic = d.v; else ui.exDraft.pose = d.v; render(); },
   newPose(d) { ui.newEx.pose = d.v; render(); },
+  poseGrp(d) { ui.poseGrp = d.g; render(); },
   dtog(d) {
     const g = d.g, o = exById(ui.exEdit), dr = ui.exDraft;
     if (g === 'st' || g === 'x') { const a = dr[g], i = a.indexOf(d.v); i < 0 ? a.push(d.v) : a.splice(i, 1); }

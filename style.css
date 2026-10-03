@@ -718,3 +718,4 @@ body.plon{overflow:hidden}
 .chipnew{display:inline-flex;gap:4px;align-items:center}.chipnew input{width:150px;flex:none;padding:3px 9px;font-size:13px}
 .exkats .kl{margin:8px 0}.exkats .kt.lock{color:var(--accent-deep);font-weight:600}
 .chip.edtd{background:var(--accent-soft);color:var(--accent-deep)}
+.posefilter{margin-bottom:6px}
