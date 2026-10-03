@@ -238,7 +238,7 @@ function renderStundenUeb(c, only) {
       const ty = bty(s, k);
       if (ty === 'atem') { [s.atem && s.atem.a, s.atem && s.atem.w].filter(Boolean).forEach(id => { const e = exById(id); if (e) tiles.push(mt(col(k), figureSVG(e.pose), e.n)); }); }
       else if (ty === 'mantra') { const m = s.mantra && typeof manById === 'function' && manById(s.mantra.id); if (m) tiles.push(mt(col(k), manIconSVG(m.id), m.n.replace(/\s*\(.*$/, ''))); }
-      else if (ty === 'ex') (s.blk[k] || []).forEach((it, j, arr) => { const e = exById(it.id); if (e) tiles.push(mt(col(k), figureSVG(e.pose) + handsMark(it, e), e.n, e.peak, !!it.seq, !!it.opt)); });
+      else if (ty === 'ex') (s.blk[k] || []).forEach((it, j, arr) => { const e = exById(it.id); if (e) { const sb = e.txt && !isTxb(it) ? sbInfo(it, e) : null; tiles.push(mt(col(k), sb ? sb.fig : figureSVG(e.pose) + handsMark(it, e), sb ? sb.title : e.n, e.peak, !!it.seq, !!it.opt)); } });
     });
     if (only) { // eine Stunde füllt die Seite: Kachelgröße nach Anzahl
       const W = 267, n = Math.max(tiles.length, 1), fsOf = cell => Math.max(7.5, Math.min(11, cell * 0.36));
@@ -257,8 +257,8 @@ function renderStundenUeb(c, only) {
 function renderPrax(c, s, i) {
   const ks = order(s).filter(k => bon(s, k));
   const minOf = k => bty(s, k) === 'ex' ? sumMin(s.blk[k] || []) : (+s.dur[k] || 0);
-  const names = items => (items || []).filter(it => exById(it.id)).map(it => { const e = exById(it.id); return esc(e.n) + (e.peak ? ' ★' : '') + (it.opt ? ' (optional)' : ''); }).join(', ');
-  const fig = it => { const e = exById(it.id); return e ? `<span class="pt${e.c === 'kraft' ? ' kr' : ''}${it.opt ? ' opt' : ''}"><span class="fg">${figureSVG(e.pose)}${handsMark(it, e)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span class="nm">${esc(e.n)}</span></span>` : ''; };
+  const names = items => (items || []).filter(it => exById(it.id)).map(it => { const e = exById(it.id); return esc(e.txt && !isTxb(it) ? sbInfo(it, e).title : e.n) + (e.peak ? ' ★' : '') + (it.opt ? ' (optional)' : ''); }).join(', ');
+  const fig = it => { const e = exById(it.id), sb = e && e.txt && !isTxb(it) ? sbInfo(it, e) : null; return e ? `<span class="pt${e.c === 'kraft' ? ' kr' : ''}${it.opt ? ' opt' : ''}"><span class="fg">${sb ? sb.fig : figureSVG(e.pose) + handsMark(it, e)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span class="nm">${esc(sb ? sb.title : e.n)}</span></span>` : ''; };
   const n = ks.reduce((a, k) => a + (bty(s, k) === 'ex' && ['asana', 'ausgl'].includes(abOf(s, k)) ? (s.blk[k] || []).length : 0), 0);
   const per = n > 64 ? 8 : n > 48 ? 7 : n > 34 ? 6 : 5, figMm = n > 64 ? 8.5 : n > 48 ? 11 : n > 34 ? 14 : 17;
   const row = (min, left, right, cls) => `<tr class="${cls || ''}"><td class="pm">${min != null ? esc(fmtMin(min)) + ' Min.' : ''}</td><td class="pl">${left}</td><td class="pr2">${right}</td></tr>`;
