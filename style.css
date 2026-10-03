@@ -719,3 +719,32 @@ body.plon{overflow:hidden}
 .exkats .kl{margin:8px 0}.exkats .kt.lock{color:var(--accent-deep);font-weight:600}
 .chip.edtd{background:var(--accent-soft);color:var(--accent-deep)}
 .posefilter{margin-bottom:6px}
+
+/* ---- Sequenzen ---- */
+.seqlist{margin:10px 0}
+.seqrow{display:flex;align-items:center;gap:10px;padding:6px;border-bottom:1px dashed var(--line);flex-wrap:wrap}
+.seqrow .xtile{width:72px;height:72px;border-radius:15px}.seqrow .xtile .fig{width:58px;height:58px}.seqrow .xtile.empty .plus{font-size:28px}
+.seqno{flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent-deep);font-weight:700;font-size:13px;display:inline-flex;align-items:center;justify-content:center}
+.seqnm{flex:1;min-width:160px;display:flex;flex-direction:column;line-height:1.3}
+.seqrow .am{display:flex;align-items:center;gap:5px}.seqrow .am input{width:70px}
+.seqq{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0}
+.seqb{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0;border-top:1px dashed var(--line)}
+.seqb select{min-width:200px}.seqsum{color:var(--muted);font-size:13px}
+.chip.seqc{background:color-mix(in srgb,var(--accent) 24%,var(--card));margin-left:6px}
+.sqsteps{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
+.sqstep{position:relative;width:112px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px}
+.sqstep .seqno{position:absolute;top:-6px;left:0;z-index:1}
+.sqstep .ktile .fig{width:80px;height:80px}.sqstep b{font-size:13px;line-height:1.2}.sqstep .sa{font-size:11px}
+.sqcat h3{margin:0}
+.seqq .seg{display:inline-flex;width:auto}.seqq .sgb.sgoff{margin-left:0}
+
+/* ---- Sequenzarten (Mobilisation / Asana / Cooldown) und zusammengehörige Sequenz-Gruppen ---- */
+.t-mobilisation{--sq:#c8a25e}.t-asana{--sq:#4f8a6e}.t-cooldown{--sq:#a2688c}
+.chip.seqt{background:color-mix(in srgb,var(--sq) 22%,var(--card));border:1px solid color-mix(in srgb,var(--sq) 55%,var(--card));color:var(--ink)}
+.seqgrp{margin:8px 0;border:2px solid var(--sq);border-radius:14px;background:color-mix(in srgb,var(--sq) 7%,var(--card));overflow:hidden}
+.seqgh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:7px 12px;background:color-mix(in srgb,var(--sq) 20%,var(--card));border-bottom:1px solid color-mix(in srgb,var(--sq) 45%,var(--card))}
+.seqgh button[disabled]{opacity:.35;cursor:default}
+.seqgrp .xrow{border-left:0}
+.seqb.t-mobilisation,.seqb.t-asana,.seqb.t-cooldown{border-left:4px solid var(--sq);padding-left:10px}
+.mtg{display:inline-flex;align-items:center;gap:3px;padding:3px 5px 3px 4px;border-radius:13px;border:2px solid var(--sq);background:color-mix(in srgb,var(--sq) 16%,var(--card))}
+.mtg .hi{width:15px;height:15px;color:var(--sq);flex:none}

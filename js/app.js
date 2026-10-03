@@ -3,7 +3,7 @@ const KEY = 'yogaplaner.v1';
 const $ = s => document.querySelector(s);
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
-function defaults() { return { v: 1, courses: [], ratings: {}, customEx: [], exEdits: {}, vocab: {}, textTpl: [], settings: { apiKey: '', model: 'claude-sonnet-5-5', email: '', recipients: [] } }; }
+function defaults() { return { v: 1, courses: [], ratings: {}, customEx: [], exEdits: {}, vocab: {}, sequences: seqDefaults(), textTpl: [], settings: { apiKey: '', model: 'claude-sonnet-5-5', email: '', recipients: [] } }; }
 function loadState() {
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && Array.isArray(s.courses)) return Object.assign(defaults(), s, { settings: Object.assign(defaults().settings, s.settings || {}) }); } catch (e) { }
   return defaults();
@@ -104,6 +104,8 @@ function render() {
   else if (ui.view === 'course' && cur()) body = viewCourse(cur());
   else if (ui.view === 'singles') body = viewSingles();
   else if (ui.view === 'catalog') body = viewCatalog();
+  else if (ui.view === 'sequences') body = viewSequences();
+  else if (ui.view === 'seqcat') body = viewSeqCatalog();
   else if (ui.view === 'mantras') body = viewMantras();
   else if (ui.view === 'texts') body = viewTexts();
   else if (ui.view === 'email') body = renderEmailView();
@@ -153,6 +155,8 @@ const HI = {
   uebersicht: '<rect x="4" y="5" width="16" height="4" rx="1"/><rect x="4" y="11" width="16" height="4" rx="1"/><path d="M4 18h10"/>',
   analyse: '<circle cx="12" cy="12" r="8"/><path d="M12 4v8l6 4"/>',
   panalyse: '<path d="M5 20V10M10 20V5M15 20v-7M20 20V8"/>',
+  sequenz: '<rect x="3.5" y="5" width="4.5" height="4.5" rx="1"/><rect x="10" y="5" width="4.5" height="4.5" rx="1"/><rect x="16.5" y="5" width="4" height="4.5" rx="1"/><path d="M5.5 14.5h13M5.5 19h8"/>',
+  seqkat: '<path d="M4 5h6v6H4zM14 5h6v6h-6z"/><path d="M4 15h16M4 19h10"/>',
   mantra: '<path d="M4 12h2M8 8v8M12 5v14M16 8v8M20 12h-2"/>',
   email: '<path d="M4 4h16v12H4z"/><path d="M20 4l-8 5L4 4"/>',
   zahnrad: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>'
@@ -182,7 +186,7 @@ function nav() {
       + (isP ? `<button class="hact" data-a="newCourse">＋ Neues Programm</button>${act('fromTpl', '＋ Programm aus Vorlagen' + cnt(nt), 'data-a="ptab" data-v="fromTpl"')}${act('build', '＋ Programm aus Einzelstunden', 'data-a="ptab" data-v="build"')}`
         : `<button class="hact" data-a="newSingle">＋ Neue Einzelstunde</button>${act('fromTpl', '＋ Einzelstunde aus Vorlage' + cnt(nt), 'data-a="stab" data-v="fromTpl"')}${act('playMin', '▶ Minimalistischer Player', 'data-a="stab" data-v="playMin"')}${act('playDet', '▶ Detailplayer', 'data-a="stab" data-v="playDet"')}`) + '</div>';
   }
-  return `<header class="noprint hdr${c ? (isS ? ' c-single' : ' c-prog') : ''}"><div class="hrow"><div class="brand">${LOTUS}Verenas Yoga Planomat<small class="ver" title="Programmversion">${typeof APP_VER !== 'undefined' ? APP_VER : ''}</small></div>${b('courses', 'Programme', 'prog')}${b('singles', 'Stunden', 'stunde')}${b('catalog', 'Übungskatalog', 'katalog')}${b('mantras', 'Mantras', 'mantra')}${b('texts', 'Textvorlagen', 'textvorl')}${b('email', 'Emails', 'email')}${c ? '<span class="hname ' + (isS ? 'is-single' : 'is-prog') + '\" title="' + esc(c.name) + '\">' + '<b>' + esc(c.name) + '</b></span>' : ''}<span class="grow"></span><button class="tab gear${ui.view === 'settings' ? ' on' : ''}" data-a="nav" data-v="settings" title="Einstellungen & Backup" aria-label="Einstellungen & Backup">${hicon('zahnrad')}</button></div>${ctx}</header>`;
+  return `<header class="noprint hdr${c ? (isS ? ' c-single' : ' c-prog') : ''}"><div class="hrow"><div class="brand">${LOTUS}Verenas Yoga Planomat<small class="ver" title="Programmversion">${typeof APP_VER !== 'undefined' ? APP_VER : ''}</small></div>${b('courses', 'Programme', 'prog')}${b('singles', 'Stunden', 'stunde')}${b('sequences', 'Sequenzen', 'sequenz')}${b('catalog', 'Übungskatalog', 'katalog')}${b('seqcat', 'Sequenzkatalog', 'seqkat')}${b('mantras', 'Mantras', 'mantra')}${b('texts', 'Textvorlagen', 'textvorl')}${b('email', 'Emails', 'email')}${c ? '<span class="hname ' + (isS ? 'is-single' : 'is-prog') + '\" title="' + esc(c.name) + '\">' + '<b>' + esc(c.name) + '</b></span>' : ''}<span class="grow"></span><button class="tab gear${ui.view === 'settings' ? ' on' : ''}" data-a="nav" data-v="settings" title="Einstellungen & Backup" aria-label="Einstellungen & Backup">${hicon('zahnrad')}</button></div>${ctx}</header>`;
 }
 function viewCourses() {
   const pt = ui.pTab || 'list', cs = state.courses.filter(c => !c.template && !c.single), ts = state.courses.filter(c => c.template && !c.single);
@@ -288,13 +292,13 @@ function timeInfo(s) {
 }
 function flatTiles(s) {
   const at = (bon(s, 'atem') ? brTileC(s, 'atem') + (s.atem.w ? brTileC(s, 'wahr') : '') : '') + (bon(s, 'mantra') ? manTileC(s) : '');
-  return at + exKeys(s).filter(k => bon(s, k)).map(k => (s.blk[k] || []).map(exTileC(s, k)).join('')).join('');
+  return at + exKeys(s).filter(k => bon(s, k)).map(k => seqTiles(s.blk[k] || [], exTileC(s, k))).join('');
 }
 // Block einer Einzelstunde (Stundenübersicht): Datum/Motto, Verlauf, Kacheln – auch oben in der Einzelstundenanalyse
 function ovBox(s, k) {
   const ty = bty(s, k), name = esc(bn(s, k));
   let min, tiles;
-  if (ty === 'ex') { const it = s.blk[k] || []; min = `${fmtMin(sumMin(it))} Min.`; tiles = it.map(exTileC(s, k)).join('') || '<span class="muted">–</span>'; }
+  if (ty === 'ex') { const it = s.blk[k] || []; min = `${fmtMin(sumMin(it))} Min.`; tiles = seqTiles(it, exTileC(s, k)) || '<span class="muted">–</span>'; }
   else if (ty === 'atem' && k === 'atem') { min = `${s.dur.atem} Min.`; tiles = brTileC(s, 'atem') + (s.atem.w ? brTileC(s, 'wahr') : '') + textTile('atem'); }
   else if (ty === 'mantra') { min = `${fmtMin(s.dur[k] == null ? 0 : s.dur[k])} Min.`; tiles = manTileC(s) + textTile(k); }
   else { min = `${fmtMin(s.dur[k] == null ? 0 : s.dur[k])} Min.`; tiles = textTile(k); }
@@ -347,7 +351,7 @@ const brTileC = (s, kind) => { const id = kind === 'atem' ? s.atem.a : s.atem.w,
 function exTile(it) { const e = exById(it.id); if (!e) return ''; return `<span class="mt cat-${e.c}" title="${esc(e.n)}${it.min ? ' · ' + fmtMin(it.min) + ' Min.' : ''}">${figureSVG(e.pose)}${peakStar(e)}</span>`; }
 function brTile(id) { const b = BR.find(x => x.id === id); return b ? `<span class="mt cat-br_${b.k}" title="${esc(b.n)}">${breathIconSVG(b.id)}</span>` : ''; }
 function tilesOf(s) {
-  const grp = exKeys(s).filter(k => bon(s, k) && (s.blk[k] || []).length).map(k => s.blk[k].map(exTile).join(''));
+  const grp = exKeys(s).filter(k => bon(s, k) && (s.blk[k] || []).length).map(k => seqTiles(s.blk[k], exTile));
   const at = bon(s, 'atem') ? brTile(s.atem.a) + (s.atem.w ? brTile(s.atem.w) : '') : '';
   return `<span class="mts">${[at].concat(grp).filter(Boolean).join('<i class="msep"></i>')}</span>`;
 }
@@ -397,7 +401,7 @@ function sessBlocks(c, s) {
       out.push(`<div class="ar sub${on ? '' : ' off'}"><div class="an"><i class="sk-atem"></i><div><b>↳ Wahrnehmungsübung</b><small>im Atemteil, die Zeit wird geteilt</small></div></div><div class="as">${sGrp(ONOFF, wOn ? 1 : 0, 'sbWahr', id, k, !on)}</div><div class="am muted">–</div></div>`);
     }
     if (ab === 'asana' && !custom) {
-      const kn = (s.blk.asana || []).filter(i => (exById(i.id) || {}).c === 'kraft').length;
+      const kn = (s.blk.asana || []).filter(i => !i.seq && (exById(i.id) || {}).c === 'kraft').length;
       out.push(`<div class="ar sub${on ? '' : ' off'}"><div class="an"><i class="sk-kraft"></i><div><b>↳ davon Kraftübungen</b><small>innerhalb der Asanas, rot markiert</small></div></div><div class="as">${sGrp([[1, '1'], [2, '2'], [3, '3'], [0, 'Rauslassen']], Math.min(kn, 3), 'sbKraft', id, k, !on)}</div><div class="am muted">${kn ? '≈ ' + kn * 3 + ' Min.' : '–'}</div></div>`);
     }
   });
@@ -459,7 +463,7 @@ function blockCard(c, s, k) {
   if (type === 'ex') {
     const items = s.blk[k] || (s.blk[k] = []);
     mins = `${fmtMin(sumMin(items))} / ${fmtMin((s.bm[k] || {}).min)} Min.`;
-    sum = `<span class="mts">${items.map(exTile).join('')}</span><span class="muted"> ${items.length} Übungen</span>`;
+    sum = `<span class="mts">${seqTiles(items, exTile)}</span><span class="muted"> ${items.length} Übungen</span>`;
     body = blockEditor(c, s, [k, name, catsOf(s, k)]);
   } else if (type === 'atem' && k === 'atem') {
     mins = `${s.dur.atem} Min.`;
@@ -492,6 +496,7 @@ ${fld('Kernsatz', inp(`s:${id}:motto.kern`, 'text', s.motto.kern, 'data-tx="kern
 ${fld('Körperlicher Fokus', inp(`s:${id}:motto.focus`, 'text', s.motto.focus, 'data-tx="focus"'), 'wide')}
 </div>
 ${defPanel(c, s)}
+${seqPanel(c, s)}
 ${fltPanel(c, s)}
 <div class="timebox"><div class="tbh"><b>Ablauf dieser Stunde</b> <span id="tinfo-${id}">${timeInfo(s)}</span> <span class="grow"></span><button class="ghost sm" data-a="bAll" data-id="${id}" data-v="1">▾ alle aufklappen</button><button class="ghost sm" data-a="bAll" data-id="${id}" data-v="0">▸ alle zuklappen</button></div><div id="strip-${id}">${stripHtml(s, true)}</div></div>
 ${order(s).filter(k => bon(s, k)).map(k => blockCard(c, s, k)).join('')}
@@ -525,18 +530,18 @@ function blockEditor(c, s, [key, label, cats]) {
     normAlt(it);
     const e = exById(it.id) || { n: '?', pose: 'stand', lv: 1, x: [], c: 'stand' };
     const ea = altE(e), ha = altH(e), P = `s:${s.id}:blk.${key}.${j}`;
-    return `<div class="xrow" data-dsid="${s.id}" data-db="${key}" data-di="${j}"><div class="xc xt"><div class="xtile cat-${e.c} pkt" draggable="true" data-a="pk" data-sid="${s.id}" data-b="${key}" data-i="${j}" title="Zum Verschieben ziehen · Klick: Übung wählen (mit Strichmännchen)">${figureSVG(e.pose)}${peakStar(e)}</div>
+    return `<div class="xrow" data-dsid="${s.id}" data-db="${key}" data-di="${j}"><div class="xc xt"><div class="xtile cat-${e.c} pkt"${it.seq ? '' : ' draggable="true"'} data-a="pk" data-sid="${s.id}" data-b="${key}" data-i="${j}" title="${it.seq ? 'Teil der Sequenz (als Ganzes verschiebbar) · Klick: Übung wählen' : 'Zum Verschieben ziehen · Klick: Übung wählen (mit Strichmännchen)'}">${figureSVG(e.pose)}${peakStar(e)}</div>
 <b class="an">${esc(e.n)}</b>${e.sa ? `<i class="sa">${esc(e.sa)}</i>` : ''}</div>
 <div class="xc">${altTile(s, key, j, ea, 'down', effE(it))}</div>
 <div class="xc">${altTile(s, key, j, ha, 'up', effH(it))}</div>
 <div class="xc xk">${stRegChips(e)}</div>
 <div class="xc xl">${lvDots(e)}<span class="chip">${lvName(e)}</span>${rateStars(e.id)}${(e.x || []).length ? `<small class="muted" title="Vorsicht bei">⚠ ${esc(e.x.map(g => GEBRECHEN[g]).join(', '))}</small>` : ''}</div>
 <div class="xc xd"><input type="number" data-f="${P}.min" data-num="1" data-sum="1" data-sid="${s.id}" min="0.5" max="30" step="0.5" value="${it.min}"><span class="muted">Min.</span></div>
-<div class="xc xdel"><button class="ghost trash" data-a="rm" data-id="${s.id}" data-b="${key}" data-i="${j}" title="Übung löschen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button></div></div>`;
-  }).join('');
+<div class="xc xdel">${it.seq ? '' : `<button class="ghost trash" data-a="rm" data-id="${s.id}" data-b="${key}" data-i="${j}" title="Übung löschen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>`}</div></div>`;
+  });
   return `<div class="blk"><div class="blkh"><span class="muted"><b id="bs-${s.id}-${key}">${fmtMin(tmin)}</b>${bud ? ' von ' + fmtMin(bud) : ''} Min.</span>
 <span class="grow"></span><button class="ghost sm" data-a="rerollBlk" data-id="${s.id}" data-b="${key}" title="Nur diesen Block neu würfeln">🎲 Block neu würfeln</button><button class="ghost sm" data-a="fitBlk" data-id="${s.id}" data-b="${key}" title="Minuten auf das Zeitbudget angleichen">⚖ auf Zeit</button></div>
-${items.length ? `<div class="xhead"><div>Übung</div><div>↓ Leichtere Alternative</div><div>↑ Schwerere Alternative</div><div>Yogastil & Körperregion</div><div>Schwierigkeitsgrad · Gefällt mir</div><div>Dauer</div><div></div></div>` : ''}${rows || '<div class="muted">keine Übung – mit „＋“ in der Kopfzeile oder hier hinzufügen</div>'}
+${items.length ? `<div class="xhead"><div>Übung</div><div>↓ Leichtere Alternative</div><div>↑ Schwerere Alternative</div><div>Yogastil & Körperregion</div><div>Schwierigkeitsgrad · Gefällt mir</div><div>Dauer</div><div></div></div>` : ''}${seqWrapRows(s, key, items, rows) || '<div class="muted">keine Übung – mit „＋“ in der Kopfzeile oder hier hinzufügen</div>'}
 <button class="pkb add" data-a="pk" data-sid="${s.id}" data-b="${key}" data-i="" title="Übung hinzufügen (mit Strichmännchen)">＋ Übung auswählen …</button></div>`;
 }
 const DOC_GRP = {
@@ -689,7 +694,7 @@ function startCourse(c) { state.courses.unshift(c); planCourse(c); ui.view = 'co
 function sessionOf(id) { const c = cur(); return { c, s: c.sessions.find(x => x.id === id) }; }
 function regenIfNotEdited(c, s, k) { if (!s.txEdited[k]) genTexts(c, s, idxOf(c, s), [k]), s.txEdited[k] = false; }
 // ---- Status: Änderungen setzen die Stunde (bzw. den Rahmen) automatisch auf „In Planung“ ----
-const MUT = new Set(['mv', 'rm', 'alt', 'togAlt', 'cntBlk', 'rerollBlk', 'fitBlk', 'fitS', 'pkpick', 'pkbrpick', 'pkmanpick', 'tglw', 'addBlock', 'delBlock', 'mvBlock', 'bmReset', 'bmOff', 'sbOn', 'sbWahr', 'sbMobi', 'sbKraft', 'tplUse', 'txClear', 'aiTx', 'bothAll']);
+const MUT = new Set(['seqOn', 'seqBlkAdd', 'seqBlkDel', 'seqApply', 'seqGrpMv', 'mv', 'rm', 'alt', 'togAlt', 'cntBlk', 'rerollBlk', 'fitBlk', 'fitS', 'pkpick', 'pkbrpick', 'pkmanpick', 'tglw', 'addBlock', 'delBlock', 'mvBlock', 'bmReset', 'bmOff', 'sbOn', 'sbWahr', 'sbMobi', 'sbKraft', 'tplUse', 'txClear', 'aiTx', 'bothAll']);
 const MUTC = new Set(['toggleGeb', 'toggleDay', 'cTog']);
 function setStatusDom(f, v) { document.querySelectorAll(`select[data-f="${f}"]`).forEach(n => { n.value = v; n.className = n.className.replace(/stat-\w+/, 'stat-' + v); }); }
 function touch(s) {
@@ -835,13 +840,13 @@ const A = {
   toggleDay(d) { const c = cur(); c.days = c.days || []; const k = +d.k, i = c.days.indexOf(k); i < 0 ? c.days.push(k) : c.days.splice(i, 1); c.dirty = true; save(); render(); },
   cntBlk(d) {
     const { c, s } = sessionOf(d.id), k = d.b, a = s.blk[k];
-    if (+d.d < 0) { if (!a.length) return; a.pop(); }
+    if (+d.d < 0) { const i = a.map(x => !x.seq).lastIndexOf(true); if (i < 0) return; a.splice(i, 1); }
     else {
       const ctx = mkCtx(c, s, Math.random); ctx.have = new Set(blkIds(s));
       const pool = withPref(poolOf(...catsOf(s, k)), abOf(s, k), ctx).concat(FALLBACK[abOf(s, k)] ? poolOf(...FALLBACK[abOf(s, k)]) : []);
       const best = eligible(pool, ctx).map(e => ({ e, sc: scoreEx(e, ctx) })).sort((x, y) => y.sc - x.sc)[0];
       if (!best) { toast('Keine weitere passende Übung gefunden.'); return; }
-      const ni = mkItem(best.e); applyAlt(s, ni); a.push(ni); a.sort((x, y) => seqIdx(x.id) - seqIdx(y.id));
+      const ni = mkItem(best.e); applyAlt(s, ni); a.push(ni); sortItems(a);
     }
     save(); render();
   },
@@ -1161,6 +1166,7 @@ document.addEventListener('drop', e => {
   const [item] = from.splice(src.i, 1);
   if (from === to && src.i < idx) idx--;
   to.splice(Math.max(0, Math.min(idx, to.length)), 0, item);
+  [from, to].forEach(a => seqLayout(a, true)); seqSyncPlan(s);
   touch(s); dnd.src = null; dndClear(); save(); render();
   if (from !== to) { ui.bopen.add(src.sid + ':' + toKey); render(); toast(`„${(exById(item.id) || {}).n}“ nach „${bn(s, toKey)}“ verschoben.`); }
 });
@@ -1269,7 +1275,7 @@ function importFile(file) {
       else if (Array.isArray(j.courses)) {
         const replace = confirm('OK = vorhandene Daten ERSETZEN\nAbbrechen = mit vorhandenen Daten ZUSAMMENFÜHREN');
         if (replace) state = Object.assign(defaults(), j);
-        else { const ids = new Set(state.courses.map(c => c.id)); j.courses.forEach(c => { if (!ids.has(c.id)) state.courses.push(c); }); Object.assign(state.ratings, j.ratings || {}); (j.customEx || []).forEach(e => { if (!state.customEx.some(x => x.id === e.id)) state.customEx.push(e); }); }
+        else { const ids = new Set(state.courses.map(c => c.id)); j.courses.forEach(c => { if (!ids.has(c.id)) state.courses.push(c); }); Object.assign(state.ratings, j.ratings || {}); (j.customEx || []).forEach(e => { if (!state.customEx.some(x => x.id === e.id)) state.customEx.push(e); }); (j.sequences || []).forEach(q => { if (!state.sequences.some(x => x.id === q.id)) state.sequences.push(q); }); }
       } else throw new Error('Unbekanntes Dateiformat');
       mergeCatalogImport(j); normalizeState(); applyCatalogState(); save(); ui.view = 'courses'; render(); toast('Import erfolgreich.');
     } catch (err) { toast('Import fehlgeschlagen: ' + err.message); }
@@ -1280,6 +1286,8 @@ function importFile(file) {
 // Atem-Kacheln-Aktionen (liegen im CH-Objekt definiert, werden per data-a aufgerufen)
 A.bmOff = function (d) { const { c, s } = sessionOf(d.id), k = d.b; s.bm[k].on = false; s.bmCustom = true; syncHaupt(s); genTexts(c, s, idxOf(c, s)); save(); render(); toast((k === 'atem' ? 'Atemteil' : 'Mantra') + ' ausgeblendet – wieder einschaltbar unter „Ablauf & Blöcke definieren“.', 5000); };
 Object.assign(A, SINGLE_ACTIONS);
+Object.assign(A, SEQ_ACTIONS);
+Object.assign(CH, SEQ_CH);
 Object.assign(A, MANTRA_ACTIONS);
 Object.assign(A, TXVORL_ACTIONS);
 Object.assign(A, PLAYER_ACTIONS);
@@ -1307,10 +1315,10 @@ Object.assign(A, {
     s.blk.mobi = []; rerollBlock(c, s, 'mobi'); genTexts(c, s, idxOf(c, s)); save(); render();
   },
   sbKraft(d) {
-    const { c, s } = sessionOf(d.id), n = +d.v, items = s.blk.asana || (s.blk.asana = []), ks = items.filter(i => (exById(i.id) || {}).c === 'kraft');
+    const { c, s } = sessionOf(d.id), n = +d.v, items = s.blk.asana || (s.blk.asana = []), ks = items.filter(i => !i.seq && (exById(i.id) || {}).c === 'kraft');
     while (ks.length > n) { const k = ks.pop(); items.splice(items.indexOf(k), 1); }
     if (ks.length < n) { const ctx = mkCtx(c, s, Math.random); ctx.have = new Set(blkIds(s)); pickN(poolOf('kraft'), n - ks.length, ctx).forEach(e => items.push(mkItem(e))); }
-    s.kN = n; items.sort((a, b) => seqIdx(a.id) - seqIdx(b.id)); s.bmCustom = true; save(); render();
+    s.kN = n; sortItems(items); s.bmCustom = true; save(); render();
   }
 });
 Object.assign(CH, TXVORL_CH);
