@@ -43,6 +43,8 @@ function sqPropChips(q, withLabels) {
   const p = sqProps(q);
   return SQ_PROPS.map(([g, lab, map]) => { const m = map(), v = (p[g] || []).filter(x => m[x]); if (!v.length) return ''; return `<span class="sqp">${withLabels ? `<small class="muted">${esc(lab)}</small>` : ''}${v.map(x => `<span class="chip${g === 'x' ? ' warn' : ' kc'}">${esc(String(m[x]).replace(/\s*\*$/, ''))}</span>`).join('')}</span>`; }).join('');
 }
+// Eigenschaften einklappbar (Zustand in ui.open, wie beim Übungskatalog); ohne Werte entfällt der Block
+const sqPropsFold = (q, key) => { const h = sqPropChips(q, true); return h ? `<details class="sqfold" data-id="sqp:${key}" ${ui.open.has('sqp:' + key) ? 'open' : ''}><summary>Eigenschaften</summary><div class="sqps">${h}</div></details>` : ''; };
 // Quelle als Link (nur http/https)
 const sqSrc = q => { const s = q.src || {}, u = String(s.u || '').trim(), n = String(s.n || '').trim(); if (!u && !n) return ''; return /^https?:\/\//i.test(u) ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(n || u)}</a>` : esc(n); };
 
@@ -162,12 +164,12 @@ ${fld('Quelle (Link)', inp('u:seqDraft.src.u', 'url', (d.src || {}).u || '', 'pl
 <p class="muted">Die Anzahl legt fest, wie viele Übungen die Sequenz hat; wähle für jede die Übung per Klick auf die Kachel. Dieselbe Übung darf mehrfach vorkommen (z. B. Vorbeuge am Anfang und Ende). Für einen Textabschnitt statt einer Übung (z. B. eine Ansage) wähle im Auswahlfenster ganz oben „Textblock“.</p>
 <div class="seqlist">${d.items.map((it, i) => seqRow(it, i, d.items.length)).join('')}</div>
 <button class="pkb add" data-a="seqAdd">＋ Übung hinzufügen</button>
-<div class="panel mini sqprops"><h3>Eigenschaften</h3><p class="muted">Werden aus den Übungen der Sequenz abgeleitet und ändern sich mit ihnen. Ein Klick auf einen Wert setzt die Gruppe auf „manuell“, dann bleibt sie so, wie du sie einstellst, bis du sie mit „↻ automatisch“ zurücksetzt.</p>${sqPropEdit(d)}</div>
+<details class="panel mini sqprops" data-id="sqp:edit" ${ui.open.has('sqp:edit') ? 'open' : ''}><summary>Eigenschaften</summary><p class="muted">Werden aus den Übungen der Sequenz abgeleitet und ändern sich mit ihnen. Ein Klick auf einen Wert setzt die Gruppe auf „manuell“, dann bleibt sie so, wie du sie einstellst, bis du sie mit „↻ automatisch“ zurücksetzt.</p>${sqPropEdit(d)}</details>
 <div class="bar"><button class="primary" data-a="seqSave">💾 Sequenz speichern</button><button data-a="seqCancel">Abbrechen</button><span class="grow"></span><span>Summe: <b id="seqsum">${fmtMin(sumMin(d.items))}</b> Min.</span></div></section>`;
   }
   const list = state.sequences || [];
   const card = q => `<div class="card course"><div class="grow"><b class="title" data-a="seqEdit" data-id="${q.id}">${esc(q.name)}</b> ${sqTypeChip(sqType(q))}
-<div class="meta">${sqCount(q.items.length - sqTxN(q))}${sqTxN(q) ? ' + ' + sqTxN(q) + ' Text' : ''} · ${fmtMin(sqMin(q))} Min.${sqSrc(q) ? ' · Quelle: ' + sqSrc(q) : ''}</div>${q.desc ? `<p class="sqd">${esc(q.desc)}</p>` : ''}<div class="sqps">${sqPropChips(q, true)}</div><span class="mts">${q.items.map(sqTile).join('')}</span></div>
+<div class="meta">${sqCount(q.items.length - sqTxN(q))}${sqTxN(q) ? ' + ' + sqTxN(q) + ' Text' : ''} · ${fmtMin(sqMin(q))} Min.${sqSrc(q) ? ' · Quelle: ' + sqSrc(q) : ''}</div>${q.desc ? `<p class="sqd">${esc(q.desc)}</p>` : ''}${sqPropsFold(q, 'l' + q.id)}<span class="mts">${q.items.map(sqTile).join('')}</span></div>
 <button data-a="seqEdit" data-id="${q.id}" class="primary">Bearbeiten</button><button data-a="seqDup" data-id="${q.id}" class="ghost" title="Duplizieren">⧉</button><button data-a="seqDel" data-id="${q.id}" class="ghost danger" title="Löschen">🗑</button></div>`;
   return `<div class="bar"><h1>Sequenzen</h1><span class="muted">${list.length} gespeichert</span><span class="grow"></span><button class="primary" data-a="seqNew">＋ Neue Sequenz</button></div>
 <p class="muted">Eine Sequenz ist eine feste Folge von Übungen mit Namen. Gespeicherte Sequenzen liegen im Sequenzkatalog und lassen sich in der Einzelstundenplanung unter „Sequenzplanung“ einplanen.</p>
@@ -183,7 +185,7 @@ function viewSeqCatalog() {
   return `<div class="bar"><h1>Sequenzkatalog</h1><span class="muted">${list.length} von ${(state.sequences || []).length} Sequenzen</span><span class="grow"></span><button class="primary" data-a="seqNew">＋ Neue Sequenz</button></div>
 <div class="panel"><div class="grid">${fld('Art', sel('u:seqT', [['', 'Alle Arten']].concat(Object.keys(SEQ_TYPES).map(k => [k, SEQ_TYPES[k].n])), tf, 'data-chg="seqFilt"'))}${fld('Geeignet für', sel('u:seqL', [['', 'Alle']].concat(Object.keys(LEVELS).filter(k => k !== 'gemischt').map(k => [k, LEVELS[k]])), lf, 'data-chg="seqFilt"'))}${fld('Ohne Belastung für', sel('u:seqG', [['', '–']].concat(Object.keys(GEBRECHEN).map(k => [k, GEBRECHEN[k]])), gf, 'data-chg="seqFilt"'))}${fld('Suche', `<input type="search" data-f="u:seqQ" data-live="1" value="${esc(ui.seqQ || '')}" placeholder="Sequenz, Beschreibung oder Übung, z. B. Sonnengruß">`)}</div></div>
 ${list.map(x => `<section class="panel sqcat"><div class="bar"><h3>${esc(x.name)}</h3>${sqTypeChip(sqType(x))}<span class="muted">${sqCount(x.items.length - sqTxN(x))}${sqTxN(x) ? ' + ' + sqTxN(x) + ' Text' : ''} · ${fmtMin(sqMin(x))} Min. · in ${used(x.id)} Stunde(n) eingeplant</span><span class="grow"></span><button class="sm" data-a="seqEdit" data-id="${x.id}">✎ Bearbeiten</button></div>
-${x.desc ? `<p class="sqd">${esc(x.desc)}</p>` : ''}<div class="sqps">${sqPropChips(x, true)}</div>${sqSrc(x) ? `<p class="muted sqsrc">Quelle: ${sqSrc(x)}</p>` : ''}
+${x.desc ? `<p class="sqd">${esc(x.desc)}</p>` : ''}${sqPropsFold(x, 'k' + x.id)}${sqSrc(x) ? `<p class="muted sqsrc">Quelle: ${sqSrc(x)}</p>` : ''}
 <div class="sqsteps">${x.items.map(step).join('')}</div></section>`).join('') || '<div class="card"><p class="muted">Keine Sequenz gefunden.</p></div>'}`;
 }
 
