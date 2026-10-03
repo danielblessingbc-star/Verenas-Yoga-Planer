@@ -44,6 +44,7 @@ const DOC_CSS = `
 .ex .fig{width:52px;height:52px;color:#3d4a42}
 .ex .fg{position:relative;display:inline-block;line-height:0}
 .ex .pk{position:absolute;top:-3px;right:-5px;width:15px;height:15px;border-radius:50%;background:#e0a82e;color:#fff;font-size:10px;line-height:15px;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.fg .hmark{position:absolute;top:-3px;left:-4px;width:14px;height:14px;border-radius:50%;background:#3d5a4a;color:#fff;display:flex;align-items:center;justify-content:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}.fg .hmark svg{width:9px;height:9px}.mx .fg .hmark{width:11px;height:11px;left:-3px}.mx .fg .hmark svg{width:7px;height:7px}
 .ex small{color:#8a8376;font-size:10px;margin-top:1px}
 .ex.opt .fg{outline:1.5px dashed #6b6558;outline-offset:2px;border-radius:6px}.ex small.optl{font-weight:700;color:#6b6558}.mx.opt{border-style:dashed;border-width:1.5px}.praxt .pt.opt{outline:1.2px dashed #6b6558;outline-offset:-1px;border-radius:4px}
 .ex small.sa{font-style:italic;color:#7b8f80}
@@ -130,7 +131,7 @@ function exCell(it) {
   const e = exById(it.id); if (!e) return '';
   if (e.txt && !isTxb(it)) { const b = sbInfo(it, e); return `<span class="ex"><span class="fg">${b.fig}</span><span>${esc(b.title)}</span>${b.sub ? `<small class="sa">${esc(b.sub)}</small>` : ''}</span>`; }
   if (e.txt) return `<span class="ex"><span class="fg">${figureSVG(e.pose)}</span><span>Text</span><small class="sa">${esc(String(it.tx || '').replace(/\s+/g, ' ').trim().slice(0, 70))}${String(it.tx || '').length > 70 ? ' …' : ''}</small></span>`;
-  const main = `<span class="ex${it.opt ? ' opt' : ''}"><span class="fg">${figureSVG(e.pose)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span>${esc(e.n)}</span>${it.opt ? '<small class="optl">(optional)</small>' : ''}${e.sa ? `<small class="sa">${esc(e.sa)}</small>` : ''}${SHOW_REPS && it.rep ? `<small>${esc(it.rep)}</small>` : ''}</span>`;
+  const main = `<span class="ex${it.opt ? ' opt' : ''}"><span class="fg">${figureSVG(e.pose)}${handsMark(it, e)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span>${esc(e.n)}</span>${it.opt ? '<small class="optl">(optional)</small>' : ''}${e.sa ? `<small class="sa">${esc(e.sa)}</small>` : ''}${SHOW_REPS && it.rep ? `<small>${esc(it.rep)}</small>` : ''}</span>`;
   const ea = effE(it) ? altE(e) : null, ha = effH(it) ? altH(e) : null; if (!ea && !ha) return main;
   const v = (x, lab) => x ? `<span class="ex alt"><span class="fg">${figureSVG(x.pose)}${x.peak ? '<b class="pk">★</b>' : ''}</span><small class="lv">${lab}</small><span>${esc(x.n)}</span></span>` : '';
   return `<span class="exg">${v(ea, '↓ leichter')}${main}${v(ha, '↑ schwerer')}</span>`;
@@ -237,7 +238,7 @@ function renderStundenUeb(c, only) {
       const ty = bty(s, k);
       if (ty === 'atem') { [s.atem && s.atem.a, s.atem && s.atem.w].filter(Boolean).forEach(id => { const e = exById(id); if (e) tiles.push(mt(col(k), figureSVG(e.pose), e.n)); }); }
       else if (ty === 'mantra') { const m = s.mantra && typeof manById === 'function' && manById(s.mantra.id); if (m) tiles.push(mt(col(k), manIconSVG(m.id), m.n.replace(/\s*\(.*$/, ''))); }
-      else if (ty === 'ex') (s.blk[k] || []).forEach((it, j, arr) => { const e = exById(it.id); if (e) tiles.push(mt(col(k), figureSVG(e.pose), e.n, e.peak, !!it.seq, !!it.opt)); });
+      else if (ty === 'ex') (s.blk[k] || []).forEach((it, j, arr) => { const e = exById(it.id); if (e) tiles.push(mt(col(k), figureSVG(e.pose) + handsMark(it, e), e.n, e.peak, !!it.seq, !!it.opt)); });
     });
     if (only) { // eine Stunde füllt die Seite: Kachelgröße nach Anzahl
       const W = 267, n = Math.max(tiles.length, 1), fsOf = cell => Math.max(7.5, Math.min(11, cell * 0.36));
@@ -257,7 +258,7 @@ function renderPrax(c, s, i) {
   const ks = order(s).filter(k => bon(s, k));
   const minOf = k => bty(s, k) === 'ex' ? sumMin(s.blk[k] || []) : (+s.dur[k] || 0);
   const names = items => (items || []).filter(it => exById(it.id)).map(it => { const e = exById(it.id); return esc(e.n) + (e.peak ? ' ★' : '') + (it.opt ? ' (optional)' : ''); }).join(', ');
-  const fig = it => { const e = exById(it.id); return e ? `<span class="pt${e.c === 'kraft' ? ' kr' : ''}${it.opt ? ' opt' : ''}"><span class="fg">${figureSVG(e.pose)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span class="nm">${esc(e.n)}</span></span>` : ''; };
+  const fig = it => { const e = exById(it.id); return e ? `<span class="pt${e.c === 'kraft' ? ' kr' : ''}${it.opt ? ' opt' : ''}"><span class="fg">${figureSVG(e.pose)}${handsMark(it, e)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span class="nm">${esc(e.n)}</span></span>` : ''; };
   const n = ks.reduce((a, k) => a + (bty(s, k) === 'ex' && ['asana', 'ausgl'].includes(abOf(s, k)) ? (s.blk[k] || []).length : 0), 0);
   const per = n > 64 ? 8 : n > 48 ? 7 : n > 34 ? 6 : 5, figMm = n > 64 ? 8.5 : n > 48 ? 11 : n > 34 ? 14 : 17;
   const row = (min, left, right, cls) => `<tr class="${cls || ''}"><td class="pm">${min != null ? esc(fmtMin(min)) + ' Min.' : ''}</td><td class="pl">${left}</td><td class="pr2">${right}</td></tr>`;

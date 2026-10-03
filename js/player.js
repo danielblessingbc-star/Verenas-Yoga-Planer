@@ -50,7 +50,7 @@ function plSteps(c, s) {
         if (achten.length) det.push({ ic: 'warn', h: 'Auf was achten', items: achten, w: true });
         const vari = [].concat(ea ? ['↓ leichter: ' + ea.n] : [], ha ? ['↑ anspruchsvoller: ' + ha.n] : []);
         if (vari.length) det.push({ ic: 'wirk', h: 'Varianten', items: vari });
-        steps.push({ block: name, title: e.n, sub: e.sa || '', opt: !!it.opt, min: +it.min || e.m || 1, cls: 'cat-' + e.c + (it.opt ? ' opt' : ''), tile: tile('cat-' + e.c + (it.opt ? ' opt' : ''), figureSVG(e.pose), peakStar(e)), det, dur: [fmtMin(+it.min || e.m || 1) + ' Min.'].concat(it.rep ? [it.rep] : []).join(' · ') });
+        steps.push({ block: name, title: e.n, sub: e.sa || '', opt: !!it.opt, min: +it.min || e.m || 1, cls: 'cat-' + e.c + (it.opt ? ' opt' : ''), tile: tile('cat-' + e.c + (it.opt ? ' opt' : ''), figureSVG(e.pose), peakStar(e) + handsMark(it, e)), det, dur: [fmtMin(+it.min || e.m || 1) + ' Min.'].concat(it.rep ? [it.rep] : []).join(' · ') });
       });
     } else if (ty === 'atem') {
       const d = +s.dur[k] || 0, a = BR.find(b => b.id === (s.atem && s.atem.a)), w = BR.find(b => b.id === (s.atem && s.atem.w));
