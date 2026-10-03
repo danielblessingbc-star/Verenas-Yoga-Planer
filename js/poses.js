@@ -72,6 +72,7 @@ function figureParts(key, ground) {
   if (key === 'ratlos') { // Standardsymbol für eigene Übungen: ahnungsloser Strichmensch mit Fragezeichen
     return figureParts('stand', ground) + '<path d="M64 14c0-8 14-8 14 0c0 7-7 7-7 15" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="71" cy="37" r="2.2" fill="currentColor"/>';
   }
+  if (typeof SYMS !== 'undefined' && SYMS[key]) return symbolParts(key);   // allgemeine Symbole (symbole.js)
   const p = POSES[key] || POSES.stand;
   const [h, n, pe, eR, hR, eL, hL, kR, fR, kL, fL] = p;
   const M = (a) => a.join(' ');
