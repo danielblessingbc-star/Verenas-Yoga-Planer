@@ -786,5 +786,6 @@ select.sbref{width:100%;box-sizing:border-box}.sbprev{display:block;margin-top:4
 
 /* Sonderbaustein Freie Übung: Text in der Kachel */
 .cat-frei{--k:#c9b8d9}
-.freitx{width:100%;box-sizing:border-box}
+.cat-pause{--k:#c6d6c9}
+.freitx,.sbnote{width:100%;box-sizing:border-box}
 .mt svg text,.xtile svg text,.pltile svg text{font-family:inherit}

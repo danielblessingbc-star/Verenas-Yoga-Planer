@@ -29,6 +29,7 @@ function sbPreview(it, e) {
 // Name, Zusatz und Symbol eines Sonderbausteins (Anzeige in Stunde, Ausdruck, Player)
 function sbInfo(it, e) {
   if (e.sb === 'frei') { const t = String(it.tx || '').replace(/\s+/g, ' ').trim(); return { title: t || 'Freie Übung', sub: t ? '' : 'noch kein Text', fig: freiFig(t) }; }
+  if (e.sb === 'pause') return { title: 'Pause', sub: String(it.tx || '').replace(/\s+/g, ' ').trim(), fig: figureSVG('pause') };
   if (e.sb === 'lied') { const x = songById(it.ref); return { title: x ? x.n : 'Lied', sub: x ? x.a || '' : 'noch nichts gewählt', fig: figureSVG('lied') }; }
   if (e.sb === 'mantra') { const m = manById(it.ref); return { title: m ? m.n : 'Mantra', sub: m ? '' : 'noch nichts gewählt', fig: m ? manIconSVG(m.id) : figureSVG('mantrasb') }; }
   return { title: 'Text', sub: '', fig: figureSVG('textblock') };
@@ -36,6 +37,7 @@ function sbInfo(it, e) {
 // Player-Inhalt für Lied und Mantra
 function sbDet(it, e) {
   const paras = t => String(t || '').split(/\n{2,}/).filter(x => x.trim());
+  if (e.sb === 'pause') return [{ ic: 'clock', h: 'Pause', paras: [String(it.tx || '').trim() || 'Kurz innehalten und nachspüren.'] }];
   if (e.sb === 'frei') return [{ ic: 'cue', h: 'Übung', paras: [String(it.tx || '').trim() || 'Es ist noch kein Text eingetragen.'] }];
   if (e.sb === 'lied') {
     const x = songById(it.ref); if (!x) return [{ ic: 'cue', h: 'Lied', paras: ['Es ist noch kein Lied gewählt.'] }];
@@ -95,7 +97,8 @@ const SB_PICK = [
   [TXB_ID, 'textblock', 'Textblock', 'Statt einer Übung: ein Textabschnitt an dieser Stelle', 'textblock text sonderbaustein anleitung hinweis'],
   [LIED_ID, 'lied', 'Lied', 'Statt einer Übung: ein Lied aus dem Lied-Katalog', 'lied song musik gesang sonderbaustein'],
   [MANSB_ID, 'mantrasb', 'Mantra', 'Statt einer Übung: ein Mantra aus der Seite Mantras', 'mantra chanten gesang sonderbaustein'],
-  [FREI_ID, 'frei', 'Freie Übung', 'Statt einer Übung: ein frei eingetragener Name, der in der Kachel steht', 'freie übung name text kachel handstand sonderbaustein']
+  [FREI_ID, 'frei', 'Freie Übung', 'Statt einer Übung: ein frei eingetragener Name, der in der Kachel steht', 'freie übung name text kachel handstand sonderbaustein'],
+  [PAUSE_ID, 'pause', 'Pause', 'Statt einer Übung: eine Pause mit eigener Dauer', 'pause ruhe nachspüren erholung sonderbaustein']
 ];
 // Symbol einer Kachel: Sonderbaustein „Freie Übung“ zeigt ihren Text, alles andere das Strichmännchen
 const tileName = (it, e) => e.sb === 'frei' && String(it.tx || '').trim() ? String(it.tx).trim() : e.n;
@@ -110,6 +113,7 @@ function sonderPanels(q) {
   const P = (c, fig, n, txt, kw) => (!q || kw.includes(q)) ? `<div class="panel sonder"><div class="ktile cat-${c}">${figureSVG(fig)}</div><div><b>Sonderbaustein: ${n}</b><p class="muted">${txt}</p></div></div>` : '';
   return P('textblock', 'textblock', 'Textblock', 'Im Auswahlfenster einer Stunde (Klick auf eine Übungskachel oder „＋ Übung auswählen“) und in der Sequenz stehen ganz oben die Sonderbausteine. Wählst du den Textblock, entsteht an dieser Stelle statt einer Übung ein Textabschnitt mit eigener Dauer, z. B. für eine Anleitung, einen Hinweis oder Yoga Nidra. Er wird im Ausdruck und im Player mit ausgegeben und erscheint nie automatisch.', 'textblock sonderbaustein text')
     + P('frei', 'frei', 'Freie Übung', 'Wie der Textblock, aber mit einem einzeiligen Textfeld neben der Kachel: Was du dort einträgst (z. B. „Handstand“), steht als Name in der Kachel, im Ausdruck und im Player. Die Dauer stellst du selbst ein.', 'freie übung name text kachel handstand sonderbaustein')
+    + P('pause', 'pause', 'Pause', 'Eine Pause an dieser Stelle der Stunde oder der Sequenz, z. B. zum Nachspüren oder Trinken. Du stellst nur die Dauer ein und kannst einen kurzen Hinweis eintragen, der unter dem Namen „Pause“ steht, im Ausdruck erscheint und im Player angezeigt wird.', 'pause ruhe nachspüren erholung sonderbaustein')
     + P('lied', 'lied', 'Lied', 'Wie der Textblock, aber mit einem Lied aus dem Lied-Katalog (oben rechts). Die Dauer des Liedes wird übernommen, wenn sie dort eingetragen ist. Im Player erscheinen Liedtext, Einsatz und Notizen.', 'lied song musik gesang sonderbaustein')
     + P('mantrasb', 'mantrasb', 'Mantra', 'Wie der Textblock, aber mit einem Mantra aus der Seite Mantras. Im Player erscheinen Mantra-Text, Bedeutung und Anleitung. Die Dauer stellst du selbst ein.', 'mantra chanten gesang sonderbaustein');
 }
