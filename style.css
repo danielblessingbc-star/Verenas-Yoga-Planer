@@ -745,4 +745,4 @@ body.plon{overflow:hidden}
 .seqgh button[disabled]{opacity:.35;cursor:default}
 .seqgrp .xrow{border-left:0}
 .seqb.t-mobilisation,.seqb.t-asana,.seqb.t-cooldown{border-left:4px solid var(--sq);padding-left:10px}
-.mt.sq{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--k) 60%,var(--line))}
+.mt.sq{box-shadow:inset 0 0 0 2px #fff}
