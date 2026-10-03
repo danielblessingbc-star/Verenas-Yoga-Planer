@@ -289,10 +289,10 @@ function sessionTags(s) {
 const SEQ = [
   'fuss_reiben', 'fuss_flex', 'fussgelenk', 'knie_flex', 'knie_kreise', 'bein_anwinkeln', 'huefte_kreis', 'schmetterling_sitz', 'haende_flex', 'handgelenk_kreis', 'finger_faust', 'ellenbogen', 'schulter_kreis', 'nacken_mobi',
   'zehen_bewegen', 'fuesse_lockern', 'fersen_heben', 'fussgelenke_stand', 'knie_leicht', 'katze_kuh_stand', 'beckenkreisen', 'schultern_stand', 'seitneigung', 'seitdrehung', 'arme_einzeln', 'arme_beide', 'arme_oeffnen', 'arme_kreisen', 'arme_atem', 'knieheben_tab',
-  'tadasana', 'rueckbeuge_leicht', 'halbe_vorbeuge', 'vorbeuge', 'weite_vorbeuge', 'vorbeuge_aushaengen', 'wirbel_aufrollen', 'gewichtsverlagerung', 'einbeinig_abheben', 'twist_stand', 'sonnengruss',
+  'tadasana', 'rueckbeuge_leicht', 'halbe_vorbeuge', 'vorbeuge_knie', 'vorbeuge', 'weite_vorbeuge', 'vorbeuge_aushaengen', 'wirbel_aufrollen', 'gewichtsverlagerung', 'einbeinig_abheben', 'twist_stand', 'sonnengruss',
   'arme_zur_sonne', 'adlerarme', 'gomukhasana_arme', 'utkatasana', 'goettin', 'krieger2', 'seitwinkel', 'krieger1', 'ausfallschritt', 'ausfall_klein', 'stand_boden', 'knieheben_stand', 'tandem', 'baum', 'krieger3_unt',
   'kniebeugen', 'kniebeuge_fersen', 'aufstehen_hinsetzen', 'utkatasana_halten', 'fersen_kraft', 'beinheben_seit', 'beinheben_halt', 'einbein_knieheben', 'wand_liegestuetz',
-  'katze_kuh_vier', 'vierfuessler_diag', 'kindhaltung', 'kind_breit', 'anahatasana', 'sphinx', 'kobra', 'janu', 'malasana_hoch',
+  'katze_kuh_vier', 'vierfuessler_diag', 'kindhaltung', 'kind_breit', 'anahatasana', 'sphinx', 'kobra_sanft', 'kobra', 'janu', 'malasana_hoch',
   'apanasana', 'knie_kreisen_liegend', 'bein_strecken', 'bauchspannung', 'bruecke', 'bruecke_halten', 'bruecke_sanft', 'herzoeffnung_liegend', 'schmetterling_liegend', 'drehung_liegend', 'beine_wand'
 ];
 const GRPBASE = () => ({ sit: SEQ.indexOf('nacken_mobi') + .5, stand: SEQ.indexOf('krieger1') + .5, bal: SEQ.indexOf('baum') + .5, quad: SEQ.indexOf('kindhaltung') - .5, prone: SEQ.indexOf('sphinx') - .2, fsit: SEQ.indexOf('janu') + .5, supine: SEQ.indexOf('bein_strecken') + .5, inv: SEQ.length + 1 });
