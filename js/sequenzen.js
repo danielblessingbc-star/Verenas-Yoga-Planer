@@ -70,16 +70,9 @@ function seqWrapRows(s, key, items, rows) {
       + `<button class="ghost sm" data-a="seqGrpMv" data-id="${s.id}" data-b="${key}" data-bid="${u.seq}" data-d="1" ${k === units.length - 1 ? 'disabled' : ''} title="Ganze Sequenz nach unten">▼</button></div>${html}</div>`;
   }).join('');
 }
-// Kachelreihen (zugeklappter Block, Übersicht): Kacheln wie normale Asanas; Farbpunkt links oben (seqDot)
+// Kachelreihen (zugeklappter Block, Übersicht, Stundenübersicht): Sequenz-Kacheln sehen aus wie normale Asanas, nur der Rahmen ist etwas dicker (Klasse sq)
 function seqTiles(items, fn) {
-  return items.map((it, j) => { const h = fn(it, j), d = seqDot(items, j); return d && h ? h.replace('>', '>' + d) : h; }).join('');
-}
-// Sequenzen in Kachelreihen: Farbpunkt (Farbe der Sequenzart) links oben; erste und letzte Kachel einer Sequenz mit vollem Punkt, die dazwischen mit Hohlpunkt
-const SEQ_COL = { mobilisation: '#c8a25e', asana: '#4f8a6e', cooldown: '#a2688c' };
-function seqDot(items, j) {
-  const it = items[j]; if (!it || !it.seq) return '';
-  const first = !items[j - 1] || items[j - 1].seq !== it.seq, last = !items[j + 1] || items[j + 1].seq !== it.seq;
-  return `<i class="sqd${first || last ? '' : ' hol'}" style="--c:${SEQ_COL[it.seqType] || SEQ_COL.asana}"></i>`;
+  return items.map((it, j) => { const h = fn(it, j); return it.seq && h ? h.replace('class="mt ', 'class="mt sq ') : h; }).join('');
 }
 // Alle Übungen eines Sequenzblocks aus der Stunde entfernen (egal in welchem Stundenblock sie stehen)
 const seqPurge = (s, bid) => Object.keys(s.blk || {}).forEach(k => { s.blk[k] = (s.blk[k] || []).filter(i => i.seq !== bid); });
