@@ -1,5 +1,5 @@
 /* Sequenzen: feste Übungsfolgen (z. B. Sonnengruß), die in Einzelstunden eingeplant werden.
-   state.sequences = [{ id, name, type, items: [{ id: Übungs-ID, min, tx? }], desc, src: { n, u }, man: { Gruppe: [Werte] }, imp }]  – type: mobilisation | asana | cooldown (fehlt = asana).
+   state.sequences = [{ id, name, type, items: [{ id: Übungs-ID, min, tx? }], desc, src: { n, u }, man: { Gruppe: [Werte] }, imp }]  – type: mobilisation | shakti | asana | cooldown (fehlt = asana).
    desc = Beschreibung, src = Quelle (Name, Link), man = manuell gesetzte Eigenschaften (alle anderen werden aus den Übungen abgeleitet), imp = Herkunfts-ID eines Imports.
    Eine Übung der Sequenz kann der Sonderbaustein „Textblock“ sein (id = 'textblock', tx = Text).
    Seite „Sequenzen“ (bearbeiten) und „Sequenzkatalog“ (nachschlagen).
@@ -7,25 +7,29 @@
    Cooldown → „Ausgleich / Cool down“). Die Übungen der gewählten Sequenz werden dort als zusammenhängende Gruppe eingefügt (it.seq = Block-ID, it.seqName, it.seqType, it.seqPos)
    und lassen sich nur als Ganzes verschieben (pos = Anzahl Einzelübungen vor der Gruppe); die übrigen Übungen werden zeitlich angepasst (rebalanceBlock). */
 
-const SEQ_TYPES = { mobilisation: { n: 'Mobilisation', blk: 'mobi' }, asana: { n: 'Asana', blk: 'asana' }, cooldown: { n: 'Cooldown', blk: 'ausgl' } };
-const SEQ_BLKS = ['mobi', 'asana', 'ausgl'];
+const SEQ_TYPES = { mobilisation: { n: 'Mobilisation', blk: 'mobi' }, shakti: { n: 'Shakti Naam', blk: 'shakti' }, asana: { n: 'Asana', blk: 'asana' }, cooldown: { n: 'Cooldown', blk: 'ausgl' } };
+const SEQ_BLKS = ['mobi', 'shakti', 'asana', 'ausgl'];
 
 // Mustersequenz: Sonnengruß aus Übungen des Katalogs (Modul 1, S. 64–77: Tadasana, Arme zur Sonne, Vorbeuge, Sprinter, Planke, Kobra, Herabschauender Hund)
 function seqDefaults() {
   const ids = ['tadasana', 'arme_zur_sonne', 'vorbeuge', 'ashwa', 'phalakasana', 'kobra', 'adho_mukha', 'ashwa', 'vorbeuge', 'arme_zur_sonne', 'tadasana'];
-  const kr = (ids) => ids.map(([id, min]) => ({ id, min }));
-  return [{ id: 'seq_sonnengruss', name: 'Sonnengruß', type: 'asana', items: ids.map(id => ({ id, min: 0.5 })), desc: 'Fließende Folge: Stand, Arme zur Sonne, Vorbeuge, Ausfallschritt, Planke, Kobra, Herabschauender Hund und wieder zurück. Mit dem Atem verbinden und im eigenen Tempo üben. Bei Schulter, Handgelenk oder Rücken die leichteren Varianten wählen.', src: { n: 'Ausbildungsskript Modul 1, S. 64 bis 77', u: '' } },
-    { id: 'seq_kundalini_spinal', name: 'Basic Spinal Energy Series (Kundalini)', type: 'asana', items: kr([['spinal_flex_sitz', 2], ['spinal_flex_fersen', 2], ['waschmaschine', 1.5], ['baerengriff_herz', 1], ['spinal_flex_oben', 1.5], ['schulterzucken', 1], ['nacken_mobi', 1], ['baerengriff_hals', 1], ['sat_kriya', 3], ['totenstellung', 5]]), desc: 'Kundalini-Kriya zur Mobilisierung und Energetisierung der Wirbelsäule: Flexe im Sitz und auf den Fersen, Drehung, Bärengriffe, Schulterzucken, Nackenrollen, Sat Kriya und Tiefenentspannung. Die klassischen Wiederholungen (108, 26) und Zeiten sind Zielwerte; Anfänger kürzen und ruhen länger. Die Tiefenentspannung ist im Original 15 Minuten lang.', src: { n: 'Shakta Kaur: Basic Spinal Energy Series (nach Yogi Bhajan), Zusammenfassung', u: 'https://www.shaktakaur.com/yogic-resources/basic-spinal-energy-series-kriya' } },
-    { id: 'seq_kundalini_satkriya', name: 'Sat Kriya Workout (Kundalini, Auszug)', type: 'asana', items: kr([['sat_kriya', 5], ['sat_kriya', 5], ['brustdehnung', 3], ['sat_kriya', 3], ['frosch_kundalini', 1], ['sat_kriya', 5]]), desc: 'Auszug aus dem Sat Kriya Workout: Sat Kriya wechselt mit Brustdehnung und Frosch. Die Quelle führt zwischen den Übungen 5 und 11 weitere abwechselnde Runden von Sat Kriya und Frosch mit kürzer werdenden Pausen; sie sind hier zu einer Abschlussrunde Sat Kriya zusammengefasst. Anfänger verkürzen alle Zeiten und ruhen länger. Nicht in Schwangerschaft und Menstruation; bei Herz-, Kreislaufproblemen oder Schwindel vorher klären.', src: { n: 'Shakta Kaur: Sat Kriya Workout (nach Yogi Bhajan), Zusammenfassung', u: 'https://www.shaktakaur.com/yogic-resources/sat-kriya-workout' } }];
+  return [{ id: 'seq_sonnengruss', name: 'Sonnengruß', type: 'asana', items: ids.map(id => ({ id, min: 0.5 })), desc: 'Fließende Folge: Stand, Arme zur Sonne, Vorbeuge, Ausfallschritt, Planke, Kobra, Herabschauender Hund und wieder zurück. Mit dem Atem verbinden und im eigenen Tempo üben. Bei Schulter, Handgelenk oder Rücken die leichteren Varianten wählen.', src: { n: 'Ausbildungsskript Modul 1, S. 64 bis 77', u: '' } }];
 }
 // Altbestand: die Mustersequenz Sonnengruß bekommt Beschreibung und Quelle (nur, wenn beides noch leer ist)
-function seqMigrate() {
-  const q = (state.sequences || []).find(x => x.id === 'seq_sonnengruss'); if (q && !q.desc && !q.src) { const d = seqDefaults()[0]; q.desc = d.desc; q.src = d.src; }
-  // Neue Mustersequenzen einmalig übernehmen (state.seqSeed merkt sich schon angebotene; gelöschte kommen nicht zurück)
-  if (!Array.isArray(state.seqSeed)) state.seqSeed = ['seq_sonnengruss'];
-  if (!state.sequences) state.sequences = [];
-  seqDefaults().forEach(d => { if (!state.seqSeed.includes(d.id)) { state.seqSeed.push(d.id); if (!sqById(d.id)) state.sequences.push(d); } });
+// Mitgelieferte Sequenzen (SEQ_IMPORT) genau einmal in den Bestand einspielen; gelöschte oder geänderte kommen nicht wieder (state.seqImp merkt sich die imp-ID).
+function seqImportMerge() {
+  if (typeof SEQ_IMPORT === 'undefined') return;
+  state.sequences = state.sequences || []; state.seqImp = state.seqImp || [];
+  SEQ_IMPORT.forEach(d => {
+    if (state.seqImp.includes(d.imp)) return;
+    if (state.sequences.some(q => q.imp === d.imp)) { state.seqImp.push(d.imp); return; }
+    if (!d.items.every(([id]) => exById(id))) return;   // Übung fehlt im Katalog: überspringen, nächster Start versucht es erneut
+    let name = d.name; while (state.sequences.some(q => norm(q.name) === norm(name))) name += ' (Import)';
+    state.sequences.push({ id: 'seq_' + d.imp, name, type: d.type, items: d.items.map(([id, m]) => ({ id, min: m != null ? m : (exById(id).m || 1) })), desc: d.desc, src: deepCopy(d.src), imp: d.imp });
+    state.seqImp.push(d.imp);
+  });
 }
+function seqMigrate() { const q = (state.sequences || []).find(x => x.id === 'seq_sonnengruss'); if (q && !q.desc && !q.src) { const d = seqDefaults()[0]; q.desc = d.desc; q.src = d.src; } }
 const sqById = id => (state.sequences || []).find(q => q.id === id) || null;
 const sqType = q => (q && SEQ_TYPES[q.type]) ? q.type : 'asana';
 const sqPType = b => SEQ_TYPES[b.type] ? b.type : (sqById(b.seqId) ? sqType(sqById(b.seqId)) : 'asana');
@@ -131,7 +135,7 @@ function seqPanel(c, s) {
     body = `${rows}<div class="bar"><button class="sm" data-a="seqBlkAdd" data-id="${id}">＋ Weiteren Sequenzblock hinzufügen</button><button class="ghost sm" data-a="seqApply" data-id="${id}" title="Übungen der gewählten Sequenzen erneut aus dem Sequenzkatalog übernehmen (z. B. nach einer Änderung der Sequenz)">↻ Aus Sequenzkatalog neu übernehmen</button><span class="grow"></span><span class="muted">Sequenzen in dieser Stunde: <b>${fmtMin(tot)}</b> Min.</span></div>`;
   }
   return `<details class="panel mini noprint" data-id="seq:${id}" ${ui.open.has('seq:' + id) ? 'open' : ''}><summary>Sequenzplanung ${chip} <span class="muted">· feste Übungsfolgen wie der Sonnengruß</span></summary>
-<p class="muted">Die Art der Sequenz bestimmt den Stundenblock: Mobilisation → „${esc(bn(s, 'mobi'))}“, Asana → „${esc(bn(s, 'asana'))}“, Cooldown → „${esc(bn(s, 'ausgl'))}“. Die Übungen stehen dort als zusammengehörige Gruppe und lassen sich im Block nur als Ganzes verschieben (▲▼). Die übrigen Übungen werden zeitlich angepasst. Spätere Änderungen an der Sequenz gelten erst nach „Neu übernehmen“.</p>
+<p class="muted">Die Art der Sequenz bestimmt den Stundenblock: Mobilisation → „${esc(bn(s, 'mobi'))}“, Shakti Naam → „${esc(bn(s, 'shakti'))}“ (muss in der Stunde eingeschaltet sein), Asana → „${esc(bn(s, 'asana'))}“, Cooldown → „${esc(bn(s, 'ausgl'))}“. Die Übungen stehen dort als zusammengehörige Gruppe und lassen sich im Block nur als Ganzes verschieben (▲▼). Die übrigen Übungen werden zeitlich angepasst. Spätere Änderungen an der Sequenz gelten erst nach „Neu übernehmen“.</p>
 ${blocked ? '<p class="banner">Alle drei Blöcke (Mobilisation, Asanas, Cool down) sind in dieser Stunde ausgeschaltet oder keine Übungsblöcke: Sequenzen können erst eingeplant werden, wenn einer wieder aktiv ist.</p>' : ''}
 <div class="seqq"><b>Sequenzen einplanen?</b>${sGrp([[1, 'Ja'], [0, 'Nein']], p.on ? 1 : 0, 'seqOn', id, 'seq', blocked && !p.on)}</div>${body}</details>`;
 }
