@@ -745,4 +745,4 @@ body.plon{overflow:hidden}
 .seqgh button[disabled]{opacity:.35;cursor:default}
 .seqgrp .xrow{border-left:0}
 .seqb.t-mobilisation,.seqb.t-asana,.seqb.t-cooldown{border-left:4px solid var(--sq);padding-left:10px}
-.mt .sqd{position:absolute;top:2px;left:2px;width:8px;height:8px;border-radius:50%;background:var(--c);border:1.5px solid var(--c);box-sizing:border-box;pointer-events:none}.mt .sqd.hol{background:var(--card)}
+.mt .sqd{position:absolute;top:2px;left:2px;width:8px;height:8px;border-radius:50%;background:var(--c);border:1.5px solid var(--c);box-sizing:border-box;pointer-events:none}.mt .sqd.hol{background:color-mix(in srgb,var(--c) 35%,transparent)}
