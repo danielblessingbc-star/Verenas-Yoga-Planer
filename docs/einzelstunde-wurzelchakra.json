@@ -1,0 +1,680 @@
+{
+ "courses": [
+  {
+   "id": "jeekxqa",
+   "name": "Wurzelchakra",
+   "created": "2026-10-03",
+   "count": 1,
+   "start": "2026-10-03",
+   "rhythm": "weekly",
+   "days": [],
+   "pauses": "",
+   "durMode": "einzeln",
+   "total": 90,
+   "durs": {
+    "einl": 6,
+    "mobi": 15,
+    "shakti": 5,
+    "asana": 44,
+    "ausgl": 16,
+    "schluss": 4,
+    "haupt": 80
+   },
+   "st": [],
+   "reg": [],
+   "status": "vorgeplant",
+   "bm": {
+    "einl": {
+     "name": "Einleitung",
+     "on": true
+    },
+    "atem": {
+     "name": "Atemübung",
+     "on": true
+    },
+    "mantra": {
+     "name": "Mantra",
+     "on": true
+    },
+    "mobi": {
+     "name": "Mobilisation im Sitzen",
+     "on": true
+    },
+    "shakti": {
+     "name": "Shakti Naam",
+     "on": true
+    },
+    "asana": {
+     "name": "Asanas (Hauptteil)",
+     "on": true
+    },
+    "ausgl": {
+     "name": "Ausgleich / Cool down",
+     "on": true
+    },
+    "schluss": {
+     "name": "Schluss",
+     "on": true
+    },
+    "shava": {
+     "name": "Shavasana",
+     "on": true
+    }
+   },
+   "level": "gemischt",
+   "breath": "aus",
+   "kraft": false,
+   "kraftN": 1,
+   "mantra": "aus",
+   "mobi": "sitz",
+   "shakti": 1,
+   "shaktiMode": "immer",
+   "einlOn": 1,
+   "schlussOn": 1,
+   "shavaOn": 0,
+   "ausglOn": 1,
+   "gebrechen": [],
+   "showAlt": false,
+   "email": "",
+   "motto": {
+    "mode": "eigen",
+    "preset": "alltag",
+    "free": "",
+    "eigen": "Wurzelchakra"
+   },
+   "seed": 833260333,
+   "sessions": [
+    {
+     "id": "8q81zj0",
+     "seed": 654942905,
+     "locked": false,
+     "date": "2026-10-03",
+     "motto": {
+      "themeId": "",
+      "title": "Wurzelchakra",
+      "kern": "Heute darf „Wurzelchakra“ für mich spürbar werden.",
+      "focus": "Füße, Beine, Standfestigkeit",
+      "tags": [
+       "wurzel"
+      ]
+     },
+     "dur": {
+      "einl": 6,
+      "schluss": 4,
+      "haupt": 80,
+      "atem": 0,
+      "shava": 0,
+      "mantra": 0,
+      "xmusik": 0
+     },
+     "blk": {
+      "mobi": [
+       {
+        "id": "nacken_mobi",
+        "min": 1,
+        "rep": "6–8 Wdh.",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "schulter_kreis",
+        "min": 1,
+        "rep": "6–8 Wdh.",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "handgelenk_kreis",
+        "min": 1,
+        "rep": "6–8 Wdh.",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "sufi_kreise",
+        "min": 2,
+        "rep": "12–16 Wdh.",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "fussgelenk",
+        "min": 1,
+        "rep": "6–8 Wdh.",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "schmetterling_sitz",
+        "min": 2,
+        "rep": "12–16 Wdh.",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "katze_kuh_vier",
+        "min": 1.5,
+        "rep": "9 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "adho_mukha",
+        "min": 1,
+        "rep": "6 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "vorbeuge",
+        "min": 1,
+        "rep": "",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "halbe_vorbeuge",
+        "min": 1,
+        "rep": "",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "vorbeuge",
+        "min": 1,
+        "rep": "",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "tadasana",
+        "min": 1.5,
+        "rep": "",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       }
+      ],
+      "shakti": [
+       {
+        "id": "sn_walking",
+        "min": 2.5,
+        "rep": "",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "sn_clapwalk",
+        "min": 2.5,
+        "rep": "",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       }
+      ],
+      "asana": [
+       {
+        "id": "tadasana",
+        "min": 2,
+        "rep": "",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "utkatasana",
+        "min": 2,
+        "rep": "12 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "vorbeuge",
+        "min": 2,
+        "rep": "",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "ashwa",
+        "min": 2,
+        "rep": "12 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "parivrtta_parsva",
+        "min": 2,
+        "rep": "12 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "phalakasana",
+        "min": 2,
+        "rep": "",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "urdhva_mukha",
+        "min": 2,
+        "rep": "12 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "adho_mukha",
+        "min": 2,
+        "rep": "12 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "dreibeiniger_hund",
+        "min": 2,
+        "rep": "",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "krieger1",
+        "min": 2,
+        "rep": "12 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "pyramide",
+        "min": 2,
+        "rep": "12 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "weite_vorbeuge",
+        "min": 2,
+        "rep": "",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "malasana",
+        "min": 2,
+        "rep": "12 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "gedrehte_hocke",
+        "min": 2,
+        "rep": "12 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "vorbeuge",
+        "min": 2,
+        "rep": "",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "arme_zur_sonne",
+        "min": 2,
+        "rep": "12 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "c_berg_namaste",
+        "min": 2,
+        "rep": "12 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "baum",
+        "min": 2,
+        "rep": "6 Atemzüge je Seite",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "tadasana",
+        "min": 2,
+        "rep": "",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "stuhl_zehenspitzen",
+        "min": 2,
+        "rep": "",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "vorbeuge",
+        "min": 2,
+        "rep": "",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "adho_mukha",
+        "min": 2,
+        "rep": "12 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       }
+      ],
+      "ausgl": [
+       {
+        "id": "kindhaltung",
+        "min": 2,
+        "rep": "12 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "apanasana",
+        "min": 2,
+        "rep": "12 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "bananasana",
+        "min": 2,
+        "rep": "12 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "nadeloehr",
+        "min": 2,
+        "rep": "12 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "drehung_liegend",
+        "min": 2,
+        "rep": "12 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "sn_shaking",
+        "min": 2,
+        "rep": "",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       },
+       {
+        "id": "totenstellung",
+        "min": 4,
+        "rep": "24 Atemzüge",
+        "repAuto": true,
+        "both": false,
+        "altE": false,
+        "altH": false
+       }
+      ],
+      "xmusik": []
+     },
+     "atem": {
+      "a": "",
+      "w": ""
+     },
+     "tx": {
+      "focus": "Füße, Beine, Standfestigkeit",
+      "kern": "Heute darf „Wurzelchakra“ für mich spürbar werden.",
+      "einl": "Herzlich willkommen zu unserer ersten gemeinsamen Yogastunde.\n\nUnsere Stunde steht heute unter dem Motto „Wurzelchakra“. Vielleicht magst du beim Üben immer wieder spüren, was dieses Motto für dich bedeutet – in deinem Körper, in deinem Atem und in deinem Alltag.\n\nEs gibt heute nichts, was du können oder schaffen musst. Wir üben in deinem Tempo und nur so weit, wie es sich gut anfühlt.\n\nSpür zunächst, welche Körperteile Kontakt mit dem Boden haben. Nimm ganz bewusst wahr, dass der Boden dich trägt.\n\nSpüre in deinen Rücken hinein: Wo liegt er auf, wo ist Raum zwischen Rücken und Boden? Du musst nichts verändern – nur wahrnehmen.\n\nLass deine Schultern weich werden und spüre, wie sich dein Brustkorb mit jedem Atemzug sanft hebt und senkt.\n\nWenn du magst, schließe die Augen oder richte deinen Blick weich auf einen Punkt vor dir. Lass Augen, Stirn und Kiefer locker werden.\n\nNimm dir einen Moment, um wahrzunehmen, wie du heute hier ankommst: Wie fühlt sich dein Körper an? Wie dein Atem? Wie dein Geist? Du musst nichts verändern – nur bemerken.\n\nDu darfst alles so annehmen, wie es gerade ist: Müdigkeit, Unruhe, Vorfreude oder einfach gar nichts Besonderes.\n\nWenn Gedanken kommen, lass sie vorüberziehen wie Wolken. Kehre immer wieder zum Spüren zurück – zu den Füßen, zum Atem, zum Kontakt mit dem Boden.\n\nVielleicht möchtest du dir für diese Stunde eine kleine Absicht setzen – ein Wort oder ein Gefühl, das dich beim Üben begleitet.\n\nUnser Motto heute: „Wurzelchakra“ – Heute darf „Wurzelchakra“ für mich spürbar werden.",
+      "atem": "",
+      "mantra": "",
+      "schluss": "Bleibe noch einen Moment ruhig liegen und spüre nach, was die Bewegung in dir bewegt hat: Wärme, Weite, Ruhe, Lebendigkeit?\n\nNimm wahr, wie sich dein Atem verändert hat und wie dein Körper auf der Matte liegt.\n\nLass das Motto „Wurzelchakra“ noch einmal nachklingen: Heute darf „Wurzelchakra“ für mich spürbar werden.\n\nSpüre, welche Körperstellen sich besonders lebendig oder weich anfühlen, und lass den Atem dorthin fließen.\n\nNimm dir Zeit, dich innerlich bei dir selbst für diese Stunde zu bedanken.\n\nSpüre, wie sich dein Herzschlag und dein Atem beruhigen.\n\nNimm wahr, wo dein Körper nach dieser Stunde mehr Raum hat: im Rücken, in den Schultern oder in den Hüften.\n\nLass die Beweglichkeit und die Wärme der Übungen noch einen Moment in dir wirken.\n\nDanke deinem Körper für das, was er heute möglich gemacht hat.\n\nWenn du magst, lege eine Hand auf dein Herz und spüre seinen Rhythmus.\n\nDann lass die Bewegungen los und geh in die Schlussentspannung.",
+      "shava": "Jetzt ist Zeit für die Schlussentspannung. Mach es dir ganz bequem und komm in der Ruhe an.\n\nLege dich so hin, dass dein Körper möglichst wenig halten muss. Wenn es angenehmer ist, kannst du die Knie aufstellen oder eine Decke unter die Knie legen.\n\nSchließe gerne die Augen und spüre noch einmal deinen Körper. Spüre den Kontakt zum Boden. Du musst nichts mehr tun. Nichts halten. Nichts erreichen.\n\nLass deine Füße schwer werden. Die Zehen, die Fußsohlen, die Fersen … alles darf loslassen.\n\nDeine Beine dürfen entspannen: die Waden, die Knie, die Oberschenkel.\n\nEntspanne dein Becken … deinen Bauch … deinen Rücken. Der Boden trägt dich.\n\nLass deine Schultern weich werden. Deine Arme dürfen schwer werden, die Ellenbogen, die Unterarme, die Hände.\n\nEntspanne deinen Nacken … dein Gesicht … die Augen … die Stirn.\n\nStell dir vor, „Wurzelchakra“ hat eine Farbe, eine Temperatur und einen Platz in deinem Körper. Lass dieses Gefühl mit jedem Atemzug ein wenig größer und weicher werden.\n\nNimm deinen Atem wahr. Ganz von selbst kommt die Einatmung … und ganz von selbst geht die Ausatmung.\n\nWiederhole innerlich, in deinem eigenen Tempo: „Heute darf „Wurzelchakra“ für mich spürbar werden.“\n\nBleibe noch einige Atemzüge in dieser Ruhe.\n…\n\nSpüre, wie schwer und warm dein Körper geworden ist. Du musst nirgendwo hin. Du bist genau hier.\n\nLass auch die Gedanken zur Ruhe kommen. Wenn einer auftaucht, lass ihn weiterziehen und kehre zum Atem zurück.\n…\n\nVertiefe nun langsam wieder deinen Atem. Bewege ganz sanft Finger und Zehen. Nimm dir Zeit, bevor du dich wieder aufrichtest.\n\nUnd wenn du heute nur einen Gedanken mitnehmen möchtest, dann vielleicht diesen:\nIch nehme das Motto „Wurzelchakra“ als kleinen Gedanken mit in den Tag.",
+      "xmusik": "Lied: Aura Cleansing (Ganputi)"
+     },
+     "txEdited": {},
+     "status": "in_planung",
+     "txd": {},
+     "kN": 0,
+     "shaktiOn": true,
+     "bm": {
+      "einl": {
+       "ab": "einl",
+       "name": "Einleitung",
+       "on": true,
+       "type": "text"
+      },
+      "atem": {
+       "ab": "atem",
+       "name": "Atemübung",
+       "on": false,
+       "type": "atem"
+      },
+      "mantra": {
+       "ab": "mantra",
+       "name": "Mantra",
+       "on": false,
+       "type": "mantra"
+      },
+      "mobi": {
+       "ab": "mobi",
+       "name": "Mobilisation",
+       "on": true,
+       "type": "ex",
+       "min": 15
+      },
+      "shakti": {
+       "ab": "shakti",
+       "name": "Shakti Naam",
+       "on": true,
+       "type": "ex",
+       "min": 5
+      },
+      "asana": {
+       "ab": "asana",
+       "name": "Asanas (Hauptteil)",
+       "on": true,
+       "type": "ex",
+       "min": 44
+      },
+      "ausgl": {
+       "ab": "ausgl",
+       "name": "Cooldown",
+       "on": true,
+       "type": "ex",
+       "min": 16
+      },
+      "schluss": {
+       "ab": "schluss",
+       "name": "Schluss",
+       "on": true,
+       "type": "text"
+      },
+      "shava": {
+       "ab": "shava",
+       "name": "Shavasana",
+       "on": false,
+       "type": "text"
+      },
+      "xmusik": {
+       "ab": "einl",
+       "name": "Musik / Notiz",
+       "on": true,
+       "type": "text"
+      }
+     },
+     "order": [
+      "einl",
+      "atem",
+      "mantra",
+      "mobi",
+      "shakti",
+      "asana",
+      "ausgl",
+      "xmusik",
+      "schluss",
+      "shava"
+     ],
+     "mobiMode": "sitz",
+     "bmCustom": true,
+     "mantra": null,
+     "altDef": false
+    }
+   ],
+   "dirty": false,
+   "template": false,
+   "single": true
+  }
+ ],
+ "customEx": [
+  {
+   "id": "c_berg_namaste",
+   "n": "Berghaltung mit Gebetshänden",
+   "sa": "Tadasana Namaskarasana",
+   "c": "stand",
+   "lv": 1,
+   "m": 1,
+   "pose": "prayer",
+   "t": [
+    "wurzel",
+    "herz",
+    "ruhe"
+   ],
+   "x": [],
+   "e": "",
+   "h": "",
+   "s": 1,
+   "o": 1000,
+   "custom": true,
+   "d": "Im Stand die Handflächen vor dem Herzen zusammenführen (Tadasana mit Gebetshänden); sammelt und erdet.",
+   "kat": {
+    "pos": [
+     "stehen"
+    ],
+    "dir": [],
+    "wirk": [
+     "regen"
+    ],
+    "en": "langhana",
+    "chakra": [
+     "anahata"
+    ],
+    "ziel": [],
+    "reg": [
+     "brust"
+    ],
+    "mus": [
+     "brust"
+    ],
+    "atm": [
+     "halten",
+     "tief",
+     "weit"
+    ],
+    "auf": [
+     "wurzel",
+     "ausricht",
+     "loslass",
+     "herz"
+    ],
+    "sup": [
+     "adjust",
+     "assist"
+    ],
+    "mat": [
+     "matte"
+    ]
+   },
+   "chakraSrc": "regel",
+   "peak": false
+  }
+ ],
+ "ratings": {}
+}

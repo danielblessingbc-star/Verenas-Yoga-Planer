@@ -6,7 +6,7 @@ const pct = (v, t) => t > 0 ? Math.round(100 * v / t) : 0;
 // Übungen einer Stunde (nur eingeschaltete Übungsblöcke) mit Block und Minuten
 function anItems(s) {
   const out = [];
-  exKeys(s).filter(k => bon(s, k)).forEach(k => (s.blk[k] || []).forEach(it => { const e = exById(it.id); if (e) out.push({ s, it, e, k, min: +it.min || 0 }); }));
+  exKeys(s).filter(k => bon(s, k)).forEach(k => (s.blk[k] || []).forEach(it => { const e = exById(it.id); if (e && !e.txt) out.push({ s, it, e, k, min: +it.min || 0 }); }));
   return out;
 }
 // Kennzahlen und Verteilungen über eine oder mehrere Stunden
@@ -146,7 +146,7 @@ function anSwapIn(s, e, skip) {
   exKeys(s).filter(k => bon(s, k) && bty(s, k) === 'ex').forEach(k => {
     if (!anFits(e, abOf(s, k))) return;
     (s.blk[k] || []).forEach((it, idx) => {
-      const v = exById(it.id); if (!v || v.peak || (skip && skip(v))) return;
+      const v = exById(it.id); if (!v || v.txt || v.peak || (skip && skip(v))) return;
       const d = Math.abs((+it.min || 0) - e.m) + (rating(v.id) - 3) * 0.5 + (it.id === 'tadasana' ? 9 : 0);
       if (!best || d < best.d) best = { k, idx, d };
     });
@@ -155,7 +155,7 @@ function anSwapIn(s, e, skip) {
 }
 // Eine Übung durch eine ähnliche, passende Alternative ersetzen (gleiche Position im Block)
 function anReplace(c, s, k, idx, usage, minAlt) {
-  const old = exById(s.blk[k][idx].id); if (!old) return false;
+  const old = exById(s.blk[k][idx].id); if (!old || old.txt) return false;
   const ctx = anCtx(c, s), ab = abOf(s, k), ok0 = old.kat || {};
   const share = (a, b) => (a || []).filter(x => (b || []).includes(x)).length;
   const cands = eligible(exAll().filter(e => e.id !== old.id && e.c !== 'kraft' && !e.peak && anFits(e, ab)), ctx);
@@ -212,7 +212,7 @@ function fixTime(c, list) { const changed = []; list.forEach(s => { if (Math.abs
 function fixLevel(c, list) {
   const changed = [];
   list.forEach(s => { const lvl = effLevel(c, s); exKeys(s).filter(k => bon(s, k)).forEach(k => (s.blk[k] || []).forEach((it, idx) => {
-    const e = exById(it.id); if (!e || e.peak) return;
+    const e = exById(it.id); if (!e || e.txt || e.peak) return;
     const alt = lvl === 'fort' ? (e.lv < 2 ? altH(e) : null) : (e.lv > (lvl === 'anf' ? 1 : 2) ? altE(e) : null);
     if (alt && !alt.peak && !blkIds(s).includes(alt.id) && (lvl === 'fort' || levelOk(alt, lvl))) { anPut(s, k, idx, alt); changed.push(s); }
   })); });

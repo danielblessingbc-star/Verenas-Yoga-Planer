@@ -39,7 +39,7 @@ const DOC_CSS = `
 .ovc.big{border:0;padding:0}.ovc.big .ovh{font-size:16px;margin-bottom:6px}.ovc.big .ovs{height:20px;border-radius:10px;margin:4px 0 10px}.ovc.big .ovs i{font-size:11px;line-height:20px}.ovc.big .mx{font-size:var(--fs);padding:4px 2px 3px;border-radius:9px}.ovc.big .mx svg,.ovc.big .mx .fig{width:var(--fig);height:var(--fig)}.ovc.big .mx span.nm{height:auto;min-height:2.3em;margin-top:3px}.ovc.big .mx .pk{width:15px;height:15px;font-size:10px;line-height:15px;top:-3px;right:-6px}
 .ovt{display:grid;grid-template-columns:repeat(15,minmax(0,1fr));gap:3px}
 .mx{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;border:1px solid;border-radius:6px;padding:2px 1px 1px;font-size:6.5px;line-height:1.1;text-align:center;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.mx .fg{position:relative;display:inline-block;line-height:0}.mx .fig,.mx svg{width:34px;height:34px;color:#3d4a42}.mx span.nm{display:block;margin-top:1px;height:15px;overflow:hidden;color:#4a4a42}.mx .pk{position:absolute;top:-2px;right:-4px;width:11px;height:11px;border-radius:50%;background:#e0a82e;color:#fff;font-size:8px;line-height:11px;text-align:center}
+.mx.sq{box-shadow:inset 0 0 0 2px #fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}.mx .fg{position:relative;display:inline-block;line-height:0}.mx .fig,.mx svg{width:34px;height:34px;color:#3d4a42}.mx span.nm{display:block;margin-top:1px;height:15px;overflow:hidden;color:#4a4a42}.mx .pk{position:absolute;top:-2px;right:-4px;width:11px;height:11px;border-radius:50%;background:#e0a82e;color:#fff;font-size:8px;line-height:11px;text-align:center}
 .ex{display:inline-flex;flex-direction:column;align-items:center;width:90px;margin:3px 2px;text-align:center;font-size:11px;line-height:1.2;vertical-align:top}
 .ex .fig{width:52px;height:52px;color:#3d4a42}
 .ex .fg{position:relative;display:inline-block;line-height:0}
@@ -127,11 +127,15 @@ const groupHeading = rs => rs.every(r => EXKEYS.includes(r.k)) ? 'Mobilisation, 
 
 function exCell(it) {
   const e = exById(it.id); if (!e) return '';
+  if (e.txt && !isTxb(it)) { const b = sbInfo(it, e); return `<span class="ex"><span class="fg">${b.fig}</span><span>${esc(b.title)}</span>${b.sub ? `<small class="sa">${esc(b.sub)}</small>` : ''}</span>`; }
+  if (e.txt) return `<span class="ex"><span class="fg">${figureSVG(e.pose)}</span><span>Text</span><small class="sa">${esc(String(it.tx || '').replace(/\s+/g, ' ').trim().slice(0, 70))}${String(it.tx || '').length > 70 ? ' …' : ''}</small></span>`;
   const main = `<span class="ex"><span class="fg">${figureSVG(e.pose)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span>${esc(e.n)}</span>${e.sa ? `<small class="sa">${esc(e.sa)}</small>` : ''}${SHOW_REPS && it.rep ? `<small>${esc(it.rep)}</small>` : ''}</span>`;
   const ea = effE(it) ? altE(e) : null, ha = effH(it) ? altH(e) : null; if (!ea && !ha) return main;
   const v = (x, lab) => x ? `<span class="ex alt"><span class="fg">${figureSVG(x.pose)}${x.peak ? '<b class="pk">★</b>' : ''}</span><small class="lv">${lab}</small><span>${esc(x.n)}</span></span>` : '';
   return `<span class="exg">${v(ea, '↓ leichter')}${main}${v(ha, '↑ schwerer')}</span>`;
 }
+// Texte der Textblöcke, die zwischen den Übungen stehen (Reihenfolge wie in der Stunde)
+const txbParts = (rs, s) => rs.map(r => r.items.filter(i => isTxb(i) && String(i.tx || '').trim()).map(i => `<div class="txt"><b>Text (${esc(r.name)})</b>${paras(i.tx, s)}</div>`).join('')).join('');
 const rowTable = rs => `<table class="flowt">${rs.map(r => `<tr><td class="lab">${esc(r.name)}<br><span class="pr">(${fmtMin(r.min)} Min.)</span></td><td>${r.items.map(exCell).join('')}</td></tr>`).join('')}</table>`;
 function kraftBox(s) {
   return blkAll(s).filter(i => (exById(i.id) || {}).c === 'kraft').map(it => {
@@ -168,7 +172,7 @@ function renderSession(c, s, i, o) {
   const flush = () => {
     if (!grp.length) return;
     const g = rs.filter(r => grp.includes(r.k)); grp = [];
-    if (g.length) parts.push({ ex: true, html: `<h3>${esc(groupHeading(g))} (${fmtMin(rowsMin(g))} Minuten)</h3>` + (onBlatt ? '<p class="hint">Die Übungsfolge mit Strichmännchen steht auf dem separaten Blatt.</p>' : rowTable(g)) });
+    if (g.length) parts.push({ ex: true, html: `<h3>${esc(groupHeading(g))} (${fmtMin(rowsMin(g))} Minuten)</h3>` + (onBlatt ? '<p class="hint">Die Übungsfolge mit Strichmännchen steht auf dem separaten Blatt.</p>' : rowTable(g)) + txbParts(g, s) });
   };
   order(s).forEach(k => {
     if (!bon(s, k)) return;
@@ -221,7 +225,7 @@ function renderOverview(c) {
 // Stundenübersicht (wie in der App): je Stunde Datum, Titel, farbiger Verlauf und alle Übungen als Kacheln
 const OV_BC = { einl: '#b9a684', atem: '#6fb8bd', mantra: '#d4d8e2', mobi: '#d4b483', shakti: '#8e6bb8', aufw: '#86b394', asana: '#4f8a6e', kraft: '#b0443a', ausgl: '#cf8fa3', schluss: '#cdb463', shava: '#7d8fa8' };
 function renderStundenUeb(c, only) {
-  const mt = (col, svg, nm, pk) => `<span class="mx" style="background:${col}33;border-color:${col}"><span class="fg">${svg}${pk ? '<b class="pk">★</b>' : ''}</span><span class="nm">${esc(nm)}</span></span>`;
+  const mt = (col, svg, nm, pk, sq) => `<span class="mx${sq ? ' sq' : ''}" style="background:${col}33;border-color:${col};--bc:${col}"><span class="fg">${svg}${pk ? '<b class="pk">★</b>' : ''}</span><span class="nm">${esc(nm)}</span></span>`;
   const cards = c.sessions.map((s, i) => {
     if (only && only.s !== s) return '';
     const ks = order(s).filter(k => bon(s, k)), col = k => OV_BC[abOf(s, k)] || '#a9b4c2';
@@ -232,7 +236,7 @@ function renderStundenUeb(c, only) {
       const ty = bty(s, k);
       if (ty === 'atem') { [s.atem && s.atem.a, s.atem && s.atem.w].filter(Boolean).forEach(id => { const e = exById(id); if (e) tiles.push(mt(col(k), figureSVG(e.pose), e.n)); }); }
       else if (ty === 'mantra') { const m = s.mantra && typeof manById === 'function' && manById(s.mantra.id); if (m) tiles.push(mt(col(k), manIconSVG(m.id), m.n.replace(/\s*\(.*$/, ''))); }
-      else if (ty === 'ex') (s.blk[k] || []).forEach(it => { const e = exById(it.id); if (e) tiles.push(mt(col(k), figureSVG(e.pose), e.n, e.peak)); });
+      else if (ty === 'ex') (s.blk[k] || []).forEach((it, j, arr) => { const e = exById(it.id); if (e) tiles.push(mt(col(k), figureSVG(e.pose), e.n, e.peak, !!it.seq)); });
     });
     if (only) { // eine Stunde füllt die Seite: Kachelgröße nach Anzahl
       const W = 267, n = Math.max(tiles.length, 1), fsOf = cell => Math.max(7.5, Math.min(11, cell * 0.36));
@@ -405,7 +409,7 @@ function paginateDoc(root) {
 
 // ---------- Zusatzblätter: Alternativenblatt, Blatt Übungsauswahl, Detailbeschreibungen ----------
 const tileFig = (e, cls) => `<span class="ex${cls ? ' ' + cls : ''}"><span class="fg">${figureSVG(e.pose)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span>${esc(e.n)}</span>${e.sa ? `<small class="sa">${esc(e.sa)}</small>` : ''}</span>`;
-const sessionExList = s => { const seen = new Set(), out = []; exRows(s).forEach(r => r.items.forEach(it => { const e = exById(it.id); if (e && !seen.has(e.id)) { seen.add(e.id); out.push({ e, it, r }); } })); return out; };
+const sessionExList = s => { const seen = new Set(), out = []; exRows(s).forEach(r => r.items.forEach(it => { const e = exById(it.id); if (e && !e.txt && !seen.has(e.id)) { seen.add(e.id); out.push({ e, it, r }); } })); return out; };
 const lvText = e => ['', 'Anfänger', 'Mittel', 'Fortgeschritten'][e.lv] || '';
 const katList = (e, k) => katLabels(e, k).join(', ');
 const paperHead = (c, title, sub) => `${LOTUS.replace('class="lotus"', 'class="lotus wm"')}<div class="kurs">${esc(c.name)}</div><h2>${title}</h2>${sub ? `<p class="sub">${sub}</p>` : ''}`;
@@ -488,7 +492,7 @@ function renderSpick(c, s, i) {
   const rows = order(s).filter(k => bon(s, k)).map(k => {
     const ty = bty(s, k), m = ty === 'ex' ? sumMin(s.blk[k] || []) : blockMin(s, k), a = t; t += m;
     let inh;
-    if (ty === 'ex') inh = (s.blk[k] || []).map(it => { const e = exById(it.id); if (!e) return ''; const ea = effE(it) ? altE(e) : null; return esc(e.n) + (e.peak ? ' ★' : '') + (ea ? ` <span class="pr">(leichter: ${esc(ea.n)})</span>` : ''); }).filter(Boolean).join(' · ') || '–';
+    if (ty === 'ex') inh = (s.blk[k] || []).map(it => { const e = exById(it.id); if (!e) return ''; if (e.txt && !isTxb(it)) return esc(e.n + ': ' + sbInfo(it, e).title); if (e.txt) return 'Text: ' + esc(String(it.tx || '').replace(/\s+/g, ' ').trim().slice(0, 50) || '…'); const ea = effE(it) ? altE(e) : null; return esc(e.n) + (e.peak ? ' ★' : '') + (ea ? ` <span class="pr">(leichter: ${esc(ea.n)})</span>` : ''); }).filter(Boolean).join(' · ') || '–';
     else if (ty === 'mantra') { const mm = s.mantra && manById(s.mantra.id); inh = mm ? esc(mm.n + ': ' + mm.text.join(' – ')) : '–'; }
     else if (ty === 'atem') inh = esc([(exById(s.atem.a) || {}).n, s.atem.w && (exById(s.atem.w) || {}).n].filter(Boolean).join(' + '));
     else inh = k === 'einl' ? esc(s.motto.title + ' – ' + (s.tx.focus || s.motto.focus)) : k === 'shava' ? '„' + esc(s.tx.kern || s.motto.kern) + '“' : k === 'schluss' ? 'Nachspüren' : 'Text';
