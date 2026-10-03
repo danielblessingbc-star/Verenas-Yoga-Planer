@@ -221,7 +221,7 @@ function renderOverview(c) {
 // Stundenübersicht (wie in der App): je Stunde Datum, Titel, farbiger Verlauf und alle Übungen als Kacheln
 const OV_BC = { einl: '#b9a684', atem: '#6fb8bd', mantra: '#d4d8e2', mobi: '#d4b483', shakti: '#8e6bb8', aufw: '#86b394', asana: '#4f8a6e', kraft: '#b0443a', ausgl: '#cf8fa3', schluss: '#cdb463', shava: '#7d8fa8' };
 function renderStundenUeb(c, only) {
-  const mt = (col, svg, nm, pk) => `<span class="mx" style="background:${col}33;border-color:${col}"><span class="fg">${svg}${pk ? '<b class="pk">★</b>' : ''}</span><span class="nm">${esc(nm)}</span></span>`;
+  const mt = (col, svg, nm, pk, fr) => `<span class="mx" style="background:${col}33;border-color:${col}${fr || ''}"><span class="fg">${svg}${pk ? '<b class="pk">★</b>' : ''}</span><span class="nm">${esc(nm)}</span></span>`;
   const cards = c.sessions.map((s, i) => {
     if (only && only.s !== s) return '';
     const ks = order(s).filter(k => bon(s, k)), col = k => OV_BC[abOf(s, k)] || '#a9b4c2';
@@ -232,7 +232,7 @@ function renderStundenUeb(c, only) {
       const ty = bty(s, k);
       if (ty === 'atem') { [s.atem && s.atem.a, s.atem && s.atem.w].filter(Boolean).forEach(id => { const e = exById(id); if (e) tiles.push(mt(col(k), figureSVG(e.pose), e.n)); }); }
       else if (ty === 'mantra') { const m = s.mantra && typeof manById === 'function' && manById(s.mantra.id); if (m) tiles.push(mt(col(k), manIconSVG(m.id), m.n.replace(/\s*\(.*$/, ''))); }
-      else if (ty === 'ex') (s.blk[k] || []).forEach(it => { const e = exById(it.id); if (e) tiles.push(mt(col(k), figureSVG(e.pose), e.n, e.peak)); });
+      else if (ty === 'ex') (s.blk[k] || []).forEach((it, j, arr) => { const e = exById(it.id); if (e) tiles.push(mt(col(k), figureSVG(e.pose), e.n, e.peak, seqFrame(arr, j))); });
     });
     if (only) { // eine Stunde füllt die Seite: Kachelgröße nach Anzahl
       const W = 267, n = Math.max(tiles.length, 1), fsOf = cell => Math.max(7.5, Math.min(11, cell * 0.36));
