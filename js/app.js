@@ -1345,6 +1345,7 @@ Object.assign(A, {
 Object.assign(CH, TXVORL_CH);
 Object.assign(A, rcpActions);
 Object.assign(A, { tglw: CH.tglw, pkbr: CH.pkbr, pkbrpick: CH.pkbrpick });
+applySeeds();
 normalizeState();
 applyCatalogState();
 document.head.insertAdjacentHTML('beforeend', `<style id="docCss">${DOC_CSS}</style>`);
