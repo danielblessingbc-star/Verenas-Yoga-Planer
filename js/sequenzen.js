@@ -70,12 +70,15 @@ function seqWrapRows(s, key, items, rows) {
       + `<button class="ghost sm" data-a="seqGrpMv" data-id="${s.id}" data-b="${key}" data-bid="${u.seq}" data-d="1" ${k === units.length - 1 ? 'disabled' : ''} title="Ganze Sequenz nach unten">▼</button></div>${html}</div>`;
   }).join('');
 }
-// Sequenz-Kachel: Klasse sq (weißer Innenrand); erste und letzte Kachel einer Sequenz zusätzlich sqe (schwarzer Innenrand)
-const seqEnd = (items, j) => { const it = items[j]; return !!it.seq && (!items[j - 1] || items[j - 1].seq !== it.seq || !items[j + 1] || items[j + 1].seq !== it.seq); };
-const seqCls = (items, j) => items[j].seq ? (seqEnd(items, j) ? ' sq sqe' : ' sq') : '';
-// Kachelreihen (zugeklappter Block, Übersicht): Sequenz-Kacheln sehen aus wie normale Asanas, nur der Innenrand unterscheidet sich
+// Sequenzen in Kachelreihen: normale Kacheln; hinter den Kacheln einer Sequenz liegt ein farbiger Balken (Farbe der Sequenzart), der nur die Lücken zwischen den Kacheln füllt.
+// Technik: jede Kachel außer der letzten einer Sequenz bekommt Klasse sqb + sq-<Art> (Schatten in Lückenbreite nach rechts, siehe style.css / DOC_CSS)
+const seqBridge = (items, j) => { const it = items[j], nx = items[j + 1]; return it && it.seq && nx && nx.seq === it.seq ? ` sqb sq-${SEQ_TYPES[it.seqType] ? it.seqType : 'asana'}` : ''; };
 function seqTiles(items, fn) {
-  return items.map((it, j) => { const h = fn(it, j); return it.seq && h ? h.replace('class="mt ', 'class="mt' + seqCls(items, j) + ' ') : h; }).join('');
+  return items.map((it, j) => { const h = fn(it, j), c = seqBridge(items, j); return c && h ? h.replace('class="mt ', 'class="mt' + c + ' ') : h; }).join('');
+}
+// Am Zeilenende (Umbruch) braucht eine Kachel keine Brücke zur nächsten
+function seqFixRows() {
+  document.querySelectorAll('.mt.sqb').forEach(t => { const n = t.nextElementSibling; if (!n || n.offsetTop - t.offsetTop > 4) t.classList.remove('sqb'); });
 }
 // Alle Übungen eines Sequenzblocks aus der Stunde entfernen (egal in welchem Stundenblock sie stehen)
 const seqPurge = (s, bid) => Object.keys(s.blk || {}).forEach(k => { s.blk[k] = (s.blk[k] || []).filter(i => i.seq !== bid); });
