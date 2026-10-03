@@ -127,11 +127,15 @@ const groupHeading = rs => rs.every(r => EXKEYS.includes(r.k)) ? 'Mobilisation, 
 
 function exCell(it) {
   const e = exById(it.id); if (!e) return '';
+  if (e.txt && !isTxb(it)) { const b = sbInfo(it, e); return `<span class="ex"><span class="fg">${b.fig}</span><span>${esc(b.title)}</span>${b.sub ? `<small class="sa">${esc(b.sub)}</small>` : ''}</span>`; }
+  if (e.txt) return `<span class="ex"><span class="fg">${figureSVG(e.pose)}</span><span>Text</span><small class="sa">${esc(String(it.tx || '').replace(/\s+/g, ' ').trim().slice(0, 70))}${String(it.tx || '').length > 70 ? ' …' : ''}</small></span>`;
   const main = `<span class="ex"><span class="fg">${figureSVG(e.pose)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span>${esc(e.n)}</span>${e.sa ? `<small class="sa">${esc(e.sa)}</small>` : ''}${SHOW_REPS && it.rep ? `<small>${esc(it.rep)}</small>` : ''}</span>`;
   const ea = effE(it) ? altE(e) : null, ha = effH(it) ? altH(e) : null; if (!ea && !ha) return main;
   const v = (x, lab) => x ? `<span class="ex alt"><span class="fg">${figureSVG(x.pose)}${x.peak ? '<b class="pk">★</b>' : ''}</span><small class="lv">${lab}</small><span>${esc(x.n)}</span></span>` : '';
   return `<span class="exg">${v(ea, '↓ leichter')}${main}${v(ha, '↑ schwerer')}</span>`;
 }
+// Texte der Textblöcke, die zwischen den Übungen stehen (Reihenfolge wie in der Stunde)
+const txbParts = (rs, s) => rs.map(r => r.items.filter(i => isTxb(i) && String(i.tx || '').trim()).map(i => `<div class="txt"><b>Text (${esc(r.name)})</b>${paras(i.tx, s)}</div>`).join('')).join('');
 const rowTable = rs => `<table class="flowt">${rs.map(r => `<tr><td class="lab">${esc(r.name)}<br><span class="pr">(${fmtMin(r.min)} Min.)</span></td><td>${r.items.map(exCell).join('')}</td></tr>`).join('')}</table>`;
 function kraftBox(s) {
   return blkAll(s).filter(i => (exById(i.id) || {}).c === 'kraft').map(it => {
@@ -168,7 +172,7 @@ function renderSession(c, s, i, o) {
   const flush = () => {
     if (!grp.length) return;
     const g = rs.filter(r => grp.includes(r.k)); grp = [];
-    if (g.length) parts.push({ ex: true, html: `<h3>${esc(groupHeading(g))} (${fmtMin(rowsMin(g))} Minuten)</h3>` + (onBlatt ? '<p class="hint">Die Übungsfolge mit Strichmännchen steht auf dem separaten Blatt.</p>' : rowTable(g)) });
+    if (g.length) parts.push({ ex: true, html: `<h3>${esc(groupHeading(g))} (${fmtMin(rowsMin(g))} Minuten)</h3>` + (onBlatt ? '<p class="hint">Die Übungsfolge mit Strichmännchen steht auf dem separaten Blatt.</p>' : rowTable(g)) + txbParts(g, s) });
   };
   order(s).forEach(k => {
     if (!bon(s, k)) return;
@@ -405,7 +409,7 @@ function paginateDoc(root) {
 
 // ---------- Zusatzblätter: Alternativenblatt, Blatt Übungsauswahl, Detailbeschreibungen ----------
 const tileFig = (e, cls) => `<span class="ex${cls ? ' ' + cls : ''}"><span class="fg">${figureSVG(e.pose)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span>${esc(e.n)}</span>${e.sa ? `<small class="sa">${esc(e.sa)}</small>` : ''}</span>`;
-const sessionExList = s => { const seen = new Set(), out = []; exRows(s).forEach(r => r.items.forEach(it => { const e = exById(it.id); if (e && !seen.has(e.id)) { seen.add(e.id); out.push({ e, it, r }); } })); return out; };
+const sessionExList = s => { const seen = new Set(), out = []; exRows(s).forEach(r => r.items.forEach(it => { const e = exById(it.id); if (e && !e.txt && !seen.has(e.id)) { seen.add(e.id); out.push({ e, it, r }); } })); return out; };
 const lvText = e => ['', 'Anfänger', 'Mittel', 'Fortgeschritten'][e.lv] || '';
 const katList = (e, k) => katLabels(e, k).join(', ');
 const paperHead = (c, title, sub) => `${LOTUS.replace('class="lotus"', 'class="lotus wm"')}<div class="kurs">${esc(c.name)}</div><h2>${title}</h2>${sub ? `<p class="sub">${sub}</p>` : ''}`;
@@ -488,7 +492,7 @@ function renderSpick(c, s, i) {
   const rows = order(s).filter(k => bon(s, k)).map(k => {
     const ty = bty(s, k), m = ty === 'ex' ? sumMin(s.blk[k] || []) : blockMin(s, k), a = t; t += m;
     let inh;
-    if (ty === 'ex') inh = (s.blk[k] || []).map(it => { const e = exById(it.id); if (!e) return ''; const ea = effE(it) ? altE(e) : null; return esc(e.n) + (e.peak ? ' ★' : '') + (ea ? ` <span class="pr">(leichter: ${esc(ea.n)})</span>` : ''); }).filter(Boolean).join(' · ') || '–';
+    if (ty === 'ex') inh = (s.blk[k] || []).map(it => { const e = exById(it.id); if (!e) return ''; if (e.txt && !isTxb(it)) return esc(e.n + ': ' + sbInfo(it, e).title); if (e.txt) return 'Text: ' + esc(String(it.tx || '').replace(/\s+/g, ' ').trim().slice(0, 50) || '…'); const ea = effE(it) ? altE(e) : null; return esc(e.n) + (e.peak ? ' ★' : '') + (ea ? ` <span class="pr">(leichter: ${esc(ea.n)})</span>` : ''); }).filter(Boolean).join(' · ') || '–';
     else if (ty === 'mantra') { const mm = s.mantra && manById(s.mantra.id); inh = mm ? esc(mm.n + ': ' + mm.text.join(' – ')) : '–'; }
     else if (ty === 'atem') inh = esc([(exById(s.atem.a) || {}).n, s.atem.w && (exById(s.atem.w) || {}).n].filter(Boolean).join(' + '));
     else inh = k === 'einl' ? esc(s.motto.title + ' – ' + (s.tx.focus || s.motto.focus)) : k === 'shava' ? '„' + esc(s.tx.kern || s.motto.kern) + '“' : k === 'schluss' ? 'Nachspüren' : 'Text';

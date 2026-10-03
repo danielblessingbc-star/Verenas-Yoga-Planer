@@ -27,6 +27,16 @@ function plSteps(c, s) {
     if (ty === 'ex') {
       (s.blk[k] || []).forEach(it => {
         const e = exById(it.id); if (!e) return;
+        if (e.txt && !isTxb(it)) { // Sonderbaustein Lied / Mantra
+          const b = sbInfo(it, e), cls = 'cat-' + e.c;
+          steps.push({ block: name, title: b.title, sub: b.sub || e.n, min: +it.min || e.m, cls, tile: tile(cls, b.fig), det: sbDet(it, e), text: true });
+          return;
+        }
+        if (e.txt) { // Sonderbaustein Textblock: Text wie ein Textblock der Stunde anzeigen
+          const d = +it.min || 1;
+          steps.push({ block: name, title: 'Text', sub: name, min: d, cls: 'cat-textblock', tile: tile('cat-textblock', figureSVG('textblock')), det: [{ ic: 'cue', h: 'Text', paras: String(it.tx || '').split(/\n{2,}/).filter(x => x.trim()) }], text: true });
+          return;
+        }
         const kraft = e.c === 'kraft' && e.how, ea = altE(e), ha = altH(e), lab = key => katLabels(e, key);
         const cues = plSentences(kraft ? e.how : e.d).slice(0, 4);
         const achten = [].concat(kraft ? (e.ev ? [e.ev] : []) : (e.w ? [e.w] : []), (e.x || []).length ? ['Vorsicht bei: ' + e.x.map(g => GEBRECHEN[g]).join(', ')] : []);
