@@ -921,7 +921,7 @@ async function aiCall(prompt, maxTokens, retried) {
   // „Denk“-Modelle (z. B. DeepSeek) verbrauchen das Token-Limit zuerst für ihre Überlegungen: leere oder abgeschnittene Antwort, dann einmal mit deutlich mehr Tokens wiederholen
   const ch0 = (j.choices && j.choices[0]) || {};
   const cut = prov === 'anthropic' ? j.stop_reason === 'max_tokens' : ch0.finish_reason === 'length'; // Antwort wegen Token-Limit abgeschnitten
-  if (!retried && ((!out.trim() && prov !== 'anthropic' && ch0.message && ch0.message.reasoning_content) || cut)) return aiCall(prompt, Math.min(16000, (maxTokens || 3000) * 4), true);
+  if (!retried && ((!out.trim() && prov !== 'anthropic' && ch0.message && ch0.message.reasoning_content) || cut)) return aiCall(prompt, Math.min(prov === 'anthropic' ? 16000 : 8000, (maxTokens || 3000) * 4), true); // 8000: viele OpenAI-kompatible Dienste (z. B. deepseek-chat) erlauben höchstens 8192
   if (!out.trim()) throw new Error('Der Dienst hat geantwortet, aber ohne Text (' + JSON.stringify(j).slice(0, 200) + '). Evtl. ist das Modell ein „Denk“-Modell, das mehr Tokens braucht, oder der Modellname passt nicht.');
   return out;
 }
