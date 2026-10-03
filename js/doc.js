@@ -39,7 +39,7 @@ const DOC_CSS = `
 .ovc.big{border:0;padding:0}.ovc.big .ovh{font-size:16px;margin-bottom:6px}.ovc.big .ovs{height:20px;border-radius:10px;margin:4px 0 10px}.ovc.big .ovs i{font-size:11px;line-height:20px}.ovc.big .mx{font-size:var(--fs);padding:4px 2px 3px;border-radius:9px}.ovc.big .mx svg,.ovc.big .mx .fig{width:var(--fig);height:var(--fig)}.ovc.big .mx span.nm{height:auto;min-height:2.3em;margin-top:3px}.ovc.big .mx .pk{width:15px;height:15px;font-size:10px;line-height:15px;top:-3px;right:-6px}
 .ovt{display:grid;grid-template-columns:repeat(15,minmax(0,1fr));gap:3px}
 .mx{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;border:1px solid;border-radius:6px;padding:2px 1px 1px;font-size:6.5px;line-height:1.1;text-align:center;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.mx.sq{box-shadow:inset 0 0 0 2px #fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}.mx .fg{position:relative;display:inline-block;line-height:0}.mx .fig,.mx svg{width:34px;height:34px;color:#3d4a42}.mx span.nm{display:block;margin-top:1px;height:15px;overflow:hidden;color:#4a4a42}.mx .pk{position:absolute;top:-2px;right:-4px;width:11px;height:11px;border-radius:50%;background:#e0a82e;color:#fff;font-size:8px;line-height:11px;text-align:center}
+.mx.sq{box-shadow:inset 0 0 0 2px #fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}.mx.sqe{box-shadow:inset 0 0 0 2px #000}.mx .fg{position:relative;display:inline-block;line-height:0}.mx .fig,.mx svg{width:34px;height:34px;color:#3d4a42}.mx span.nm{display:block;margin-top:1px;height:15px;overflow:hidden;color:#4a4a42}.mx .pk{position:absolute;top:-2px;right:-4px;width:11px;height:11px;border-radius:50%;background:#e0a82e;color:#fff;font-size:8px;line-height:11px;text-align:center}
 .ex{display:inline-flex;flex-direction:column;align-items:center;width:90px;margin:3px 2px;text-align:center;font-size:11px;line-height:1.2;vertical-align:top}
 .ex .fig{width:52px;height:52px;color:#3d4a42}
 .ex .fg{position:relative;display:inline-block;line-height:0}
@@ -221,7 +221,7 @@ function renderOverview(c) {
 // Stundenübersicht (wie in der App): je Stunde Datum, Titel, farbiger Verlauf und alle Übungen als Kacheln
 const OV_BC = { einl: '#b9a684', atem: '#6fb8bd', mantra: '#d4d8e2', mobi: '#d4b483', shakti: '#8e6bb8', aufw: '#86b394', asana: '#4f8a6e', kraft: '#b0443a', ausgl: '#cf8fa3', schluss: '#cdb463', shava: '#7d8fa8' };
 function renderStundenUeb(c, only) {
-  const mt = (col, svg, nm, pk, sq) => `<span class="mx${sq ? ' sq' : ''}" style="background:${col}33;border-color:${col};--bc:${col}"><span class="fg">${svg}${pk ? '<b class="pk">★</b>' : ''}</span><span class="nm">${esc(nm)}</span></span>`;
+  const mt = (col, svg, nm, pk, sq) => `<span class="mx${sq || ''}" style="background:${col}33;border-color:${col};--bc:${col}"><span class="fg">${svg}${pk ? '<b class="pk">★</b>' : ''}</span><span class="nm">${esc(nm)}</span></span>`;
   const cards = c.sessions.map((s, i) => {
     if (only && only.s !== s) return '';
     const ks = order(s).filter(k => bon(s, k)), col = k => OV_BC[abOf(s, k)] || '#a9b4c2';
@@ -232,7 +232,7 @@ function renderStundenUeb(c, only) {
       const ty = bty(s, k);
       if (ty === 'atem') { [s.atem && s.atem.a, s.atem && s.atem.w].filter(Boolean).forEach(id => { const e = exById(id); if (e) tiles.push(mt(col(k), figureSVG(e.pose), e.n)); }); }
       else if (ty === 'mantra') { const m = s.mantra && typeof manById === 'function' && manById(s.mantra.id); if (m) tiles.push(mt(col(k), manIconSVG(m.id), m.n.replace(/\s*\(.*$/, ''))); }
-      else if (ty === 'ex') (s.blk[k] || []).forEach((it, j, arr) => { const e = exById(it.id); if (e) tiles.push(mt(col(k), figureSVG(e.pose), e.n, e.peak, !!it.seq)); });
+      else if (ty === 'ex') (s.blk[k] || []).forEach((it, j, arr) => { const e = exById(it.id); if (e) tiles.push(mt(col(k), figureSVG(e.pose), e.n, e.peak, seqCls(arr, j))); });
     });
     if (only) { // eine Stunde füllt die Seite: Kachelgröße nach Anzahl
       const W = 267, n = Math.max(tiles.length, 1), fsOf = cell => Math.max(7.5, Math.min(11, cell * 0.36));

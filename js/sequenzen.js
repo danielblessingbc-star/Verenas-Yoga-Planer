@@ -70,9 +70,12 @@ function seqWrapRows(s, key, items, rows) {
       + `<button class="ghost sm" data-a="seqGrpMv" data-id="${s.id}" data-b="${key}" data-bid="${u.seq}" data-d="1" ${k === units.length - 1 ? 'disabled' : ''} title="Ganze Sequenz nach unten">▼</button></div>${html}</div>`;
   }).join('');
 }
-// Kachelreihen (zugeklappter Block, Übersicht, Stundenübersicht): Sequenz-Kacheln sehen aus wie normale Asanas, nur der Rahmen ist etwas dicker (Klasse sq)
+// Sequenz-Kachel: Klasse sq (weißer Innenrand); erste und letzte Kachel einer Sequenz zusätzlich sqe (schwarzer Innenrand)
+const seqEnd = (items, j) => { const it = items[j]; return !!it.seq && (!items[j - 1] || items[j - 1].seq !== it.seq || !items[j + 1] || items[j + 1].seq !== it.seq); };
+const seqCls = (items, j) => items[j].seq ? (seqEnd(items, j) ? ' sq sqe' : ' sq') : '';
+// Kachelreihen (zugeklappter Block, Übersicht): Sequenz-Kacheln sehen aus wie normale Asanas, nur der Innenrand unterscheidet sich
 function seqTiles(items, fn) {
-  return items.map((it, j) => { const h = fn(it, j); return it.seq && h ? h.replace('class="mt ', 'class="mt sq ') : h; }).join('');
+  return items.map((it, j) => { const h = fn(it, j); return it.seq && h ? h.replace('class="mt ', 'class="mt' + seqCls(items, j) + ' ') : h; }).join('');
 }
 // Alle Übungen eines Sequenzblocks aus der Stunde entfernen (egal in welchem Stundenblock sie stehen)
 const seqPurge = (s, bid) => Object.keys(s.blk || {}).forEach(k => { s.blk[k] = (s.blk[k] || []).filter(i => i.seq !== bid); });
