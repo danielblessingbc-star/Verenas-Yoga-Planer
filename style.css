@@ -736,3 +736,12 @@ body.plon{overflow:hidden}
 .sqstep .ktile .fig{width:80px;height:80px}.sqstep b{font-size:13px;line-height:1.2}.sqstep .sa{font-size:11px}
 .sqcat h3{margin:0}
 .seqq .seg{display:inline-flex;width:auto}.seqq .sgb.sgoff{margin-left:0}
+
+/* ---- Sequenzarten (Mobilisation / Asana / Cooldown) und zusammengehörige Sequenz-Gruppen ---- */
+.t-mobilisation{--sq:#c8a25e}.t-asana{--sq:#4f8a6e}.t-cooldown{--sq:#a2688c}
+.chip.seqt{background:color-mix(in srgb,var(--sq) 22%,var(--card));border:1px solid color-mix(in srgb,var(--sq) 55%,var(--card));color:var(--ink)}
+.seqgrp{margin:8px 0;border:2px solid var(--sq);border-radius:14px;background:color-mix(in srgb,var(--sq) 7%,var(--card));overflow:hidden}
+.seqgh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:7px 12px;background:color-mix(in srgb,var(--sq) 20%,var(--card));border-bottom:1px solid color-mix(in srgb,var(--sq) 45%,var(--card))}
+.seqgh button[disabled]{opacity:.35;cursor:default}
+.seqgrp .xrow{border-left:0}
+.seqb.t-mobilisation,.seqb.t-asana,.seqb.t-cooldown{border-left:4px solid var(--sq);padding-left:10px}

@@ -283,8 +283,24 @@ const seqIdx = id => {
   const g = e.g || (e.c === 'balance' ? 'bal' : e.c === 'stand' || e.c === 'flow' || e.c === 'mobi_stand' ? 'stand' : e.c === 'mobi_sitz' ? 'sit' : e.c === 'kraft' ? (onFloor(e) ? 'supine' : 'stand') : 'supine');
   return (B[g] === undefined ? 1000 : B[g]) + ((e.o || 0) % 1000) / 10000;
 };
-// Übungen aus eingeplanten Sequenzen (it.seq) stehen in ihrer Reihenfolge am Anfang des Blocks, die übrigen folgen in der Standardreihenfolge
-const sortItems = items => { const sq = items.filter(i => i.seq), rest = items.filter(i => !i.seq).sort((a, b) => seqIdx(a.id) - seqIdx(b.id)); items.splice(0, items.length, ...sq, ...rest); return items; };
+// Übungen aus eingeplanten Sequenzen (it.seq = ID des Sequenzblocks) bilden eine zusammenhängende Gruppe; it.seqPos = Anzahl Einzelübungen vor der Gruppe.
+// seqLayout setzt die Gruppen an ihre Position; keepRest: Reihenfolge der übrigen Übungen und Gruppenposition aus dem aktuellen Array übernehmen (nach Drag & Drop / Verschieben)
+const seqLayout = (items, keepRest) => {
+  const groups = [], gm = {}, rest = [];
+  items.forEach(i => {
+    if (!i.seq) { rest.push(i); return; }
+    let g = gm[i.seq];
+    if (!g) { g = gm[i.seq] = { its: [], pos: keepRest ? rest.length : (+i.seqPos || 0), n: groups.length }; groups.push(g); }
+    g.its.push(i);
+  });
+  if (!keepRest) rest.sort((a, b) => seqIdx(a.id) - seqIdx(b.id));
+  groups.sort((a, b) => a.pos - b.pos || a.n - b.n);
+  const out = []; let r = 0;
+  groups.forEach(g => { while (r < g.pos && r < rest.length) out.push(rest[r++]); g.its.forEach(i => { i.seqPos = r; out.push(i); }); });
+  while (r < rest.length) out.push(rest[r++]);
+  items.splice(0, items.length, ...out); return items;
+};
+const sortItems = items => seqLayout(items, false);
 const FLOORPOSE = ['quad_cat', 'quad_diag', 'child', 'anahatasana', 'sphinx', 'cobra', 'plank_floor', 'bridge', 'supine_knee', 'supine_bent', 'leg_stretch', 'twist_supine', 'butterfly_lying', 'legs_wall', 'heart_supine', 'janu', 'malasana'];
 const onFloor = e => e && FLOORPOSE.includes(e.pose);
 
@@ -593,7 +609,7 @@ function rebalanceBlock(c, s, k) {
   if (key === 'kraft') { B.kraftN = Math.max(1, s.blk.kraft.length || c.kraftN || 1); B.kraft = B.kraft || B.kraftN * 3; }
   else if (!(B[key] > 0)) B[key] = blockBudgets(c, +s.dur.haupt || 45)[key] || 5;
   s.blk[key] = pickBlock(c, key, ctx, B);
-  if (key === 'asana') applySeqPlan(c, s);
+  applySeqPlan(c, s, key);
 }
 
 // ---------- Texte (Länge richtet sich nach der Dauer des Teils) ----------

@@ -530,18 +530,18 @@ function blockEditor(c, s, [key, label, cats]) {
     normAlt(it);
     const e = exById(it.id) || { n: '?', pose: 'stand', lv: 1, x: [], c: 'stand' };
     const ea = altE(e), ha = altH(e), P = `s:${s.id}:blk.${key}.${j}`;
-    return `<div class="xrow" data-dsid="${s.id}" data-db="${key}" data-di="${j}"><div class="xc xt"><div class="xtile cat-${e.c} pkt" draggable="true" data-a="pk" data-sid="${s.id}" data-b="${key}" data-i="${j}" title="Zum Verschieben ziehen · Klick: Übung wählen (mit Strichmännchen)">${figureSVG(e.pose)}${peakStar(e)}</div>
-<b class="an">${esc(e.n)}</b>${e.sa ? `<i class="sa">${esc(e.sa)}</i>` : ''}${it.seq ? `<span class="chip seqc" title="Aus der Sequenz „${esc(it.seqName)}“ (Sequenzplanung dieser Stunde)">⟳ ${esc(it.seqName)}</span>` : ''}</div>
+    return `<div class="xrow" data-dsid="${s.id}" data-db="${key}" data-di="${j}"><div class="xc xt"><div class="xtile cat-${e.c} pkt"${it.seq ? '' : ' draggable="true"'} data-a="pk" data-sid="${s.id}" data-b="${key}" data-i="${j}" title="${it.seq ? 'Teil der Sequenz (als Ganzes verschiebbar) · Klick: Übung wählen' : 'Zum Verschieben ziehen · Klick: Übung wählen (mit Strichmännchen)'}">${figureSVG(e.pose)}${peakStar(e)}</div>
+<b class="an">${esc(e.n)}</b>${e.sa ? `<i class="sa">${esc(e.sa)}</i>` : ''}</div>
 <div class="xc">${altTile(s, key, j, ea, 'down', effE(it))}</div>
 <div class="xc">${altTile(s, key, j, ha, 'up', effH(it))}</div>
 <div class="xc xk">${stRegChips(e)}</div>
 <div class="xc xl">${lvDots(e)}<span class="chip">${lvName(e)}</span>${rateStars(e.id)}${(e.x || []).length ? `<small class="muted" title="Vorsicht bei">⚠ ${esc(e.x.map(g => GEBRECHEN[g]).join(', '))}</small>` : ''}</div>
 <div class="xc xd"><input type="number" data-f="${P}.min" data-num="1" data-sum="1" data-sid="${s.id}" min="0.5" max="30" step="0.5" value="${it.min}"><span class="muted">Min.</span></div>
-<div class="xc xdel"><button class="ghost trash" data-a="rm" data-id="${s.id}" data-b="${key}" data-i="${j}" title="Übung löschen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button></div></div>`;
-  }).join('');
+<div class="xc xdel">${it.seq ? '' : `<button class="ghost trash" data-a="rm" data-id="${s.id}" data-b="${key}" data-i="${j}" title="Übung löschen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>`}</div></div>`;
+  });
   return `<div class="blk"><div class="blkh"><span class="muted"><b id="bs-${s.id}-${key}">${fmtMin(tmin)}</b>${bud ? ' von ' + fmtMin(bud) : ''} Min.</span>
 <span class="grow"></span><button class="ghost sm" data-a="rerollBlk" data-id="${s.id}" data-b="${key}" title="Nur diesen Block neu würfeln">🎲 Block neu würfeln</button><button class="ghost sm" data-a="fitBlk" data-id="${s.id}" data-b="${key}" title="Minuten auf das Zeitbudget angleichen">⚖ auf Zeit</button></div>
-${items.length ? `<div class="xhead"><div>Übung</div><div>↓ Leichtere Alternative</div><div>↑ Schwerere Alternative</div><div>Yogastil & Körperregion</div><div>Schwierigkeitsgrad · Gefällt mir</div><div>Dauer</div><div></div></div>` : ''}${rows || '<div class="muted">keine Übung – mit „＋“ in der Kopfzeile oder hier hinzufügen</div>'}
+${items.length ? `<div class="xhead"><div>Übung</div><div>↓ Leichtere Alternative</div><div>↑ Schwerere Alternative</div><div>Yogastil & Körperregion</div><div>Schwierigkeitsgrad · Gefällt mir</div><div>Dauer</div><div></div></div>` : ''}${seqWrapRows(s, key, items, rows) || '<div class="muted">keine Übung – mit „＋“ in der Kopfzeile oder hier hinzufügen</div>'}
 <button class="pkb add" data-a="pk" data-sid="${s.id}" data-b="${key}" data-i="" title="Übung hinzufügen (mit Strichmännchen)">＋ Übung auswählen …</button></div>`;
 }
 const DOC_GRP = {
@@ -694,7 +694,7 @@ function startCourse(c) { state.courses.unshift(c); planCourse(c); ui.view = 'co
 function sessionOf(id) { const c = cur(); return { c, s: c.sessions.find(x => x.id === id) }; }
 function regenIfNotEdited(c, s, k) { if (!s.txEdited[k]) genTexts(c, s, idxOf(c, s), [k]), s.txEdited[k] = false; }
 // ---- Status: Änderungen setzen die Stunde (bzw. den Rahmen) automatisch auf „In Planung“ ----
-const MUT = new Set(['seqOn', 'seqBlkAdd', 'seqBlkDel', 'seqApply', 'mv', 'rm', 'alt', 'togAlt', 'cntBlk', 'rerollBlk', 'fitBlk', 'fitS', 'pkpick', 'pkbrpick', 'pkmanpick', 'tglw', 'addBlock', 'delBlock', 'mvBlock', 'bmReset', 'bmOff', 'sbOn', 'sbWahr', 'sbMobi', 'sbKraft', 'tplUse', 'txClear', 'aiTx', 'bothAll']);
+const MUT = new Set(['seqOn', 'seqBlkAdd', 'seqBlkDel', 'seqApply', 'seqGrpMv', 'mv', 'rm', 'alt', 'togAlt', 'cntBlk', 'rerollBlk', 'fitBlk', 'fitS', 'pkpick', 'pkbrpick', 'pkmanpick', 'tglw', 'addBlock', 'delBlock', 'mvBlock', 'bmReset', 'bmOff', 'sbOn', 'sbWahr', 'sbMobi', 'sbKraft', 'tplUse', 'txClear', 'aiTx', 'bothAll']);
 const MUTC = new Set(['toggleGeb', 'toggleDay', 'cTog']);
 function setStatusDom(f, v) { document.querySelectorAll(`select[data-f="${f}"]`).forEach(n => { n.value = v; n.className = n.className.replace(/stat-\w+/, 'stat-' + v); }); }
 function touch(s) {
@@ -1166,6 +1166,7 @@ document.addEventListener('drop', e => {
   const [item] = from.splice(src.i, 1);
   if (from === to && src.i < idx) idx--;
   to.splice(Math.max(0, Math.min(idx, to.length)), 0, item);
+  [from, to].forEach(a => seqLayout(a, true)); seqSyncPlan(s);
   touch(s); dnd.src = null; dndClear(); save(); render();
   if (from !== to) { ui.bopen.add(src.sid + ':' + toKey); render(); toast(`„${(exById(item.id) || {}).n}“ nach „${bn(s, toKey)}“ verschoben.`); }
 });
