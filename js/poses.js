@@ -87,6 +87,7 @@ function figureParts(key, ground) {
 }
 function figureSVG(key, size) {
   const px = size ? ` width="${size}" height="${size}"` : '';
+  if (key === 'textblock') return TEXTICON.replace('<svg class="fig"', '<svg class="fig"' + px);   // Sonderbaustein „Textblock“
   return `<svg class="fig" viewBox="0 0 100 100"${px} aria-hidden="true">${figureParts(key)}</svg>`;
 }
 

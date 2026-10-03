@@ -364,7 +364,8 @@ function txDurCtl(s, k) {
 }
 function txField(s, k, label, rows) {
   const id = s.id;
-  return `<div class="fld wide"><label>${label} ${WPM[k] ? `<button class="btn-neu" data-a="regenTx" data-id="${id}" data-k="${k}" title="Text mit anderer Formulierung neu erzeugen">↻ Neu</button><button class="btn-neu" data-a="tplOpen" data-id="${id}" data-k="${k}" title="Vorlage aus „Textvorlagen“ einfügen">📋 Vorlage</button><button class="btn-neu" data-a="txClear" data-id="${id}" data-k="${k}" title="Text leeren">🗑 Leeren</button><button class="btn-neu sm2" data-a="tplSaveFrom" data-id="${id}" data-k="${k}" title="Diesen Text als eigene Vorlage speichern">💾 Als Vorlage</button>` : ''} <span class="tw" data-twk="${k}" data-sid="${id}">${twText(s, k)}</span></label>${WPM[k] ? txDurCtl(s, k) : ''}${ui.tplPick && ui.tplPick.sid === id && ui.tplPick.k === k ? tplPickPanel(s, k) : ''}<div class="hlw"><div class="hlbd" aria-hidden="true"></div><textarea data-f="s:${id}:tx.${k}" data-tx="${k}" data-sid="${id}" rows="${rows}">${esc(s.tx[k] || '')}</textarea></div></div>`;
+  const tplOk = WPM[k] || TX_KINDS[abOf(s, k)];
+  return `<div class="fld wide"><label>${label} ${tplOk ? `${WPM[k] ? `<button class="btn-neu" data-a="regenTx" data-id="${id}" data-k="${k}" title="Text mit anderer Formulierung neu erzeugen">↻ Neu</button>` : ''}<button class="btn-neu" data-a="tplOpen" data-id="${id}" data-k="${k}" title="Vorlage aus „Textvorlagen“ einfügen">📋 Vorlage</button><button class="btn-neu" data-a="txClear" data-id="${id}" data-k="${k}" title="Text leeren">🗑 Leeren</button><button class="btn-neu sm2" data-a="tplSaveFrom" data-id="${id}" data-k="${k}" title="Diesen Text als eigene Vorlage speichern">💾 Als Vorlage</button>` : ''} <span class="tw" data-twk="${k}" data-sid="${id}">${twText(s, k)}</span></label>${WPM[k] ? txDurCtl(s, k) : ''}${ui.tplPick && ui.tplPick.sid === id && ui.tplPick.k === k ? tplPickPanel(s, k) : ''}<div class="hlw"><div class="hlbd" aria-hidden="true"></div><textarea data-f="s:${id}:tx.${k}" data-tx="${k}" data-sid="${id}" rows="${rows}">${esc(s.tx[k] || '')}</textarea></div></div>`;
 }
 const bcls = k => isCustomKey(k) ? 'x' : k;
 const MOBI_ICONS = {
@@ -416,7 +417,7 @@ function defPanel(c, s) {
     const types = Object.keys(BTYPES).filter(t => (t !== 'atem' && t !== 'mantra') || k === t);
     return `<tr><td class="c1"><input type="checkbox" data-f="s:${id}:bm.${k}.on" data-chg="bmon" data-sid="${id}" data-b="${k}" ${m.on !== false ? 'checked' : ''} title="Block ein-/ausblenden"></td>
 <td class="mvc"><button class="ghost sm" data-a="mvBlock" data-id="${id}" data-b="${k}" data-d="-1" ${ix === 0 ? 'disabled' : ''} title="Block nach oben">▲</button><button class="ghost sm" data-a="mvBlock" data-id="${id}" data-b="${k}" data-d="1" ${ix === ord.length - 1 ? 'disabled' : ''} title="Block nach unten">▼</button></td>
-<td><select class="arts" data-chg="bmab" data-sid="${id}" data-b="${k}" ${k === 'atem' || k === 'mantra' ? 'disabled' : ''}>${BDEF.filter(b => k === 'atem' ? b[0] === 'atem' : k === 'mantra' ? b[0] === 'mantra' : (b[0] !== 'atem' && b[0] !== 'mantra')).map(b => `<option value="${b[0]}"${b[0] === ab ? ' selected' : ''}>${esc(b[1])}</option>`).join('')}</select></td>
+<td><select class="arts" data-chg="bmab" data-sid="${id}" data-b="${k}" ${k === 'atem' || k === 'mantra' ? 'disabled' : ''}>${BDEF.concat(isCustomKey(k) ? BEXTRA : []).filter(b => k === 'atem' ? b[0] === 'atem' : k === 'mantra' ? b[0] === 'mantra' : (b[0] !== 'atem' && b[0] !== 'mantra')).map(b => `<option value="${b[0]}"${b[0] === ab ? ' selected' : ''}>${esc(b[1])}</option>`).join('')}</select></td>
 <td><select class="arts" data-f="s:${id}:bm.${k}.type" data-chg="bmtype" data-sid="${id}" data-b="${k}">${types.map(t => `<option value="${t}"${t === ty ? ' selected' : ''}>${BTYPES[t]}</option>`).join('')}</select></td>
 <td>${inp(`s:${id}:bm.${k}.name`, 'text', m.name, `data-chg="bmname" data-sid="${id}" data-b="${k}" placeholder="${esc(bdefName(k))}"`)}</td>
 <td class="dtd">${dur}</td>
@@ -463,7 +464,7 @@ function blockCard(c, s, k) {
   if (type === 'ex') {
     const items = s.blk[k] || (s.blk[k] = []);
     mins = `${fmtMin(sumMin(items))} / ${fmtMin((s.bm[k] || {}).min)} Min.`;
-    sum = `<span class="mts">${seqTiles(items, exTile)}</span><span class="muted"> ${items.length} Übungen</span>`;
+    sum = `<span class="mts">${seqTiles(items, exTile)}</span><span class="muted"> ${items.filter(i => !isTxb(i)).length} Übungen${items.some(isTxb) ? ' + Text' : ''}</span>`;
     body = blockEditor(c, s, [k, name, catsOf(s, k)]);
   } else if (type === 'atem' && k === 'atem') {
     mins = `${s.dur.atem} Min.`;
@@ -530,6 +531,10 @@ function blockEditor(c, s, [key, label, cats]) {
     normAlt(it);
     const e = exById(it.id) || { n: '?', pose: 'stand', lv: 1, x: [], c: 'stand' };
     const ea = altE(e), ha = altH(e), P = `s:${s.id}:blk.${key}.${j}`;
+    if (e.txt) return `<div class="xrow xtxb" data-dsid="${s.id}" data-db="${key}" data-di="${j}"><div class="xc xt"><div class="xtile cat-${e.c} pkt"${it.seq ? '' : ' draggable="true"'} data-a="pk" data-sid="${s.id}" data-b="${key}" data-i="${j}" title="${it.seq ? 'Teil der Sequenz (als Ganzes verschiebbar) · Klick: Übung wählen' : 'Zum Verschieben ziehen · Klick: Übung oder Textblock wählen'}">${figureSVG(e.pose)}</div><b class="an">Textblock</b><i class="sa">Sonderbaustein</i></div>
+<div class="xc xtx"><textarea rows="${Math.min(10, Math.max(3, Math.ceil(String(it.tx || '').length / 90)))}" data-f="${P}.tx" placeholder="Text für diese Stelle der Stunde …">${esc(it.tx || '')}</textarea></div>
+<div class="xc xd"><input type="number" data-f="${P}.min" data-num="1" data-sum="1" data-sid="${s.id}" min="0.5" max="60" step="0.5" value="${it.min}"><span class="muted">Min.</span></div>
+<div class="xc xdel">${it.seq ? '' : `<button class="ghost trash" data-a="rm" data-id="${s.id}" data-b="${key}" data-i="${j}" title="Textblock löschen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>`}</div></div>`;
     return `<div class="xrow" data-dsid="${s.id}" data-db="${key}" data-di="${j}"><div class="xc xt"><div class="xtile cat-${e.c} pkt"${it.seq ? '' : ' draggable="true"'} data-a="pk" data-sid="${s.id}" data-b="${key}" data-i="${j}" title="${it.seq ? 'Teil der Sequenz (als Ganzes verschiebbar) · Klick: Übung wählen' : 'Zum Verschieben ziehen · Klick: Übung wählen (mit Strichmännchen)'}">${figureSVG(e.pose)}${peakStar(e)}</div>
 <b class="an">${esc(e.n)}</b>${e.sa ? `<i class="sa">${esc(e.sa)}</i>` : ''}</div>
 <div class="xc">${altTile(s, key, j, ea, 'down', effE(it))}</div>
@@ -665,6 +670,7 @@ ${fld('Geeignet für', sel('u:cat.lvl', [['', 'Alle'], ['Anfänger', 'Anfänger'
 ${fld('Ohne Belastung für', sel('u:cat.geb', [['', '–']].concat(Object.keys(GEBRECHEN).map(k => [k, GEBRECHEN[k]])), f.geb))}
 ${fld('Yogastil', sel('u:cat.st', [['', 'Alle']].concat(Object.keys(STILE).map(k => [k, STILE[k]])), f.st))}</div></div>
 <details class="panel mini" data-id="katf" ${ui.open.has('katf') ? 'open' : ''}><summary>Weitere Kategorien <span class="muted">(Filter nach Körperregion, Muskulatur, Atmung, Aufmerksamkeit, Unterstützung, Material, Haltung, Wirbelsäule, Wirkung, Energetik, Chakra, Ziel)</span></summary><div class="grid">${['reg', 'mus', 'atm', 'auf', 'sup', 'mat', 'pos', 'dir', 'wirk', 'en', 'chakra', 'ziel'].map(k => fld(KATTITLE[k], sel('u:cat.k_' + k, [['', 'Alle']].concat(Object.keys(KAT[k]).map(x => [x, KAT[k][x]])), f['k_' + k]))).join('')}</div><p class="muted">* ergänzt. Die Kategorien werden aus Haltung, Art und Schlagworten abgeleitet; das Chakra folgt – wo vorhanden – dem Skript (Modul 3). Die Angaben stehen im aufgeklappten Detail jeder Übung.</p></details>
+${(!f.cat && !f.lvl && !f.geb && !f.st && !katOn && (!q || 'textblock sonderbaustein text'.includes(q))) ? `<div class="panel sonder"><div class="ktile cat-textblock">${figureSVG('textblock')}</div><div><b>Sonderbaustein: Textblock</b><p class="muted">Im Auswahlfenster einer Stunde (Klick auf eine Übungskachel oder „＋ Übung auswählen“) und in der Sequenz steht ganz oben der Eintrag „Textblock“. Wählst du ihn, entsteht an dieser Stelle statt einer Übung ein Textabschnitt mit eigener Dauer, z. B. für eine Anleitung, einen Hinweis oder Yoga Nidra. Er wird im Ausdruck und im Player mit ausgegeben und erscheint nie automatisch.</p></div></div>` : ''}
 <div class="legend catlegend">${Object.keys(CATS).map(k => `<span class="lg cat-${k}"><i></i>${esc(CATS[k])}</span>`).join('')}</div>
 <div class="tblwrap"><table class="cat"><thead><tr><th></th><th>Übung / Sanskrit</th><th>Yogastile</th><th>Stufe</th><th>Vorsicht bei</th><th>↓ Leichter</th><th>↑ Anspruchsvoller</th><th>Gefällt mir</th></tr></thead><tbody>${list.map(row).join('')}</tbody></table></div>
 <h2>Atem- und Wahrnehmungsübungen</h2><div class="legend catlegend"><span class="lg cat-br_atem"><i></i>Atemübung</span><span class="lg cat-br_wahr"><i></i>Wahrnehmungsübung</span></div><div class="tblwrap"><table class="cat"><thead><tr><th></th><th>Übung</th><th>Yogastile</th><th>Stufe</th><th>Vorsicht bei</th><th>Gefällt mir</th></tr></thead><tbody>${blist.map(brow).join('')}</tbody></table></div>
@@ -834,13 +840,18 @@ const A = {
   pkpick(d) {
     const p = ui.pk; if (!p) return; const { c, s } = sessionOf(p.sid), e = exById(d.id); closePicker();
     if (p.i === '' || p.i == null) { const ni = mkItem(e); applyAlt(s, ni); s.blk[p.b].push(ni); }
-    else { const it = s.blk[p.b][+p.i]; it.id = e.id; it.repAuto = true; syncRep(it); applyAlt(s, it); }
+    else {
+      const it = s.blk[p.b][+p.i], wasTx = isTxb(it);
+      it.id = e.id; it.repAuto = true;
+      if (e.txt) { it.tx = it.tx || ''; it.rep = ''; it.repAuto = false; it.altE = it.altH = it.both = false; }
+      else { if (wasTx) { delete it.tx; it.min = e.m; } syncRep(it); applyAlt(s, it); }
+    }
     save(); render();
   },
   toggleDay(d) { const c = cur(); c.days = c.days || []; const k = +d.k, i = c.days.indexOf(k); i < 0 ? c.days.push(k) : c.days.splice(i, 1); c.dirty = true; save(); render(); },
   cntBlk(d) {
     const { c, s } = sessionOf(d.id), k = d.b, a = s.blk[k];
-    if (+d.d < 0) { const i = a.map(x => !x.seq).lastIndexOf(true); if (i < 0) return; a.splice(i, 1); }
+    if (+d.d < 0) { const i = a.map(x => !x.seq && !isTxb(x)).lastIndexOf(true); if (i < 0) return; a.splice(i, 1); }
     else {
       const ctx = mkCtx(c, s, Math.random); ctx.have = new Set(blkIds(s));
       const pool = withPref(poolOf(...catsOf(s, k)), abOf(s, k), ctx).concat(FALLBACK[abOf(s, k)] ? poolOf(...FALLBACK[abOf(s, k)]) : []);
@@ -981,7 +992,7 @@ const CH = {
       syncHaupt(s);
     }
     if (k === 'mantra' && bon(s, k) && !(s.mantra && s.mantra.id)) s.mantra = { id: pickMantra(c, s) };
-    if (bon(s, k) && bty(s, k) === 'text' && !(+s.dur[k] > 0)) s.dur[k] = { einl: 5, schluss: 3, shava: 10 }[abOf(s, k)] || 5;
+    if (bon(s, k) && bty(s, k) === 'text' && !(+s.dur[k] > 0)) s.dur[k] = { einl: 5, schluss: 3, shava: 10, nidra: 20 }[abOf(s, k)] || 5;
     if (k === 'atem' && bon(s, k)) { if (!(+s.dur.atem > 0)) s.dur.atem = 5; if (!s.atem.a) { const ctx = mkCtx(c, s, Math.random); ctx.have = new Set(blkIds(s)); s.atem.a = pickBreath(ctx, 'atem') || 'bauchatmung'; } }
     genTexts(c, s, idxOf(c, s)); save(); render();
   },
@@ -1189,7 +1200,8 @@ function openPicker(btn, d) {
       (off.lvl || levelOk(e, pctx.lvl)) && (off.geb || !contra(e, geb)) &&
       (off.pre || ((rating(e.id) > 0 || f.allowBanned) && katOk(e, pctx.flt)))));
   };
-  const rowsHtml = pool => pool.map(p => {
+  const txbRow = `<button class="pko cat-textblock${curId === TXB_ID ? ' cur' : ''}" data-a="pkpick" data-id="${TXB_ID}" data-q="textblock text sonderbaustein anleitung hinweis"><span class="pkf">${figureSVG('textblock')}</span><div class="pkinfo"><div class="pkname"><b>Textblock</b><small class="sa">Sonderbaustein</small></div><div class="pkmeta"><span>Statt einer Übung: ein Textabschnitt an dieser Stelle</span></div></div></button>`;
+  const rowsHtml = pool => txbRow + pool.map(p => {
     const bad = !off.geb && contra(p, geb) && p.id !== curId, r = rating(p.id), warn = (p.x || []).filter(g => geb.includes(g)).map(g => GEBRECHEN[g]);
     const meta = `<div class="pkmeta">${lvDots(p)}<span>${esc(lvName(p))}</span><span class="muted">· ${fmtMin(p.m)} Min.</span>${r === 0 ? '<span class="chip warn">ausgeschlossen</span>' : rstars(r)}</div>`;
     return `<button class="pko cat-${p.c}${p.id === curId ? ' cur' : ''}" data-a="pkpick" data-id="${p.id}" ${bad ? 'disabled' : ''} data-q="${esc(norm(p.n + ' ' + (p.sa || '')))}"><span class="pkf">${figureSVG(p.pose)}${peakStar(p)}</span><div class="pkinfo"><div class="pkname"><b>${esc(p.n)}</b>${p.sa ? `<small class="sa">${esc(p.sa)}</small>` : ''}</div>${meta}<div class="pkch">${stRegChips(p)}</div>${warn.length ? `<div class="pkwarn">⚠ ${esc(warn.join(', '))}</div>` : ''}</div></button>`;

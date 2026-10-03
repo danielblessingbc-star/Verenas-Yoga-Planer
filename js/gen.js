@@ -31,7 +31,12 @@ const norm = s => (s || '').toLowerCase().replace(/[^a-zäöüß0-9]+/g, ' ').tr
 
 // ---------- Katalog-Zugriff ----------
 function exAll() { return EX.concat(state.customEx || []); }
-function exById(id) { return exAll().find(e => e.id === id) || BR.find(b => b.id === id) || null; }
+// Sonderbaustein „Textblock“: erscheint im Auswahlfenster wie eine Übung, ist aber ein Textabschnitt (it.tx) mit Dauer.
+// Er gehört nicht zu exAll(): der Generator wählt ihn nie von selbst, eigene Auswertungen (Analyse, Bewertung) überspringen ihn (e.txt).
+const TXB_ID = 'textblock';
+const TEXTBLOCK = { id: TXB_ID, n: 'Textblock', sa: '', c: 'textblock', lv: 1, m: 1, pose: 'textblock', t: [], x: [], st: [], e: '', h: '', s: 1, o: 0, txt: true, kat: {}, d: 'Sonderbaustein: ein Textabschnitt statt einer Übung, z. B. Anleitung, Hinweis oder Yoga Nidra. Der Text steht an dieser Stelle der Stunde oder der Sequenz.' };
+const isTxb = i => !!i && i.id === TXB_ID;
+function exById(id) { return exAll().find(e => e.id === id) || BR.find(b => b.id === id) || (id === TXB_ID ? TEXTBLOCK : null); }
 function rating(id) { const r = state.ratings[id]; return r === undefined ? 3 : r; }
 function levelOk(e, lvl) {
   if (lvl === 'anf') return e.lv <= 1;
@@ -116,8 +121,9 @@ const EXKEYS = ['mobi', 'shakti', 'asana', 'ausgl'];        // Standard-Übungsb
 const STATUS = { vorgeplant: 'Vorgeplant', in_planung: 'In Planung', fertig: 'Fertig' };
 const STATUS_MIGRATE = { entwurf: 'vorgeplant', geplant: 'in_planung', gehalten: 'fertig' };
 const BTYPES = { text: 'Text', ex: 'Übungen', atem: 'Atem + Wahrnehmung', mantra: 'Mantra' };
-const bdefName = k => (BDEF.find(b => b[0] === k) || [0, k])[1];
-const bdefType = k => (BDEF.find(b => b[0] === k) || [0, 0, 'text'])[2];
+const BEXTRA = [['nidra', 'Yoga Nidra', 'text']];   // zusätzliche Abschnitte (nur für eigene Blöcke wählbar, nicht Teil der Standardstunde)
+const bdefName = k => (BDEF.concat(BEXTRA).find(b => b[0] === k) || [0, k])[1];
+const bdefType = k => (BDEF.concat(BEXTRA).find(b => b[0] === k) || [0, 0, 'text'])[2];
 const bn = (s, k) => (s.bm && s.bm[k] && s.bm[k].name) || bdefName(k);
 const bon = (s, k) => !(s.bm && s.bm[k] && s.bm[k].on === false);
 const bty = (s, k) => (s.bm && s.bm[k] && s.bm[k].type) || bdefType(k);
@@ -293,7 +299,12 @@ const seqLayout = (items, keepRest) => {
     if (!g) { g = gm[i.seq] = { its: [], pos: keepRest ? rest.length : (+i.seqPos || 0), n: groups.length }; groups.push(g); }
     g.its.push(i);
   });
-  if (!keepRest) rest.sort((a, b) => seqIdx(a.id) - seqIdx(b.id));
+  if (!keepRest) {   // Textblöcke behalten ihre Position (Anzahl Übungen davor), die Übungen werden einsortiert
+    const txs = []; rest.forEach((i, n) => { if (isTxb(i)) txs.push([i, rest.slice(0, n).filter(x => !isTxb(x)).length]); });
+    const ex = rest.filter(i => !isTxb(i)).sort((a, b) => seqIdx(a.id) - seqIdx(b.id));
+    txs.forEach(([i, k], t) => ex.splice(Math.min(k + t, ex.length), 0, i));
+    rest.splice(0, rest.length, ...ex);
+  }
   groups.sort((a, b) => a.pos - b.pos || a.n - b.n);
   const out = []; let r = 0;
   groups.forEach(g => { while (r < g.pos && r < rest.length) out.push(rest[r++]); g.its.forEach(i => { i.seqPos = r; out.push(i); }); });
@@ -329,7 +340,7 @@ const syncRep = it => { if (it.repAuto !== false) it.rep = repFor(exById(it.id),
 
 const DEFREP = { mobi_sitz: '6–8 Wdh.', mobi_stand: '6–8 Wdh.', flow: '', stand: '3–5 Atemzüge', balance: '3–5 Atemzüge je Seite', boden: '3–5 Atemzüge', kraft: '' };
 const defRep = e => e.reps || DEFREP[e.c] || '';
-const mkItem = (e, min) => { min = min == null ? e.m : min; return { id: e.id, min, rep: repFor(e, min), repAuto: true, both: false, altE: false, altH: false }; };
+const mkItem = (e, min) => { min = min == null ? e.m : min; const it = { id: e.id, min, rep: repFor(e, min), repAuto: true, both: false, altE: false, altH: false }; if (e.txt) it.tx = ''; return it; };
 // Alternativen, die in der Ausgabe erscheinen sollen (altE = leichtere, altH = schwerere; both = älteres Sammelfeld)
 const effE = i => !!(i.altE || i.both), effH = i => !!(i.altH || i.both);
 const normAlt = i => { if (i.both) { i.altE = true; i.altH = true; i.both = false; } };
@@ -369,6 +380,7 @@ function mergeAufw(s) {
   [s.tx, s.txEdited, s.dur].forEach(o => { if (o) delete o.aufw; });
 }
 function normalizeState() {
+  if (typeof seqMigrate === 'function') seqMigrate();
   (state.courses || []).forEach(c => (c.sessions || []).forEach(s => {
     if ((s.order || []).includes('aufw') || (s.bm && s.bm.aufw) || (s.blk && s.blk.aufw)) mergeAufw(s);
     if ((s.order || []).includes('kraft') || (s.bm && s.bm.kraft) || (s.blk && s.blk.kraft)) mergeKraft(s);
@@ -484,7 +496,7 @@ function blockBudgets(c, H, noShakti) {
 }
 // Minuten der Übungen proportional auf ein Zeitbudget skalieren (auf halbe Minuten gerundet)
 function fitItems(all, budget) {
-  const items = all.filter(i => !i.seq); budget = half(budget) - sumMin(all.filter(i => i.seq)); const tot = sumMin(items);
+  const items = all.filter(i => !i.seq && !isTxb(i)); budget = half(budget) - sumMin(all.filter(i => i.seq || isTxb(i))); const tot = sumMin(items);
   if (!items.length || budget <= 0 || !tot) return;
   const f = budget / tot, mx = i => Math.max(1, ((exById(i.id) || {}).m || 1) * 3);
   items.forEach(i => { i.min = clamp(half(i.min * f), 0.5, mx(i)); });
@@ -584,7 +596,7 @@ function rebalanceBlock(c, s, k) {
   const isK = i => (exById(i.id) || {}).c === 'kraft', main = abOf(s, k) === 'asana';
   const pool = poolFor(s, k).concat(FALLBACK[abOf(s, k)] ? poolOf(...FALLBACK[abOf(s, k)]) : []).filter(e => !(main && e.c === 'kraft'));
   // Sequenz-Übungen werden nie entfernt; im Hauptblock gehen zuerst Nicht-Kraftübungen vom Ende
-  const pickIdx = () => { for (let i = items.length - 1; i >= 0; i--) if (!items[i].seq && !(main && isK(items[i]))) return i; for (let i = items.length - 1; i >= 0; i--) if (!items[i].seq) return i; return -1; };
+  const pickIdx = () => { for (let i = items.length - 1; i >= 0; i--) if (!items[i].seq && !isTxb(items[i]) && !(main && isK(items[i]))) return i; for (let i = items.length - 1; i >= 0; i--) if (!items[i].seq && !isTxb(items[i])) return i; return -1; };
   const popOne = () => { const i = pickIdx(); if (i < 0) return false; items.splice(i, 1); return true; };
   const addBest = () => {
     const best = eligible(pool, ctx).map(e => ({ e, sc: scoreEx(e, ctx) })).sort((a, b) => b.sc - a.sc)[0];
@@ -608,7 +620,9 @@ function rebalanceBlock(c, s, k) {
   const B = blockTargets(c, s);
   if (key === 'kraft') { B.kraftN = Math.max(1, s.blk.kraft.length || c.kraftN || 1); B.kraft = B.kraft || B.kraftN * 3; }
   else if (!(B[key] > 0)) B[key] = blockBudgets(c, +s.dur.haupt || 45)[key] || 5;
+  const keepTx = (s.blk[key] || []).map((i, n) => [i, n]).filter(([i]) => isTxb(i));
   s.blk[key] = pickBlock(c, key, ctx, B);
+  keepTx.forEach(([i, n]) => s.blk[key].splice(Math.min(n, s.blk[key].length), 0, i));
   applySeqPlan(c, s, key);
 }
 
