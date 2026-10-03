@@ -253,14 +253,16 @@ function renderStundenUeb(c, only) {
   return `<section class="paper land">${paperHead(c, 'Stundenübersicht', esc(courseSub(c)))}${cards}${pageFoot(c)}</section>`;
 }
 
-// Praxisblatt (nach Vorlage): eine Seite je Stunde – links Zeit/Notizen, rechts Übungen als Strichmännchen; Mobilisation und Shakti Naam als Textzeilen, Asanas gruppiert
+// Praxisblatt (nach Vorlage): eine Seite je Stunde – links Zeit/Notizen, rechts Übungen als Strichmännchen; Mobilisation, Shakti Naam und Asanas als Strichmännchen-Reihen
 function renderPrax(c, s, i) {
   const ks = order(s).filter(k => bon(s, k));
   const minOf = k => bty(s, k) === 'ex' ? sumMin(s.blk[k] || []) : (+s.dur[k] || 0);
-  const names = items => (items || []).filter(it => exById(it.id)).map(it => { const e = exById(it.id); return esc(e.n) + (e.peak ? ' ★' : '') + (it.opt ? ' (optional)' : ''); }).join(', ');
   const fig = it => { const e = exById(it.id); return e ? `<span class="pt${e.c === 'kraft' ? ' kr' : ''}${it.opt ? ' opt' : ''}"><span class="fg">${figureSVG(e.pose)}${handsMark(it, e)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span class="nm">${esc(e.n)}</span></span>` : ''; };
-  const n = ks.reduce((a, k) => a + (bty(s, k) === 'ex' && ['asana', 'ausgl'].includes(abOf(s, k)) ? (s.blk[k] || []).length : 0), 0);
-  const per = n > 64 ? 8 : n > 48 ? 7 : n > 34 ? 6 : 5, figMm = n > 64 ? 8.5 : n > 48 ? 11 : n > 34 ? 14 : 17;
+  // Zeilenzahl der Strichmännchen-Reihen (Mobilisation, Shakti Naam, Asanas) bestimmt Figurengröße und Reihenbreite, damit alles auf eine Seite passt
+  const figKs = ks.filter(k => bty(s, k) === 'ex' && ['mobi', 'shakti', 'asana', 'ausgl'].includes(abOf(s, k)));
+  const CFG = [[5, 17, 5], [6, 14, 6], [7, 11, 7], [8, 8.5, 8], [10, 7, 99]];
+  const cfg = CFG.find(([pp, , cap]) => figKs.reduce((a, k) => a + Math.ceil((s.blk[k] || []).length / pp), 0) <= cap);
+  const per = cfg[0], figMm = cfg[1];
   const row = (min, left, right, cls) => `<tr class="${cls || ''}"><td class="pm">${min != null ? esc(fmtMin(min)) + ' Min.' : ''}</td><td class="pl">${left}</td><td class="pr2">${right}</td></tr>`;
   const rows = [];
   ks.forEach(k => {
@@ -275,21 +277,8 @@ function renderPrax(c, s, i) {
       rows.push(row(mn, `<b>${name}</b>`, esc(mm ? mm.n : ''), 'txr'));
     } else if (ty === 'ex') {
       const items = s.blk[k] || []; if (!items.length) return;
-      if (ab === 'mobi' || ab === 'shakti') {
-        const eff = ab === 'shakti' ? items.map(it => exById(it.id)).filter(e => e && e.d).slice(0, 2).map(e => '<br><span class="eff">' + esc(e.n) + ': ' + esc(e.d.length > 130 ? e.d.slice(0, 127).replace(/\s+\S*$/, '') + ' …' : e.d) + '</span>').join('') : '';
-        rows.push(row(mn, `<b>${name}</b>`, names(items) + eff, 'txr'));
-      } else {
-        // Gruppen nach Chakra (falls zugeordnet), sonst fortlaufend
-        const ch = it => { const e = exById(it.id); return ((e && e.kat && e.kat.chakra) || [])[0] || ''; };
-        let groups = []; items.forEach(it => { const g = groups[groups.length - 1], key = ch(it); if (g && g.key === key) g.items.push(it); else groups.push({ key, items: [it] }); });
-        groups = [{ key: '', items }]; // fortlaufend in Reihen (links Platz für eigene Notizen)
-        groups.forEach((g, gi) => {
-          for (let p = 0; p < g.items.length; p += per) {
-            const first = gi === 0 && p === 0, lbl = p === 0 ? (g.key ? '<b>' + esc((KAT.chakra || {})[g.key] || g.key) + '</b>' : (first ? '' : '')) : '';
-            rows.push(row(first ? mn : null, (first ? '<b>' + name + '</b>' : '') + (first && lbl ? '<br>' : '') + lbl, g.items.slice(p, p + per).map(fig).join(''), 'figr'));
-          }
-        });
-      }
+      // fortlaufend in Reihen (links Platz für eigene Notizen)
+      for (let p = 0; p < items.length; p += per) rows.push(row(p === 0 ? mn : null, p === 0 ? `<b>${name}</b>` : '', items.slice(p, p + per).map(fig).join(''), 'figr'));
     }
   });
   return `<section class="paper prax">${paperHead(c, esc(sessionTitle(c, s, i)), esc(`${fmtMin(plannedTotal(s))} Min. · ${LEVELS[c.level]}`))}<table class="praxt" style="--per:${per};--pfig:${figMm}mm"><tbody>${rows.join('')}</tbody></table>${pageFoot(c)}</section>`;
