@@ -59,6 +59,27 @@ function tplPickPanel(s, k) {
   return `<div class="tplpick"><div class="tph"><b>Vorlage einfügen</b><label class="tpk">Art: <select data-chg="tplKind" data-id="${s.id}" data-k="${k}">${Object.keys(TX_KINDS).map(x => `<option value="${x}"${x === kind ? ' selected' : ''}>${esc(TX_KINDS[x])}</option>`).join('')}</select></label><span class="muted">ersetzt den aktuellen Text · {motto} und {kernsatz} werden ausgefüllt</span><span class="grow"></span><button class="ghost sm" data-a="tplOpen" data-id="${s.id}" data-k="${k}">✕ schließen</button></div>${list.map(t => `<button class="tpo" data-a="tplUse" data-id="${s.id}" data-k="${k}" data-tid="${t.id}"><b>${esc(t.name)}</b> <span class="tag${t.id.startsWith('m_') ? '' : ' own'}">${t.id.startsWith('m_') ? 'Muster' : 'Eigene'}</span> <small class="muted">${txWords(txTplFill(t, s))} Wörter</small><span class="tpp">${esc(txTplFill(t, s).replace(/\s+/g, ' ').slice(0, 160))} …</span></button>`).join('') || '<p class="muted">Keine Vorlagen vorhanden.</p>'}<p class="muted">Eigene Vorlagen legst du auf der Seite „Textvorlagen“ an.</p></div>`;
 }
 
+// Prompt-Feld unter dem Textfeld-Kopf: die KI schreibt (oder überarbeitet) nur diesen einen Text
+function tplAiPanel(s, k) {
+  const a = ui.tplAi, has = !!(s.tx[k] || '').trim(), busy = !!a.busy;
+  return `<div class="tplpick"><div class="tph"><b>Text per KI erstellen</b><span class="muted">${has ? 'Der vorhandene Text wird mitgeschickt und gemäß Prompt überarbeitet.' : 'Beschreibe, was die KI schreiben soll.'}</span><span class="grow"></span><button class="ghost sm" data-a="tplAiOpen" data-id="${s.id}" data-k="${k}">✕ schließen</button></div>
+<textarea id="tplAiIn" rows="3" placeholder="${has ? 'z. B. „kürzer und einfacher“, „mit Bezug auf den Herbst“ …' : 'z. B. „sanfte Einleitung für müde Teilnehmerinnen nach dem Arbeitstag“ …'}"${busy ? ' disabled' : ''}>${esc(a.prompt || '')}</textarea>
+<div class="bar"><button class="primary sm" data-a="tplAiGo" data-id="${s.id}" data-k="${k}"${busy ? ' disabled' : ''}>${busy ? 'KI schreibt …' : '🤖 Text erstellen'}</button>${state.settings.apiKey ? '' : '<span class="muted">Dafür ist ein API-Schlüssel in den Einstellungen nötig.</span>'}</div></div>`;
+}
+async function aiTextField(c, s, k, wish) {
+  const kind = TX_KINDS[txKindOf(s, k)], old = (s.tx[k] || '').trim(), mt = k === 'mantra' && s.mantra && manById(s.mantra.id);
+  const tgt = WPM[k] ? Math.round(txDur(s, k) * WPM[k]) : 0;
+  const p = `Du bist eine erfahrene Yogalehrerin und schreibst einen Anleitungstext für eine Gruppenyogastunde (${LEVELS[c.level]}, ${sessionTotal(s)} Minuten, Stunde ${idxOf(c, s) + 1} von ${c.sessions.length}).
+Gesucht ist nur dieser Text: ${kind}.
+Motto der Stunde: „${s.motto.title}“ (Kernsatz: ${s.tx.kern || s.motto.kern}). Körperlicher Fokus: ${s.tx.focus || s.motto.focus}.
+${mt ? 'Mantra: ' + mt.n + ' (Text: ' + mt.text.join(' / ') + ') – den Mantratext NICHT verändern.\n' : ''}${old ? 'Bisheriger Text:\n„' + old + '“\n' : ''}Auftrag der Lehrerin: „${wish}“
+Schreibe auf Deutsch in der Du-Form, ruhig, einfach, mit kurzen Sätzen und Sprechpausen (…), ohne Esoterik-Übertreibung.${tgt ? ' Länge ca. ' + tgt + ' Wörter, außer der Auftrag verlangt etwas anderes.' : ''}
+Antworte ausschließlich mit dem fertigen Text, ohne Überschrift, Anführungszeichen oder Erklärung. Absätze durch eine Leerzeile trennen.`;
+  const out = (await aiCall(p, 3000)).replace(/\*\*/g, '').trim();
+  if (!out) throw new Error('Die KI hat keinen Text geliefert.');
+  s.tx[k] = out; s.txEdited[k] = true;
+}
+
 // Seite „Textvorlagen“
 function viewTexts() {
   ui.tplNew = ui.tplNew || { kind: 'einl', name: '', text: '' };
@@ -87,7 +108,16 @@ const TXVORL_ACTIONS = {
   },
   tplDel(d, el) { const t = (state.textTpl || []).find(x => x.id === d.id); if (t && confirmTwice(el, 'tpl' + d.id, `Vorlage „${t.name}“ löschen?`)) { state.textTpl = state.textTpl.filter(x => x !== t); save(); render(); } },
   tplCopy(d) { const t = TX_MUSTER.find(x => x.id === d.id); if (!t) return; (state.textTpl = state.textTpl || []).push({ id: 'u_' + uid(), kind: t.kind, name: t.name + ' (eigene)', text: t.text }); save(); render(); toast('Eigene Kopie angelegt – direkt darunter änderbar.'); },
-  tplOpen(d) { ui.tplPick = (ui.tplPick && ui.tplPick.sid === d.id && ui.tplPick.k === d.k) ? null : { sid: d.id, k: d.k }; render(); },
+  tplOpen(d) { ui.tplPick = (ui.tplPick && ui.tplPick.sid === d.id && ui.tplPick.k === d.k) ? null : { sid: d.id, k: d.k }; if (ui.tplPick) ui.tplAi = null; render(); },
+  tplAiOpen(d) { ui.tplAi = (ui.tplAi && ui.tplAi.sid === d.id && ui.tplAi.k === d.k) ? null : { sid: d.id, k: d.k, prompt: '' }; if (ui.tplAi) ui.tplPick = null; render(); },
+  async tplAiGo(d) {
+    const { c, s } = sessionOf(d.id), a = ui.tplAi, el = document.getElementById('tplAiIn'), wish = ((el && el.value) || '').trim();
+    if (!a || a.busy) return;
+    if (!wish) { toast('Bitte einen Prompt eingeben.'); return; }
+    a.prompt = wish; a.busy = true; render();
+    try { await aiTextField(c, s, d.k, wish); ui.tplAi = null; save(); render(); toast('Text von der KI übernommen.'); }
+    catch (e) { console.error(e); a.busy = false; render(); toast('⚠ ' + e.message, 12000); }
+  },
   tplUse(d) {
     const { c, s } = sessionOf(d.id), t = txTplList(txPickKind(s, d.k)).find(x => x.id === d.tid); if (!t) return;
     s.tx[d.k] = txTplFill(t, s); s.txEdited[d.k] = true; ui.tplPick = null; save(); render(); toast(`Vorlage „${t.name}“ eingefügt.`);
