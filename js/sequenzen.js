@@ -16,6 +16,19 @@ function seqDefaults() {
   return [{ id: 'seq_sonnengruss', name: 'Sonnengruß', type: 'asana', items: ids.map(id => ({ id, min: 0.5 })), desc: 'Fließende Folge: Stand, Arme zur Sonne, Vorbeuge, Ausfallschritt, Planke, Kobra, Herabschauender Hund und wieder zurück. Mit dem Atem verbinden und im eigenen Tempo üben. Bei Schulter, Handgelenk oder Rücken die leichteren Varianten wählen.', src: { n: 'Ausbildungsskript Modul 1, S. 64 bis 77', u: '' } }];
 }
 // Altbestand: die Mustersequenz Sonnengruß bekommt Beschreibung und Quelle (nur, wenn beides noch leer ist)
+// Mitgelieferte Sequenzen (SEQ_IMPORT) genau einmal in den Bestand einspielen; gelöschte oder geänderte kommen nicht wieder (state.seqImp merkt sich die imp-ID).
+function seqImportMerge() {
+  if (typeof SEQ_IMPORT === 'undefined') return;
+  state.sequences = state.sequences || []; state.seqImp = state.seqImp || [];
+  SEQ_IMPORT.forEach(d => {
+    if (state.seqImp.includes(d.imp)) return;
+    if (state.sequences.some(q => q.imp === d.imp)) { state.seqImp.push(d.imp); return; }
+    if (!d.items.every(([id]) => exById(id))) return;   // Übung fehlt im Katalog: überspringen, nächster Start versucht es erneut
+    let name = d.name; while (state.sequences.some(q => norm(q.name) === norm(name))) name += ' (Import)';
+    state.sequences.push({ id: 'seq_' + d.imp, name, type: d.type, items: d.items.map(([id, m]) => ({ id, min: m != null ? m : (exById(id).m || 1) })), desc: d.desc, src: deepCopy(d.src), imp: d.imp });
+    state.seqImp.push(d.imp);
+  });
+}
 function seqMigrate() { const q = (state.sequences || []).find(x => x.id === 'seq_sonnengruss'); if (q && !q.desc && !q.src) { const d = seqDefaults()[0]; q.desc = d.desc; q.src = d.src; } }
 const sqById = id => (state.sequences || []).find(q => q.id === id) || null;
 const sqType = q => (q && SEQ_TYPES[q.type]) ? q.type : 'asana';
