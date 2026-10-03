@@ -3,7 +3,7 @@ const KEY = 'yogaplaner.v1';
 const $ = s => document.querySelector(s);
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
-function defaults() { return { v: 1, courses: [], ratings: {}, customEx: [], exEdits: {}, vocab: {}, sequences: seqDefaults(), songs: songDefaults(), textTpl: [], settings: { apiKey: '', model: 'claude-sonnet-5-5', email: '', recipients: [] } }; }
+function defaults() { return { v: 1, courses: [], ratings: {}, customEx: [], exEdits: {}, vocab: {}, sequences: seqDefaults(), seqImp: [], songs: songDefaults(), textTpl: [], settings: { apiKey: '', model: 'claude-sonnet-5-5', email: '', recipients: [] } }; }
 function loadState() {
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && Array.isArray(s.courses)) return Object.assign(defaults(), s, { settings: Object.assign(defaults().settings, s.settings || {}) }); } catch (e) { }
   return defaults();
@@ -564,7 +564,7 @@ const DOC_GRP = {
   a: { keys: ['mat', 'geb', 'detail', 'katall'], title: 'Allgemein', ic: 'katalog', hint: 'Nachschlage-Listen, gelten für die gewählten Stunden' }
 };
 const DOC_OPT = {
-  ueb: ['Kompakte Übersicht', 'Tabelle aller Stunden im Querformat'], prax: ['Praxisblatt (nach Vorlage)', 'Eine Seite je Stunde: Zeiten, Textzeilen und Asanas als Strichmännchen'], uebE: ['Stundenübersicht der Stunde', 'Verlauf und alle Kacheln, eine Seite je Stunde (Querformat)'], uebS: ['Stundenübersicht', 'Alle Stunden mit Verlauf und Kacheln (Querformat)'], anaP: ['Programmanalyse', 'Auswertung über das ganze Programm'],
+  ueb: ['Kompakte Übersicht', 'Tabelle aller Stunden im Querformat'], prax: ['Praxisblatt (nach Vorlage)', 'Eine Seite je Stunde: Zeiten, Mobilisation, Shakti Naam und Asanas als Strichmännchen'], uebE: ['Stundenübersicht der Stunde', 'Verlauf und alle Kacheln, eine Seite je Stunde (Querformat)'], uebS: ['Stundenübersicht', 'Alle Stunden mit Verlauf und Kacheln (Querformat)'], anaP: ['Programmanalyse', 'Auswertung über das ganze Programm'],
   std: ['Stundenpläne mit Texten', 'Ablauf, Texte, Übungstabelle und Material'], blatt: ['Strichmännchen-Blätter', 'Übungsfolge als Kacheln (Querformat)'], alt: ['Alternativenblatt', 'Leichtere Alternativen zu den Übungen'],
   uebw: ['Blatt Übungsauswahl', 'Kacheln mit Beschreibung wie im Katalog'], detS: ['Detailbeschreibungen der Stunde', 'Technik, Wirkung, Varianten der Übungen dieser Stunde'], spick: ['Spickzettel', 'Ablauf mit Zeiten auf einer Seite'], hands: ['Hands-on Blatt', 'Adjustment, Support und Assistance'], anaS: ['Einzelstundenanalyse', 'Kennzahlen und Verteilungen je Stunde'],
   mat: ['Materialliste', 'Matte und Hilfsmittel mit Übungen'], geb: ['Gebrechenliste', 'Übungen und für wen nicht geeignet'], detail: ['Detailbeschreibungen', 'Technik, Wirkung, Varianten je Übung'], katall: ['Übungskatalog gesamt', 'Alle Übungen des Katalogs mit Beschreibung']

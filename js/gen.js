@@ -396,6 +396,7 @@ function mergeAufw(s) {
 }
 function normalizeState() {
   if (typeof seqMigrate === 'function') seqMigrate();
+  if (typeof seqImportMerge === 'function') seqImportMerge();
   (state.courses || []).forEach(c => (c.sessions || []).forEach(s => {
     if ((s.order || []).includes('aufw') || (s.bm && s.bm.aufw) || (s.blk && s.blk.aufw)) mergeAufw(s);
     if ((s.order || []).includes('kraft') || (s.bm && s.bm.kraft) || (s.blk && s.blk.kraft)) mergeKraft(s);
