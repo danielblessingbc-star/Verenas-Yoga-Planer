@@ -186,7 +186,7 @@ function nav() {
     const nl = state.courses.filter(x => isP ? (!x.template && !x.single) : (x.single && !x.template)).length, nt = state.courses.filter(x => x.template && (isP ? !x.single : x.single)).length + (isP ? BUILTIN.length : 0);
     ctx = `<div class="hctx is-actions">${tab('list', (isP ? 'Vorhandene Programme' : 'Vorhandene Einzelstunden') + cnt(nl))}<span class="hsep"></span>`
       + (isP ? `<button class="hact" data-a="newCourse">＋ Neues Programm</button>${act('fromTpl', '＋ Programm aus Vorlagen' + cnt(nt), 'data-a="ptab" data-v="fromTpl"')}${act('build', '＋ Programm aus Einzelstunden', 'data-a="ptab" data-v="build"')}`
-        : `<button class="hact" data-a="newSingle">＋ Neue Einzelstunde</button>${act('fromTpl', '＋ Einzelstunde aus Vorlage' + cnt(nt), 'data-a="stab" data-v="fromTpl"')}${act('playMin', '▶ Minimalistischer Player', 'data-a="stab" data-v="playMin"')}${act('playDet', '▶ Detailplayer', 'data-a="stab" data-v="playDet"')}`) + '</div>';
+        : `<button class="hact" data-a="newSingle">＋ Neue Einzelstunde</button>${act('fromTpl', '＋ Einzelstunde aus Vorlage' + cnt(nt), 'data-a="stab" data-v="fromTpl"')}${act('aiGen', '✨ KI-generierte Stunde', 'data-a="stab" data-v="aiGen"')}${act('playMin', '▶ Minimalistischer Player', 'data-a="stab" data-v="playMin"')}${act('playDet', '▶ Detailplayer', 'data-a="stab" data-v="playDet"')}`) + '</div>';
   }
   return `<header class="noprint hdr${c ? (isS ? ' c-single' : ' c-prog') : ''}"><div class="hrow"><div class="brand">${LOTUS}Verenas Yoga Planomat<small class="ver" title="Programmversion">${typeof APP_VER !== 'undefined' ? APP_VER : ''}</small></div>${b('courses', 'Programme', 'prog')}${b('singles', 'Stunden', 'stunde')}${b('sequences', 'Sequenzen', 'sequenz')}${b('catalog', 'Übungskatalog', 'katalog')}${b('seqcat', 'Sequenzkatalog', 'seqkat')}${b('mantras', 'Mantras', 'mantra')}${b('songs', 'Lied-Katalog', 'lied')}${b('texts', 'Textvorlagen', 'textvorl')}${b('email', 'Emails', 'email')}${c ? '<span class="hname ' + (isS ? 'is-single' : 'is-prog') + '\" title="' + esc(c.name) + '\">' + '<b>' + esc(c.name) + '</b></span>' : ''}<span class="grow"></span><button class="tab gear${ui.view === 'settings' ? ' on' : ''}" data-a="nav" data-v="settings" title="Einstellungen & Backup" aria-label="Einstellungen & Backup">${hicon('zahnrad')}</button></div>${ctx}</header>`;
 }
@@ -1321,6 +1321,7 @@ Object.assign(A, MANTRA_ACTIONS);
 Object.assign(A, SONG_ACTIONS);
 Object.assign(A, TXVORL_ACTIONS);
 Object.assign(A, ANA_ACTIONS);
+Object.assign(A, AIGEN_ACTIONS);
 Object.assign(A, PLAYER_ACTIONS);
 Object.assign(A, VIDEO_ACTIONS);
 Object.assign(A, {

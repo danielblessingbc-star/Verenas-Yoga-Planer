@@ -927,13 +927,13 @@ function jsonFrom(text, open, close) {
   return JSON.parse(text.slice(a, b + 1));
 }
 const exNames = ids => ids.map(i => (exById(i) || {}).n).filter(Boolean).join(', ');
-async function aiTexts(c, s, idx) {
+async function aiTexts(c, s, idx, wish) {
   const a = exById(s.atem.a), w = exById(s.atem.w), sample = THEMES[0];
   const p = `Du bist eine erfahrene Yogalehrerin und schreibst Anleitungstexte für eine Gruppenyogastunde (${LEVELS[c.level]}, ${sessionTotal(s)} Minuten, Stunde ${idx + 1} von ${c.sessions.length}).
 Motto der Stunde: „${s.motto.title}“ (Kernsatz: ${s.motto.kern}). Körperlicher Fokus: ${s.motto.focus}.
 Dauern in Minuten: Einleitung ${txDur(s, 'einl')}, Atemübung ${txDur(s, 'atem')}, ${bon(s, 'mantra') && s.mantra ? 'Mantra ' + txDur(s, 'mantra') + ', ' : ''}Hauptteil ${s.dur.haupt}, Schluss ${txDur(s, 'schluss')}, Shavasana ${txDur(s, 'shava')}.
 Atemübung: ${a ? a.n : '–'}${w ? '; Wahrnehmungsübung: ' + w.n : ''}.${bon(s, 'mantra') && s.mantra && manById(s.mantra.id) ? ' Mantra: ' + manById(s.mantra.id).n + ' (Text: ' + manById(s.mantra.id).text.join(' / ') + ') – den Mantratext NICHT verändern.' : ''}
-Übungen im Hauptteil: ${exNames(blkIds(s))}.
+${wish ? 'Wünsche der Lehrerin für diese Stunde: „' + wish + '“. Berücksichtige sie in Inhalt und Ton der Texte.\n' : ''}Übungen im Hauptteil: ${exNames(blkIds(s))}.
 Schreibe auf Deutsch in der Du-Form, ruhig, einfach, mit kurzen Sätzen und Sprechpausen (…), ohne Esoterik-Übertreibung. Stilprobe Einleitung: „${sample.e}“
 Länge (entspricht der Sprechzeit): Einleitung ca. ${Math.round(txDur(s, 'einl') * WPM.einl)} Wörter, Atemtext ca. ${Math.round(txDur(s, 'atem') * WPM.atem)} Wörter, Shavasana ca. ${Math.round(txDur(s, 'shava') * WPM.shava)} Wörter, Schluss ca. ${Math.round(txDur(s, 'schluss') * WPM.schluss)} Wörter.
 Antworte ausschließlich mit JSON: {"einl":"…","atem":"…","schluss":"…","shava":"…","focus":"…","kern":"…"}`;
