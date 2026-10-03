@@ -1096,7 +1096,7 @@ function resetSession(c, s) {
   fillSession(c, s, idx, { motto: mottos[idx] || s.motto });
 }
 // ---- Status „Fertig“: Einzelplanung ist gesperrt, Änderungsversuch fragt nach ----
-const LOCKED_OK = new Set(['noop', 'ovFilter', 'tplOpen', 'vidRes', 'vidExport', 'plPlay', 'plClose', 'plToggle', 'plPrev', 'plNext', 'plRestart', 'selS', 'gotoS', 'gotoSA','prevS', 'nextS', 'tab', 'nav', 'tglb', 'bAll', 'exinfo', 'lock', 'frameView', 'fltTog', 'fltGeb', 'fltReset', 'preview', 'print', 'mail', 'eml', 'html', 'copy', 'pdf', 'rate']);
+const LOCKED_OK = new Set(['noop', 'ovFilter', 'tplOpen', 'vidRes', 'vidExport', 'plPlay', 'plClose', 'plToggle', 'plPrev', 'plNext', 'plRestart', 'selS', 'gotoS', 'gotoSA','prevS', 'nextS', 'tab', 'nav', 'tglb', 'bAll', 'exinfo', 'lock', 'frameView', 'fltTog', 'fltGeb', 'fltReset', 'preview', 'print', 'mail', 'eml', 'html', 'copy', 'pdf', 'rate', 'aiAna', 'aiAnaDel']);
 function sidOfEl(el) {
   const m = (el.dataset.f || '').match(/^s:([^:]+):/);
   return m ? m[1] : (el.dataset.sid || el.dataset.dsid || el.dataset.id || (ui.pk && el.closest && el.closest('#pkpanel') ? ui.pk.sid : null));
@@ -1320,6 +1320,7 @@ Object.assign(CH, SEQ_CH);
 Object.assign(A, MANTRA_ACTIONS);
 Object.assign(A, SONG_ACTIONS);
 Object.assign(A, TXVORL_ACTIONS);
+Object.assign(A, ANA_ACTIONS);
 Object.assign(A, PLAYER_ACTIONS);
 Object.assign(A, VIDEO_ACTIONS);
 Object.assign(A, {

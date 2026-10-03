@@ -791,3 +791,5 @@ select.sbref{width:100%;box-sizing:border-box}.sbprev{display:block;margin-top:4
 .mt svg text,.xtile svg text,.pltile svg text{font-family:inherit}
 
 .t-shakti{--sq:#8e6bb8}.seqb.t-shakti{border-left:4px solid var(--sq);padding-left:10px}
+
+.aiana p{margin:4px 0;line-height:1.5}.aiana .subh{margin-top:10px}.apanel.aipanel{border-top-color:var(--accent-deep)}
