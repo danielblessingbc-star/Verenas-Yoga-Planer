@@ -1,4 +1,4 @@
-// Prüft die mitgelieferten Sequenzen (js/sequenzen-import.js): jede Übung existiert im Katalog, IDs und Namen sind eindeutig, Quellen sind Links.
+// Prüft die mitgelieferten Sequenzen (js/sequenzen-import.js): jede Übung existiert im Katalog, IDs und Namen sind eindeutig, Quellen sind Links oder das Ausbildungsskript.
 const assert = require('node:assert');
 const { loadCatalog, run } = require('./helpers');
 const ctx = loadCatalog(['sequenzen-import']);
@@ -14,7 +14,7 @@ t('ids_und_namen_eindeutig', () => {
   assert.strictEqual(r[0], r[1]); assert.strictEqual(r[0], r[2]);
 });
 t('felder_und_quellen', () => {
-  const bad = J("return SEQ_IMPORT.filter(s => !['mobilisation', 'asana', 'cooldown'].includes(s.type) || !s.desc || !/^https:\\/\\//.test((s.src || {}).u) || !(s.src || {}).n || !s.items.length || s.items.some(i => !(i[1] > 0))).map(s => s.imp)");
+  const bad = J("return SEQ_IMPORT.filter(s => !['mobilisation', 'shakti', 'asana', 'cooldown'].includes(s.type) || !s.desc || !(((s.src || {}).u === '' && /^Ausbildungsskript Modul \\d/.test((s.src || {}).n)) || /^https:\\/\\//.test((s.src || {}).u)) || !(s.src || {}).n || !s.items.length || s.items.some(i => !(i[1] > 0))).map(s => s.imp)");
   assert.deepStrictEqual(bad, []);
 });
 t('keine_gedankenstriche', () => {

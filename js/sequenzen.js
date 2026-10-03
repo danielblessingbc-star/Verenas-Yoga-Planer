@@ -1,5 +1,5 @@
 /* Sequenzen: feste Übungsfolgen (z. B. Sonnengruß), die in Einzelstunden eingeplant werden.
-   state.sequences = [{ id, name, type, items: [{ id: Übungs-ID, min, tx? }], desc, src: { n, u }, man: { Gruppe: [Werte] }, imp }]  – type: mobilisation | asana | cooldown (fehlt = asana).
+   state.sequences = [{ id, name, type, items: [{ id: Übungs-ID, min, tx? }], desc, src: { n, u }, man: { Gruppe: [Werte] }, imp }]  – type: mobilisation | shakti | asana | cooldown (fehlt = asana).
    desc = Beschreibung, src = Quelle (Name, Link), man = manuell gesetzte Eigenschaften (alle anderen werden aus den Übungen abgeleitet), imp = Herkunfts-ID eines Imports.
    Eine Übung der Sequenz kann der Sonderbaustein „Textblock“ sein (id = 'textblock', tx = Text).
    Seite „Sequenzen“ (bearbeiten) und „Sequenzkatalog“ (nachschlagen).
@@ -7,8 +7,8 @@
    Cooldown → „Ausgleich / Cool down“). Die Übungen der gewählten Sequenz werden dort als zusammenhängende Gruppe eingefügt (it.seq = Block-ID, it.seqName, it.seqType, it.seqPos)
    und lassen sich nur als Ganzes verschieben (pos = Anzahl Einzelübungen vor der Gruppe); die übrigen Übungen werden zeitlich angepasst (rebalanceBlock). */
 
-const SEQ_TYPES = { mobilisation: { n: 'Mobilisation', blk: 'mobi' }, asana: { n: 'Asana', blk: 'asana' }, cooldown: { n: 'Cooldown', blk: 'ausgl' } };
-const SEQ_BLKS = ['mobi', 'asana', 'ausgl'];
+const SEQ_TYPES = { mobilisation: { n: 'Mobilisation', blk: 'mobi' }, shakti: { n: 'Shakti Naam', blk: 'shakti' }, asana: { n: 'Asana', blk: 'asana' }, cooldown: { n: 'Cooldown', blk: 'ausgl' } };
+const SEQ_BLKS = ['mobi', 'shakti', 'asana', 'ausgl'];
 
 // Mustersequenz: Sonnengruß aus Übungen des Katalogs (Modul 1, S. 64–77: Tadasana, Arme zur Sonne, Vorbeuge, Sprinter, Planke, Kobra, Herabschauender Hund)
 function seqDefaults() {
@@ -140,7 +140,7 @@ function seqPanel(c, s) {
     body = `${rows}<div class="bar"><button class="sm" data-a="seqBlkAdd" data-id="${id}">＋ Weiteren Sequenzblock hinzufügen</button><button class="ghost sm" data-a="seqApply" data-id="${id}" title="Übungen der gewählten Sequenzen erneut aus dem Sequenzkatalog übernehmen (z. B. nach einer Änderung der Sequenz)">↻ Aus Sequenzkatalog neu übernehmen</button><span class="grow"></span><span class="muted">Sequenzen in dieser Stunde: <b>${fmtMin(tot)}</b> Min.</span></div>`;
   }
   return `<details class="panel mini noprint" data-id="seq:${id}" ${ui.open.has('seq:' + id) ? 'open' : ''}><summary>Sequenzplanung ${chip} <span class="muted">· feste Übungsfolgen wie der Sonnengruß</span></summary>
-<p class="muted">Die Art der Sequenz bestimmt den Stundenblock: Mobilisation → „${esc(bn(s, 'mobi'))}“, Asana → „${esc(bn(s, 'asana'))}“, Cooldown → „${esc(bn(s, 'ausgl'))}“. Die Übungen stehen dort als zusammengehörige Gruppe und lassen sich im Block nur als Ganzes verschieben (▲▼). Die übrigen Übungen werden zeitlich angepasst. Spätere Änderungen an der Sequenz gelten erst nach „Neu übernehmen“.</p>
+<p class="muted">Die Art der Sequenz bestimmt den Stundenblock: Mobilisation → „${esc(bn(s, 'mobi'))}“, Shakti Naam → „${esc(bn(s, 'shakti'))}“ (muss in der Stunde eingeschaltet sein), Asana → „${esc(bn(s, 'asana'))}“, Cooldown → „${esc(bn(s, 'ausgl'))}“. Die Übungen stehen dort als zusammengehörige Gruppe und lassen sich im Block nur als Ganzes verschieben (▲▼). Die übrigen Übungen werden zeitlich angepasst. Spätere Änderungen an der Sequenz gelten erst nach „Neu übernehmen“.</p>
 ${blocked ? '<p class="banner">Alle drei Blöcke (Mobilisation, Asanas, Cool down) sind in dieser Stunde ausgeschaltet oder keine Übungsblöcke: Sequenzen können erst eingeplant werden, wenn einer wieder aktiv ist.</p>' : ''}
 <div class="seqq"><b>Sequenzen einplanen?</b>${sGrp([[1, 'Ja'], [0, 'Nein']], p.on ? 1 : 0, 'seqOn', id, 'seq', blocked && !p.on)}</div>${body}</details>`;
 }

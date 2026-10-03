@@ -33,5 +33,35 @@ const SEQ_IMPORT = [
     desc: 'Ruhige, seitlich betonte Folge als Gegenstück zum Sonnengruß: kühlend, erdend und beruhigend, gut für den Abend oder zum Stundenende. Aufbau gespiegelt: erst zu einer Seite, dann zur anderen, am Ende zurück in die Berghaltung. Es gibt viele Formen des Mondgrußes; dies ist eine der verbreiteten.',
     src: { n: 'yogaeasy: Mondgruß, Auszug aus „Female Yoga“ von Katharina Middendorf', u: 'https://www.yogaeasy.de/artikel/aus-dem-schatten-ins-licht-der-mondgruss' },
     items: [['tadasana', 0.5], ['anjali_mudra', 0.5], ['seitneigung', 1], ['goettin', 1], ['dreieck', 1], ['pyramide', 1], ['anjaneyasana', 1], ['skandasana', 1], ['anjaneyasana', 1], ['pyramide', 1], ['dreieck', 1], ['goettin', 1], ['tadasana', 0.5]]
+  },
+  {
+    imp: 'imp_sn_heil', name: 'Shakti Naam Heilserie', type: 'shakti',
+    desc: 'Die Heilserie für Vitalität, Jugend und Schönheit: ein Herz-Kreislauf-Training in acht Schritten, das das elektromagnetische Feld stärken soll. Immer die Körpermitte (Hara) aktivieren. Die Minuten sind die Mindestdauer laut Skript (Arm Swings 3 bis 7, Magnetfeld 5 bis 10, Clap Walk 6 bis 10, Walking 3 bis 6). Nicht bei Schwindel, Bluthochdruck, Osteoporose oder Knieproblemen; für Senioren eher die Sitz-Sequenz wählen.',
+    src: { n: 'Ausbildungsskript Modul 6, S. 15 bis 19', u: '' },
+    items: [['sn_armswing', 3], ['sn_magnet', 5], ['sn_clapwalk', 6], ['sn_heartsaver', 3], ['sn_walking', 3], ['kindhaltung', 1], ['sn_shaking', 1], ['shavasana', 3]]
+  },
+  {
+    imp: 'imp_sn_stehen', name: 'Shakti Naam Cardio im Stehen', type: 'shakti',
+    desc: 'Acht Cardio-Übungen im Stehen: Kicken mit Mantra, kreuzweises Laufen, Marschieren, Herz-Fächeln, Rennen, Tanzen und Kniebeugen mit „Har“. Beckenboden anspannen und die Körpermitte „bracen“, am besten mit aufbauender, rhythmischer Musik. Nicht bei Schwindel, Bluthochdruck, Osteoporose oder Knieproblemen. Die Minuten sind meine Vorschläge, das Skript nennt keine Zeiten.',
+    src: { n: 'Ausbildungsskript Modul 6, S. 22 bis 26', u: '' },
+    items: [['sn_kick1', 2], ['sn_kick2', 2], ['sn_cross', 2], ['sn_march', 2], ['sn_fan', 2], ['sn_run', 2], ['sn_dance', 2], ['sn_squat', 3]]
+  },
+  {
+    imp: 'imp_sn_sitzen', name: 'Shakti Naam Cardio Atemarbeit im Sitzen', type: 'shakti',
+    desc: 'Neun Übungen im einfachen Sitz mit Shakti Mudra und kräftigem Atem, je etwa 3 Minuten, jeweils mit Atem anhalten und Arme ausschütteln am Ende. Gut für Gruppen, die nicht stehen oder laufen sollen. Nicht bei Schwindel, Bluthochdruck, Glaukom oder Osteoporose.',
+    src: { n: 'Ausbildungsskript Modul 6, S. 61 bis 65', u: '' },
+    items: [['sn_s_twist', 3], ['sn_s_gyan', 3], ['sn_s_chest', 3], ['sn_s_prana_down', 3], ['sn_s_prana_grab', 3], ['sn_s_cross', 3], ['sn_s_fan', 3], ['sn_s_circles', 3], ['sn_s_wings', 3]]
+  },
+  {
+    imp: 'imp_sn_cardio_detail', name: 'Shakti Naam Cardio-Übungen (Detailseiten)', type: 'shakti',
+    desc: 'Die Cardio-Übungen, die das Skript auf eigenen Seiten mit Technik, Wirkung und Kontraindikationen beschreibt, in Skriptreihenfolge: Schütteln, kreuzweises Laufen, Walking, Brain Booster, Armkreise, Himmlisches Prana, Hara Tanz, Lichtwall und die Superheld Sequenz. Das ist eine Zusammenstellung, keine feste Folge im Skript; Minuten sind meine Vorschläge. Mit den Hinweisen der einzelnen Übungen (Schulter, Knie, Osteoporose, Schwindel) abgleichen.',
+    src: { n: 'Ausbildungsskript Modul 6, S. 28 bis 37', u: '' },
+    items: [['sn_shaking', 3], ['sn_clapwalk', 3], ['sn_walking', 3], ['sn_brain', 2], ['sn_armkreise', 2], ['sn_prana_himmel', 2], ['sn_haratanz', 2], ['sn_lichtwall', 2], ['sn_superheld', 3]]
+  },
+  {
+    imp: 'imp_sn_hws', name: 'HWS Mobilisation: Nackenöffnungen', type: 'mobilisation',
+    desc: 'Vier Möglichkeiten, den Nacken im Stehen zu öffnen: mit verschränkten Händen, mit Kinnkreisen (Schildkröte), Hamster im Glück und Backen aufplustern mit Tattva Mudra. Im Skript sind es Optionen; hier stehen alle vier nacheinander, einzelne lassen sich in der Stunde entfernen. Die letzten beiden mit angehaltenem Atem. Nicht bei Nackenverletzungen und Bluthochdruck, Option 4 auch nicht bei Glaukom.',
+    src: { n: 'Ausbildungsskript Modul 6, S. 38 bis 43', u: '' },
+    items: [['sn_nacken1', 2], ['sn_nacken2', 2], ['sn_hamster', 2], ['sn_tattva', 2]]
   }
 ];

@@ -769,3 +769,5 @@ select.sbref{width:100%;box-sizing:border-box}.sbprev{display:block;margin-top:4
 .songh{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}.songh .xtile{flex:none;cursor:default}.songh h3{margin:0 0 2px}.songb{display:flex;gap:8px;flex-wrap:wrap}
 .songl{margin-top:4px;word-break:break-all}.songtx{margin:6px 0 0;line-height:1.5}
 .songl a{color:var(--accent-deep)}.hero>.primary{white-space:nowrap}
+
+.t-shakti{--sq:#8e6bb8}.seqb.t-shakti{border-left:4px solid var(--sq);padding-left:10px}
