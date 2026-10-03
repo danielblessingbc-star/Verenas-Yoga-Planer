@@ -81,6 +81,7 @@ ${kpi('Peak Pose', R.peaks.length, peak)}
 ${kpi('Atem / Wahrnehmung', '', esc(at))}
 </div>
 ${hints.length ? `<section class="panel apanel hints"><h3>Auffälligkeiten</h3><ul>${hints.map(h => hintLi(h, c, asDoc)).join('')}</ul></section>` : ''}
+${aiAnaPanel(c, s, asDoc)}
 ${distPanels(R, c)}
 ${(() => { const tbl = `<table class="atbl"><thead><tr><th>Block</th><th>Übung</th><th>Dauer</th><th>Schwierigkeit</th><th>Yogastil &amp; Körperregion</th>${asDoc ? '' : '<th>Gefällt mir</th>'}</tr></thead><tbody>${lines || '<tr><td colspan="6" class="muted">Keine Übungen.</td></tr>'}</tbody></table>`; return asDoc ? '<h3>Übungen der Stunde</h3>' + tbl : apanel('Übungen der Stunde mit „Gefällt mir“', 'Sterne anklicken, um die Bewertung zu ändern – sie fließt in die automatische Auswahl ein.', `<div class="tblwrap">${tbl}</div>`, 'wide'); })()}`;
 }
@@ -123,6 +124,7 @@ ${kpi('Peak Poses', R.peaks.length, `${peakDistinct} verschiedene · in ${withPe
 ${kpi('Status', '', Object.keys(STATUS).map(k => `<span class="stdot stc-${k}"></span>${STATUS[k]} ${st[k] || 0}`).join(' · '))}
 </div>
 ${hints.length ? `<section class="panel apanel hints"><h3>Auffälligkeiten</h3><ul>${hints.slice(0, 16).map(h => hintLi(h, c, asDoc)).join('')}</ul></section>` : ''}
+${aiAnaPanel(c, null, asDoc)}
 ${(() => { const tbl = `<table class="atbl"><thead><tr><th>Nr.</th><th>Datum</th><th>Motto</th><th>Dauer (Min.)</th><th>Übungen</th><th>Ø Schwierigkeit</th>${asDoc ? '' : '<th>Ø Gefällt mir</th>'}<th>Peak Pose</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`; return asDoc ? `<h3>Verlauf über das Programm</h3><div class="spark">${spark}</div>` + tbl : apanel('Verlauf über das Programm', 'Zeile anklicken = Einzelstundenanalyse. Säulen: Ø Schwierigkeit je Stunde.', `<div class="spark">${spark}</div><div class="tblwrap">${tbl}</div>`, 'wide'); })()}
 ${distPanels(R, c)}
 <div class="agrid">
@@ -132,6 +134,60 @@ ${apanel('Gefällt mir – Schlusslichter', 'Niedrigste Bewertungen unter den ve
 ${apanel('Noch nicht bewertet', `${unrated.length} Übungen im Programm ohne Sterne`, unrated.length ? `<ul class="alist">${unrated.slice(0, 10).map(e => li(e)).join('')}</ul>${unrated.length > 10 ? `<p class="muted">… und ${unrated.length - 10} weitere</p>` : ''}` : '<p class="muted">Alles bewertet.</p>')}`}
 </div>`;
 }
+
+
+// ---------------- KI-Einschätzung (optional, Stunde oder Programm) ----------------
+// Gesendet werden nur Mottos, Übungsnamen, Zeiten und Kennzahlen, keine Namen oder Angaben von Teilnehmenden.
+function aiAnaFacts(c, sessions) {
+  const R = anStat(c, sessions), L = { lv: { 1: 'Anfänger', 2: 'Mittel', 3: 'Fortgeschritten' } };
+  const dist = (m, lab) => { const t = Object.values(m).reduce((a, b) => a + b, 0); return Object.keys(m).filter(k => m[k] > 0).sort((a, b) => m[b] - m[a]).map(k => `${lab[k] || (k === '_none' ? 'ohne Zuordnung' : k)} ${pct(m[k], t)} %`).join(', ') || 'keine Daten'; };
+  const sess = sessions.map((s, i) => {
+    const byBlk = {}; anItems(s).forEach(r => { (byBlk[r.k] = byBlk[r.k] || []).push(`${r.e.n}${r.e.peak ? ' (Peak Pose)' : ''} ${fmtMin(r.min)} Min.`); });
+    const geb = effGeb(c, s).map(g => GEBRECHEN[g]).filter(Boolean);
+    return `Stunde ${sessions.length > 1 ? i + 1 : (c.sessions.indexOf(s) + 1)}: Motto „${s.motto.title}“, Fokus: ${s.motto.focus || 'keiner'}, ${fmtMin(plannedTotal(s))} Min. geplant (Soll ${sessionTotal(s)} Min.)${geb.length ? ', berücksichtigte Einschränkungen: ' + geb.join(', ') : ''}\n` + Object.keys(byBlk).map(k => `  ${bn(s, k)}: ${byBlk[k].join('; ')}`).join('\n');
+  }).join('\n\n');
+  return `Gruppe: ${LEVELS[c.level]}. Übungen gesamt: ${R.n}, davon ${Object.keys(R.ids).length} verschiedene. Durchschnittliche Schwierigkeit ${f1(R.lv)} von 3 (${lvLabel(R.lv)}). Peak Poses: ${R.peaks.length}.
+Verteilung nach Minuten:
+Körperregionen: ${dist(R.dist.reg, KAT.reg)}
+Haltung im Raum: ${dist(R.dist.pos, KAT.pos)}
+Funktionelle Wirkung: ${dist(R.dist.wirk, KAT.wirk)}
+Energetischer Fokus: ${dist(R.dist.en, KAT.en)}
+Yogastile: ${dist(R.dist.st, STILE)}
+Chakren: ${dist(R.dist.chakra, KAT.chakra)}
+Schwierigkeit: ${dist(R.dist.lv, L.lv)}
+
+${sess}`;
+}
+async function aiAnalyse(c, s) {
+  const prog = !s, facts = aiAnaFacts(c, prog ? c.sessions : [s]);
+  const p = `Du bist eine erfahrene Yogalehrerin und gibst einer Kollegin eine fachliche Rückmeldung zu ${prog ? 'ihrem Kursprogramm (alle Stunden zusammen)' : 'einer von ihr geplanten Yogastunde'}. Sprich sie mit „du“ an, freundlich, klar und konkret.
+Stütze dich ausschließlich auf die Angaben unten. Erfinde keine Übungen, Zahlen oder Teilnehmerdaten. Gib keine medizinischen Ratschläge.
+Beurteile: ${prog ? 'Entwicklung und Steigerung über die Stunden, Abwechslung und Wiederholungen, Ausgewogenheit von Körperregionen und Wirkung, Passung zur Gruppe' : 'Spannungsbogen (Ankommen, Aufwärmen, Hauptteil, Gegenhaltungen, Ausklang), Ausgewogenheit von Körperregionen und Wirkung, Passung zur Gruppe, Zeitverteilung'}.
+Format: reiner Text ohne Markdown, genau diese vier Überschriften, jeweils allein in einer Zeile: Gesamteindruck, Stärken, Verbesserungsvorschläge, ${prog ? 'Verlauf' : 'Aufbau'}. Unter „Verbesserungsvorschläge“ 3 bis 5 konkrete Punkte, jeder beginnt mit „• “ und nennt, wo sinnvoll, Übungen oder Stunden beim Namen. Höchstens ${prog ? 350 : 250} Wörter. Keine Gedankenstriche.
+
+${facts}`;
+  return (await aiCall(p, 1800)).replace(/\*\*/g, '').trim();
+}
+function aiAnaHtml(text) {
+  return String(text).split('\n').map(l => l.trim()).filter(Boolean).map(l => /^(Gesamteindruck|Stärken|Verbesserungsvorschläge|Aufbau|Verlauf):?$/.test(l) ? `<div class="subh">${esc(l.replace(/:$/, ''))}</div>` : `<p>${esc(l)}</p>`).join('');
+}
+function aiAnaPanel(c, s, asDoc) {
+  const o = (s || c).aiAna, key = s ? 's' + s.id : 'p' + c.id, busy = ui.aiAnaBusy === key;
+  if (asDoc) return o && o.text ? `<h3>KI-Einschätzung</h3><div class="aiana">${aiAnaHtml(o.text)}</div>` : '';
+  const btn = `<button class="sm primary" data-a="aiAna" ${s ? `data-id="${s.id}"` : ''} ${ui.aiAnaBusy ? 'disabled' : ''}>${busy ? 'KI analysiert …' : o ? '↻ Neu erstellen' : '✨ KI-Einschätzung erstellen'}</button>${o && !busy ? ` <button class="sm ghost" data-a="aiAnaDel" ${s ? `data-id="${s.id}"` : ''} title="Einschätzung entfernen">🗑</button>` : ''}`;
+  return apanel('KI-Einschätzung', 'Fachliche Rückmeldung zu Aufbau, Ausgewogenheit und Passung zur Gruppe. Gesendet werden nur Mottos, Übungsnamen, Zeiten und Kennzahlen. Das ist ein Vorschlag: bitte fachlich prüfen.', `<div class="bar noprint">${btn}${o ? `<span class="muted"> erstellt am ${esc(fmtDate(o.at))}</span>` : ''}</div>${o && o.text ? `<div class="aiana">${aiAnaHtml(o.text)}</div>` : '<p class="muted">Noch keine Einschätzung erstellt. API-Schlüssel und Anbieter stellst du in den Einstellungen ein.</p>'}`, 'aipanel');
+}
+const ANA_ACTIONS = {
+  async aiAna(d) {
+    const c = cur(); if (!c || ui.aiAnaBusy) return;
+    const s = d.id ? c.sessions.find(x => x.id === d.id) : null; if (d.id && !s) return;
+    const key = s ? 's' + s.id : 'p' + c.id; ui.aiAnaBusy = key; render(); toast('KI analysiert …', 20000);
+    try { (s || c).aiAna = { text: await aiAnalyse(c, s), at: todayIso() }; save(); toast('KI-Einschätzung erstellt.'); }
+    catch (e) { console.error(e); toast('⚠ ' + e.message, 12000); }
+    finally { ui.aiAnaBusy = null; render(); }
+  },
+  aiAnaDel(d) { const c = cur(), s = d.id ? c.sessions.find(x => x.id === d.id) : null; if (!c || (d.id && !s)) return; delete (s || c).aiAna; save(); render(); }
+};
 
 
 // ---------------- Automatische Änderungen zu den Auffälligkeiten ("Ändern") ----------------
