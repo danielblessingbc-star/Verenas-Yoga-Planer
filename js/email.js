@@ -117,7 +117,7 @@ function renderEmailListTab(drafts) {
     ui.currentEmailDraftId = draft.id;
     ui.emailTab = 'edit';
     render();
-  ">+ Neuer Entwurf</button>';
+  ">+ Neuer Entwurf</button>`;
   html += '</div>';
   html += '</div>';
 
