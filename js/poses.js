@@ -90,6 +90,7 @@ function figureSVG(key, size) {
   if (key === 'lied') return LIEDICON.replace('<svg class="fig"', '<svg class="fig"' + px);   // Sonderbaustein „Lied“
   if (key === 'mantrasb') return manIconSVG('om').replace('<svg class="fig"', '<svg class="fig"' + px);   // Sonderbaustein „Mantra“
   if (key === 'textblock') return TEXTICON.replace('<svg class="fig"', '<svg class="fig"' + px);   // Sonderbaustein „Textblock“
+  if (key === 'frei') return FREIICON.replace('<svg class="fig"', '<svg class="fig"' + px);   // Sonderbaustein „Freie Übung“ ohne Text
   return `<svg class="fig" viewBox="0 0 100 100"${px} aria-hidden="true">${figureParts(key)}</svg>`;
 }
 
@@ -130,6 +131,27 @@ Object.assign(ICONS, {
 });
 
 const LIEDICON = '<svg class="fig" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M40 70V22l34-8v48"/><path d="M40 40l34-8"/><ellipse cx="30" cy="72" rx="10" ry="8"/><ellipse cx="64" cy="64" rx="10" ry="8"/></g></svg>';
-const TEXTICON = '<svg class="fig" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M24 8h36l18 18v66H24z"/><path d="M60 8v18h18"/><path d="M34 46h34M34 58h34M34 70h22"/></g></svg>';
+const FREIICON = '<svg class="fig" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M64 18l18 18-42 42-22 4 4-22z"/><path d="M56 26l18 18"/></g></svg>';
+// Kachel der „Freien Übung“: der eingetragene Text steht als Name in der Kachel (Schrift passt sich der Länge an)
+function freiFig(txt, size) {
+  const px = size ? ` width="${size}" height="${size}"` : '', t = String(txt || '').replace(/\s+/g, ' ').trim();
+  if (!t) return FREIICON.replace('<svg class="fig"', '<svg class="fig"' + px);
+  const esc_ = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  let f = 24, lines = [];
+  for (; f >= 10; f--) {
+    const max = Math.max(3, Math.floor(88 / (f * 0.58)));
+    if (f > 10 && t.split(' ').some(w => w.length > max)) continue;   // erst verkleinern, Wörter nur im Notfall trennen
+    lines = []; let cur = '';
+    t.split(' ').forEach(w => {
+      while (w.length > max) { if (cur) { lines.push(cur); cur = ''; } lines.push(w.slice(0, max - 1) + '-'); w = w.slice(max - 1); }
+      if (!cur) cur = w; else if ((cur + ' ' + w).length <= max) cur += ' ' + w; else { lines.push(cur); cur = w; }
+    });
+    if (cur) lines.push(cur);
+    if (lines.length * f * 1.18 <= 88) break;
+  }
+  const lh = f * 1.18, y0 = 50 - (lines.length - 1) * lh / 2 + f * 0.35;
+  return `<svg class="fig" viewBox="0 0 100 100"${px} aria-hidden="true"><g fill="currentColor" font-family="inherit" font-weight="600" font-size="${f}" text-anchor="middle">${lines.map((l, i) => `<text x="50" y="${(y0 + i * lh).toFixed(1)}">${esc_(l)}</text>`).join('')}</g></svg>`;
+}
+const TEXTICON ='<svg class="fig" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M24 8h36l18 18v66H24z"/><path d="M60 8v18h18"/><path d="M34 46h34M34 58h34M34 70h22"/></g></svg>';
 
 POSES.ratlos = POSES.stand; // Auswahl im Katalog; Zeichnung (mit Fragezeichen) siehe figureParts

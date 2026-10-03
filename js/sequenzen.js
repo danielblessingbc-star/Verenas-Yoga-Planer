@@ -23,7 +23,7 @@ const sqPType = b => SEQ_TYPES[b.type] ? b.type : (sqById(b.seqId) ? sqType(sqBy
 const sqTypeChip = t => `<span class="chip seqt t-${t}">${SEQ_TYPES[t].n}</span>`;
 const sqItems = q => q.items.filter(i => exById(i.id));
 const sqMin = q => sumMin(q.items);
-const sqTile = it => { const e = exById(it.id); return e ? `<span class="mt cat-${e.c}" title="${esc(e.n)} · ${fmtMin(it.min)} Min.">${figureSVG(e.pose)}${peakStar(e)}</span>` : ''; };
+const sqTile = it => { const e = exById(it.id); return e ? `<span class="mt cat-${e.c}" title="${esc(tileName(it, e))} · ${fmtMin(it.min)} Min.">${sbTileFig(it, e)}${peakStar(e)}</span>` : ''; };
 const sqCount = n => n + (n === 1 ? ' Übung' : ' Übungen');
 const sqExs = q => q.items.map(i => exById(i.id)).filter(e => e && !e.txt);
 const sqTxN = q => q.items.filter(isSb).length;   // Sonderbausteine (Text, Lied, Mantra)
@@ -64,7 +64,7 @@ function seqApplyBlock(c, s, key) {
   if (seqActive(s, key)) mine.forEach(b => {
     const q = sqById(b.seqId);
     if (!q) { if (old[b.id]) ins.push(...old[b.id]); return; }
-    sqItems(q).forEach(x => { const it = mkItem(exById(x.id), x.min); if (isTxb(it)) it.tx = x.tx || ''; else if (isSb(it)) it.ref = x.ref || ''; it.seq = b.id; it.seqName = q.name; it.seqType = sqPType(b); it.seqPos = +b.pos || 0; applyAlt(s, it); ins.push(it); });
+    sqItems(q).forEach(x => { const it = mkItem(exById(x.id), x.min); if (hasTx(exById(x.id))) it.tx = x.tx || ''; else if (isSb(it)) it.ref = x.ref || ''; it.seq = b.id; it.seqName = q.name; it.seqType = sqPType(b); it.seqPos = +b.pos || 0; applyAlt(s, it); ins.push(it); });
   });
   const have = new Set(ins.map(i => i.id));
   s.blk[key] = ins.concat(items.filter(i => !i.seq && !have.has(i.id)));
@@ -132,7 +132,7 @@ function seqRow(it, i, n) {
   const e = exById(it.id), tx = isSb(it), tile = e
     ? `<div class="xtile cat-${e.c} pkt" data-a="seqPk" data-i="${i}" title="Klicken: andere Übung wählen">${tx ? sbInfo(it, e).fig : figureSVG(e.pose)}${peakStar(e)}</div>`
     : `<div class="xtile empty pkt" data-a="seqPk" data-i="${i}" title="Klicken: Übung wählen"><span class="plus">＋</span></div>`;
-  return `<div class="seqrow${tx ? ' txb' : ''}"><span class="seqno">${i + 1}</span>${tile}<div class="seqnm">${e ? `<b>${esc(e.n)}</b>${e.sa ? `<i class="sa">${esc(e.sa)}</i>` : ''}${tx ? (isTxb(it) ? `<textarea rows="3" class="seqtx" data-chg="seqTx" data-i="${i}" placeholder="Text an dieser Stelle der Sequenz …">${esc(it.tx || '')}</textarea>` : sbRefSelect(it, e, `data-chg="seqRef" data-i="${i}"`) + sbPreview(it, e)) : ''}` : '<b class="muted">noch keine Übung gewählt</b>'}</div>
+  return `<div class="seqrow${tx ? ' txb' : ''}"><span class="seqno">${i + 1}</span>${tile}<div class="seqnm">${e ? `<b>${esc(e.n)}</b>${e.sa ? `<i class="sa">${esc(e.sa)}</i>` : ''}${tx ? (e.sb === 'frei' ? `<input type="text" class="freitx" data-chg="seqTx" data-i="${i}" value="${esc(it.tx || '')}" maxlength="60" placeholder="Name der Übung, z. B. Handstand …" autocomplete="off">` : isTxb(it) ? `<textarea rows="3" class="seqtx" data-chg="seqTx" data-i="${i}" placeholder="Text an dieser Stelle der Sequenz …">${esc(it.tx || '')}</textarea>` : sbRefSelect(it, e, `data-chg="seqRef" data-i="${i}"`) + sbPreview(it, e)) : ''}` : '<b class="muted">noch keine Übung gewählt</b>'}</div>
 <div class="am"><input type="number" min="0.5" max="30" step="0.5" value="${it.min}" data-chg="seqMin" data-i="${i}"><span>Min.</span></div>
 <button class="ghost sm" data-a="seqMv" data-i="${i}" data-d="-1" ${i === 0 ? 'disabled' : ''} title="Nach oben">▲</button><button class="ghost sm" data-a="seqMv" data-i="${i}" data-d="1" ${i === n - 1 ? 'disabled' : ''} title="Nach unten">▼</button>
 <button class="ghost sm danger" data-a="seqRm" data-i="${i}" title="Übung entfernen">🗑</button></div>`;
@@ -221,7 +221,7 @@ const SEQ_ACTIONS = {
   seqPick(d) {
     const p = ui.pk, dr = ui.seqDraft; if (!p || p.kind !== 'seq' || !dr || !dr.items[p.i]) return;
     const it = dr.items[p.i]; it.id = d.id;
-    if (d.id === TXB_ID) { it.tx = it.tx || ''; delete it.ref; } else if (d.id === LIED_ID || d.id === MANSB_ID) { it.ref = ''; delete it.tx; it.min = (exById(d.id) || {}).m || it.min; } else { delete it.tx; delete it.ref; }
+    if (d.id === TXB_ID || d.id === FREI_ID) { it.tx = it.tx || ''; delete it.ref; } else if (d.id === LIED_ID || d.id === MANSB_ID) { it.ref = ''; delete it.tx; it.min = (exById(d.id) || {}).m || it.min; } else { delete it.tx; delete it.ref; }
     closePicker(); render();
   },
   // Eigenschaften: Klick setzt die Gruppe auf „manuell“ (Startwert = bisheriger automatischer Wert); „↻ automatisch“ hebt das auf
@@ -235,7 +235,7 @@ const SEQ_ACTIONS = {
     if (d.items.some(i => !i.id)) { toast('Bitte für jede Übung eine Auswahl treffen oder die Anzahl verringern.'); return; }
     if (d.items.some(i => (i.id === LIED_ID || i.id === MANSB_ID) && !i.ref)) { toast('Bitte bei jedem Lied bzw. Mantra eine Auswahl treffen.'); return; }
     if ((state.sequences || []).some(q => q.id !== d.id && norm(q.name) === norm(name))) { toast('Eine Sequenz mit diesem Namen gibt es schon.'); return; }
-    const q = { id: d.id, name, type: SEQ_TYPES[d.type] ? d.type : 'asana', items: d.items.map(i => Object.assign({ id: i.id, min: Math.max(0.5, +i.min || 0.5) }, i.id === TXB_ID ? { tx: String(i.tx || '') } : isSb(i) ? { ref: String(i.ref || '') } : {})) }, k = state.sequences.findIndex(x => x.id === d.id);
+    const q = { id: d.id, name, type: SEQ_TYPES[d.type] ? d.type : 'asana', items: d.items.map(i => Object.assign({ id: i.id, min: Math.max(0.5, +i.min || 0.5) }, hasTx(exById(i.id)) ? { tx: String(i.tx || '') } : isSb(i) ? { ref: String(i.ref || '') } : {})) }, k = state.sequences.findIndex(x => x.id === d.id);
     if (String(d.desc || '').trim()) q.desc = String(d.desc).trim();
     const sn = String((d.src || {}).n || '').trim(), su = String((d.src || {}).u || '').trim(); if (sn || su) q.src = { n: sn, u: su };
     if (d.man && Object.keys(d.man).length) q.man = deepCopy(d.man);
