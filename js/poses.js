@@ -105,8 +105,9 @@ const ICONS = {
   licht_brust: '<circle cx="50" cy="50" r="16"/><path d="M50 12v12M50 76v12M12 50h12M76 50h12M23 23l8 8M69 69l8 8M77 23l-8 8M31 69l-8 8"/>',
   rueckblick: '<path d="M26 30A32 32 0 1 1 18 56"/><path d="M12 22l14 8-3-16"/><path d="M52 34V52L66 60"/>'
 };
-function breathIconSVG(id) {
-  let g = ICONS[id] || '';
+function breathIconSVG(id) { return iconSVG((BR.find(x => x.id === id) || {}).ic || id); }
+function iconSVG(key) {
+  let g = ICONS[key] || '';
   g = g.replace('%arms_up%', figureParts('arms_up', false)).replace('%stand%', figureParts('stand', false));
   return `<svg class="fig" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${g}</g></svg>`;
 }

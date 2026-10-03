@@ -3,7 +3,7 @@ const KEY = 'yogaplaner.v1';
 const $ = s => document.querySelector(s);
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
-function defaults() { return { v: 1, courses: [], ratings: {}, customEx: [], textTpl: [], settings: { apiKey: '', model: 'claude-sonnet-5-5', email: '', recipients: [] } }; }
+function defaults() { return { v: 1, courses: [], ratings: {}, customEx: [], exEdits: {}, vocab: {}, textTpl: [], settings: { apiKey: '', model: 'claude-sonnet-5-5', email: '', recipients: [] } }; }
 function loadState() {
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && Array.isArray(s.courses)) return Object.assign(defaults(), s, { settings: Object.assign(defaults().settings, s.settings || {}) }); } catch (e) { }
   return defaults();
@@ -36,7 +36,8 @@ const ui = {
   view: 'courses', courseId: null, tab: 'plan', open: new Set(['set', 'ovw']), sel: null, bopen: new Set(),
   doc: { ueb: true, std: true, blatt: true, alt: false, uebw: false, detail: false, spick: false, hands: false, detS: false, mat: false, geb: false, katall: false, anaS: false, anaP: false, sel: 'all' },
   cat: { q: '', cat: '', lvl: '', geb: '', st: '', k_reg: '', k_mus: '', k_atm: '', k_auf: '', k_sup: '', k_mat: '', k_pos: '', k_dir: '', k_wirk: '', k_en: '', k_chakra: '', k_ziel: '' }, exOpen: new Set(),
-  newEx: { n: '', c: 'stand', lv: 1, m: 2, pose: 'stand', tags: '', x: [], e: '' }
+  newEx: { n: '', c: 'stand', lv: 1, m: 2, pose: 'stand', tags: '', x: [], e: '' },
+  exEdit: null, exDraft: null, exDraftKat: {}, exDraftAuto: [], exDraftAll: false
 };
 const cur = () => state.courses.find(c => c.id === ui.courseId);
 const idxOf = (c, s) => c.sessions.indexOf(s);
@@ -575,6 +576,44 @@ ${fld('Betreff', inp('c:emailSubject', 'text', c.emailSubject || c.name + ' – 
 <p class="muted">Hinweis: Ein Browser kann selbst keine Mails mit Anhang versenden. „E-Mail-Entwurf (.eml)“ erzeugt eine Datei, die sich per Doppelklick in Outlook/Thunderbird als fertiger Entwurf mit Anhang öffnet; dort nur noch auf „Senden“ klicken.</p></section></div>
 <div class="doc" id="docPreview">${buildDoc(c, o)}</div>`;
 }
+// ---- Übungen im Katalog bearbeiten ----
+const exIsBR = id => BR_ORIG.has(id);
+const bsEq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+function exDraftOpen(o) {
+  const br = exIsBR(o.id);
+  ui.exEdit = o.id; ui.exDraftKat = {}; ui.exDraftAuto = []; ui.exDraftAll = false;
+  ui.exDraft = { n: o.n, sa: o.sa || '', d: o.d || '', m: o.m, c: br ? o.k : o.c, lv: o.lv, s: o.s === 1 ? 1 : 0, st: (o.st || []).slice(), x: (o.x || []).slice(), pose: o.pose || 'stand', ic: o.ic || o.id };
+}
+function autoKat(o) { const t = JSON.parse(JSON.stringify(o)), d = ui.exDraft; t.pose = d.pose; t.c = d.c; delete t.kat; deriveKat(t); return t.kat; }
+function katEff(o, g) { if (g in ui.exDraftKat) return ui.exDraftKat[g]; if (ui.exDraftAuto.includes(g)) return autoKat(o)[g]; return (o.kat && o.kat[g]) || (g === 'en' ? '' : []); }
+const katManual = (o, g) => g in ui.exDraftKat || (manualGroups(o.id).includes(g) && !ui.exDraftAuto.includes(g));
+// Chipzeile mit Bausteinen: Auswahl per Klick, eigene Bausteine (v_…) umbenennen/löschen, „＋ neu“ legt einen Baustein an
+function chipRow(type, group, list, selected, field) {
+  const chips = Object.keys(list).map(k => `<span class="chipx"><button type="button" class="chipsel${selected.includes(k) ? ' on' : ''}" data-a="dtog" data-g="${esc(field)}" data-v="${esc(k)}">${esc(String(type === 'cats' ? (list[k].n || list[k]) : list[k]).replace(/\s*\*$/, ''))}</button>${/^v_/.test(k) ? `<button type="button" class="chipmini" data-a="vocRename" data-t="${type}" data-g="${esc(group)}" data-v="${esc(k)}" title="Umbenennen">✎</button><button type="button" class="chipmini" data-a="vocDel" data-t="${type}" data-g="${esc(group)}" data-v="${esc(k)}" title="Baustein löschen">✕</button>` : ''}</span>`).join('');
+  const id = `vocIn-${type}-${group}`;
+  return `<div class="chiprow">${chips}<span class="chipnew"><input type="text" id="${id}" placeholder="＋ neu …" maxlength="60"><button type="button" class="sm" data-a="vocNew" data-t="${type}" data-g="${esc(group)}" title="Neuen Baustein anlegen und auswählen">＋</button></span></div>`;
+}
+function exEditForm(o) {
+  const d = ui.exDraft, br = exIsBR(o.id);
+  const cats = br ? { atem: 'Atemübung', wahr: 'Wahrnehmungsübung' } : CATS;
+  const sym = br ? ICON_KEYS.map(k => `<button type="button" class="xp${d.ic === k ? ' on' : ''}" data-a="exPickSym" data-v="${esc(k)}" title="${esc(k)}">${iconSVG(k)}</button>`) : POSE_KEYS.map(k => `<button type="button" class="xp${d.pose === k ? ' on' : ''}" data-a="exPickSym" data-v="${esc(k)}" title="${esc(k)}">${figureSVG(k)}</button>`);
+  const kats = br ? '' : `<div class="kats exkats"><b>Weitere Kategorien</b> <small class="muted">🔒 = manuell gesetzt, bleibt wie eingestellt · ohne Schloss = wird aus Haltung, Art und Schlagworten berechnet</small>${KAT_GROUPS.map(g => {
+    const cur_ = katEff(o, g), man = katManual(o, g), arr = Array.isArray(cur_) ? cur_ : (cur_ ? [cur_] : []);
+    return `<div class="kl"><span class="kt${man ? ' lock' : ''}">${man ? '🔒 ' : ''}${esc(KATTITLE[g])}</span>${man ? `<button type="button" class="ghost sm" data-a="grpAuto" data-g="${g}" title="Manuellen Wert verwerfen und neu berechnen">↻ Neu berechnen</button>` : ''}${chipRow('kat', g, KAT[g], arr, g)}</div>`;
+  }).join('')}<label class="chk"><input type="checkbox" data-f="u:exDraftAll" ${ui.exDraftAll ? 'checked' : ''}> Beim Speichern <b>alle</b> Kategorien neu berechnen (auch manuelle)</label></div>`;
+  return `<div class="exform"><h3>Übung bearbeiten</h3><div class="grid">
+${fld('Name', inp('u:exDraft.n', 'text', d.n))}${br ? '' : fld('Sanskrit', inp('u:exDraft.sa', 'text', d.sa))}
+${fld('Art', sel('u:exDraft.c', Object.keys(cats).map(k => [k, cats[k]]), d.c))}
+${fld('Ab Stufe', sel('u:exDraft.lv', [[1, 'Anfänger'], [2, 'Mittel'], [3, 'Fortgeschritten']], d.lv, 'data-num="1"'))}${fld('Dauer (Min.)', inp('u:exDraft.m', 'number', d.m, 'min="0.5" max="30" step="0.5"'))}
+<div class="fld"><label>&nbsp;</label><label class="chk"><input type="checkbox" data-f="u:exDraft.s" ${d.s ? 'checked' : ''}> für Senioren geeignet</label></div>
+<div class="fld wide"><label>Beschreibung</label><textarea data-f="u:exDraft.d" rows="3">${esc(d.d)}</textarea></div></div>
+<div class="fld"><label>Symbol</label><div class="xpick">${sym.join('')}</div></div>
+<div class="fld"><label>Yogastile</label>${chipRow('stile', '', STILE, d.st, 'st')}</div>
+<div class="fld"><label>Vorsicht bei</label>${chipRow('geb', '', GEBRECHEN, d.x, 'x')}</div>
+${br ? '' : `<div class="fld"><label>Neue Art anlegen</label><small class="muted">Übungen mit eigener Art erscheinen im Katalog, werden aber nicht automatisch für Programme vorgeschlagen (nur manuell wählbar).</small>${chipRow('cats', '', {}, [], 'c')}</div>`}
+${kats}
+<div class="bar"><button class="primary" data-a="exEditSave">Speichern</button><button data-a="exEditCancel">Abbrechen</button></div></div>`;
+}
 function viewCatalog() {
   const f = ui.cat, c = ui.courseId && cur(), geb = c ? c.gebrechen : [];
   const q = norm(f.q);
@@ -586,6 +625,7 @@ function viewCatalog() {
   const stileChips = o => (o.st || []).map(k => `<span class="chip stl st-${k}">${esc(STILE[k] || k)}</span>`).join('');
   const dtl = (o, cols) => {
     if (!ui.exOpen.has(o.id)) return '';
+    if (ui.exEdit === o.id) return `<tr class="detail"><td colspan="${cols}">${exEditForm(o)}</td></tr>`;
     const ea = altE(o), ha = altH(o), kraft = o.c === 'kraft' && o.how;
     const bits = [];
     if (o.d) bits.push(`<p>${esc(o.d)}</p>`);
@@ -602,16 +642,16 @@ function viewCatalog() {
       const line = k => { const l = katLabels(o, k); return l.length ? `<div class="kl"><span class="kt">${esc(KATTITLE[k])}</span> ${l.map(x => `<span class="chip kc">${esc(x)}</span>`).join('')}${k === 'chakra' && o.chakraSrc ? `<small class="muted"> ${o.chakraSrc === 'skript' ? '(laut Skript, Modul 3)' : '(Zuordnung nach Regel: Herzöffner → Anahata, Hüftöffner → Svadhisthana, Füße/Beine → Muladhara)'}</small>` : ''}</div>` : ''; };
       meta.push(`<div class="kats"><b>Weitere Kategorien</b>${['reg', 'mus', 'atm', 'auf', 'sup', 'mat', 'pos', 'dir', 'wirk', 'en', 'chakra', 'ziel'].map(line).join('')}</div>`);
     }
-    return `<tr class="detail"><td colspan="${cols}"><div class="dgrid"><div class="dtext">${bits.join('')}</div><div class="dmeta">${meta.map(m => `<div>${m}</div>`).join('')}</div></div></td></tr>`;
+    return `<tr class="detail"><td colspan="${cols}"><div class="dgrid"><div class="dtext">${bits.join('')}</div><div class="dmeta">${meta.map(m => `<div>${m}</div>`).join('')}</div></div><div class="bar"><button class="sm" data-a="exEditOpen" data-id="${o.id}">✎ Bearbeiten</button>${exIsEdited(o.id) ? `<button class="ghost sm" data-a="exEditResetBtn" data-id="${o.id}">↺ Auf Original zurücksetzen</button>` : ''}</div></td></tr>`;
   };
   const row = e => {
     const ea = altE(e), ha = altH(e), open = ui.exOpen.has(e.id);
     return `<tr class="mainrow${open ? ' open' : ''} ${rating(e.id) === 0 ? 'banned' : ''}"><td class="tilec"><div class="ktile cat-${e.c} clk" data-a="exinfo" data-id="${e.id}" title="Details ein-/ausklappen">${figureSVG(e.pose)}${peakStar(e)}</div></td>
-<td><a class="nm" data-a="exinfo" data-id="${e.id}" title="Details ein-/ausklappen"><b>${esc(e.n)}</b> <span class="car">${open ? '▾' : '▸'}</span></a>${e.sa ? `<br><i class="sa">${esc(e.sa)}${e.sv === false ? ' *' : ''}</i>` : ''}<br><small class="muted">${esc(CATS[e.c])} · ${e.m} Min.</small>${e.custom ? ` <button class="ghost sm danger" data-a="delEx" data-id="${e.id}">löschen</button>` : ''}</td>
+<td><a class="nm" data-a="exinfo" data-id="${e.id}" title="Details ein-/ausklappen"><b>${esc(e.n)}</b> <span class="car">${open ? '▾' : '▸'}</span></a>${exIsEdited(e.id) ? ' <span class="chip edtd">angepasst</span>' : ''}${e.sa ? `<br><i class="sa">${esc(e.sa)}${e.sv === false ? ' *' : ''}</i>` : ''}<br><small class="muted">${esc(CATS[e.c])} · ${e.m} Min.</small>${e.custom ? ` <button class="ghost sm danger" data-a="delEx" data-id="${e.id}">löschen</button>` : ''}</td>
 <td>${stileChips(e)}</td><td>${levelDisplay(e).map(l => `<span class="chip">${l}</span>`).join('')}</td><td>${e.x.map(g => `<span class="chip warn">${esc(GEBRECHEN[g])}</span>`).join('') || '<span class="muted">–</span>'}</td>
 <td class="vtc">${vtile(ea, 'down')}</td><td class="vtc">${vtile(ha, 'up')}</td><td>${stars(e.id)}</td></tr>${dtl(e, 8)}`;
   };
-  const brow = b => { const open = ui.exOpen.has(b.id); return `<tr class="mainrow${open ? ' open' : ''} ${rating(b.id) === 0 ? 'banned' : ''}"><td class="tilec"><div class="ktile cat-br_${b.k} clk" data-a="exinfo" data-id="${b.id}" title="Details ein-/ausklappen">${breathIconSVG(b.id)}</div></td><td><a class="nm" data-a="exinfo" data-id="${b.id}"><b>${esc(b.n)}</b> <span class="car">${open ? '▾' : '▸'}</span></a>${b.sa ? `<br><i class="sa">${esc(b.sa)}</i>` : ''}<br><small class="muted">${b.k === 'atem' ? 'Atemübung' : 'Wahrnehmungsübung'} · ${b.m} Min.</small></td><td>${stileChips(b)}</td><td>${levelDisplay(b).map(l => `<span class="chip">${l}</span>`).join('')}</td><td>${b.x.map(g => `<span class="chip warn">${esc(GEBRECHEN[g])}</span>`).join('') || '<span class="muted">–</span>'}</td><td>${stars(b.id)}</td></tr>${dtl(b, 6)}`; };  const n = ui.newEx;
+  const brow = b => { const open = ui.exOpen.has(b.id); return `<tr class="mainrow${open ? ' open' : ''} ${rating(b.id) === 0 ? 'banned' : ''}"><td class="tilec"><div class="ktile cat-br_${b.k} clk" data-a="exinfo" data-id="${b.id}" title="Details ein-/ausklappen">${breathIconSVG(b.id)}</div></td><td><a class="nm" data-a="exinfo" data-id="${b.id}"><b>${esc(b.n)}</b> <span class="car">${open ? '▾' : '▸'}</span></a>${exIsEdited(b.id) ? ' <span class="chip edtd">angepasst</span>' : ''}${b.sa ? `<br><i class="sa">${esc(b.sa)}</i>` : ''}<br><small class="muted">${b.k === 'atem' ? 'Atemübung' : 'Wahrnehmungsübung'} · ${b.m} Min.</small></td><td>${stileChips(b)}</td><td>${levelDisplay(b).map(l => `<span class="chip">${l}</span>`).join('')}</td><td>${b.x.map(g => `<span class="chip warn">${esc(GEBRECHEN[g])}</span>`).join('') || '<span class="muted">–</span>'}</td><td>${stars(b.id)}</td></tr>${dtl(b, 6)}`; };  const n = ui.newEx;
   return `<div class="bar"><h1>Übungskatalog</h1><span class="muted">${list.length} von ${exAll().length} Übungen · ${blist.length} von ${BR.length} Atem- und Wahrnehmungsübungen</span></div>
 <p class="muted">Bewerte, wie gern du eine Übung magst: mehr Sterne = wird häufiger vorgeschlagen, ⊘ = nie automatisch. Auf jeder Kachel zeigen kleine Kacheln die leichtere (↓) und die anspruchsvollere (↑) Variante. Ein Klick auf Kachel oder Namen klappt Beschreibung, Hinweise, Sanskrit, Stile und Quelle auf. Alle Übungen stammen aus deinen Kursunterlagen oder dem Ausbildungsskript; eigene lassen sich unten ergänzen. * = Sanskrit-Name nicht im Skript belegt.</p>
 <div class="panel"><div class="grid">${fld('Suche', `<input type="search" data-f="u:cat.q" data-live="1" value="${esc(f.q)}" placeholder="z. B. Krieger">`)}
@@ -626,7 +666,7 @@ ${fld('Yogastil', sel('u:cat.st', [['', 'Alle']].concat(Object.keys(STILE).map(k
 <details class="panel" data-id="newex" ${ui.open.has('newex') ? 'open' : ''}><summary>＋ Eigene Übung hinzufügen</summary><div class="grid">
 ${fld('Name', inp('u:newEx.n', 'text', n.n))}${fld('Kategorie', sel('u:newEx.c', Object.keys(CATS).map(k => [k, CATS[k]]), n.c))}
 ${fld('Ab Stufe', sel('u:newEx.lv', [[1, 'Anfänger'], [2, 'Mittel'], [3, 'Fortgeschritten']], n.lv, 'data-num="1"'))}${fld('Dauer (Min.)', inp('u:newEx.m', 'number', n.m, 'min="1" max="10" step="0.5"'))}
-${fld('Strichmännchen', `<div class="posepick">${sel('u:newEx.pose', Object.keys(POSES).map(k => [k, k]), n.pose)}<span class="pp">${figureSVG(n.pose)}</span></div>`)}
+<div class="fld wide"><label>Symbol (Strichmännchen)</label><div class="xpick">${POSE_KEYS.map(k => `<button type="button" class="xp${n.pose === k ? ' on' : ''}" data-a="newPose" data-v="${esc(k)}" title="${esc(k)}">${figureSVG(k)}</button>`).join('')}</div></div>
 ${fld('Schlagworte (z. B. kraft balance herz)', inp('u:newEx.tags', 'text', n.tags))}
 ${fld('Leichtere Alternative', sel('u:newEx.e', [['', '–']].concat(exAll().map(e => [e.id, e.n])), n.e))}
 <div class="fld wide"><label>Vorsicht bei</label><div class="checks">${Object.keys(GEBRECHEN).map(k => `<label class="chk"><input type="checkbox" data-a="toggleNewX" data-k="${k}" ${n.x.includes(k) ? 'checked' : ''}> ${esc(GEBRECHEN[k])}</label>`).join('')}</div></div></div>
@@ -1132,20 +1172,29 @@ function openPicker(btn, d) {
   const c = cur(), s = c.sessions.find(x => x.id === d.sid); if (!s) return;
   const all = poolFor(s, d.b).sort((a, b) => seqIdx(a.id) - seqIdx(b.id));
   const curId = d.i === '' ? null : s.blk[d.b][+d.i].id;
-  // nur Übungen anzeigen, die Vorfilter (Rahmen/Gruppe/Einschränkungen) UND Filter der Stunde erfüllen; „nur manuell wählbare“ sind hier ausdrücklich wählbar
-  const pctx = mkCtx(c, s, Math.random); pctx.flt = Object.assign({}, fltDefault(), pctx.flt || {}, { allowMan: true });
-  const okIds = new Set(eligible(all, pctx).map(e => e.id)), pool = all.filter(e => okIds.has(e.id) || e.id === curId);
-  const filtered = all.length - pool.length;
+  // Filter einzeln abwählbar (merkt sich die Wahl): Vorauswahl = Filter der Stunde + Ausschlüsse, Stufe, Gebrechen
+  const off = Object.assign({ blk: false, pre: false, lvl: false, geb: false }, ui.pkOff); ui.pkOff = off;
+  const blockAll = all, allEx = exAll().slice().sort((a, b) => seqIdx(a.id) - seqIdx(b.id));
+  const geb = effGeb(c, s);
   ui.pk = { sid: d.sid, b: d.b, i: d.i };
-  const rows = pool.map(p => {
-    const geb = effGeb(c, s), bad = contra(p, geb) && p.id !== curId, r = rating(p.id), warn = (p.x || []).filter(g => geb.includes(g)).map(g => GEBRECHEN[g]);
+  const poolNow = () => {
+    const pctx = mkCtx(c, s, Math.random), f = Object.assign({}, fltDefault(), pctx.flt || {});
+    return (off.blk ? allEx : blockAll).filter(e => e.id === curId || (
+      (off.lvl || levelOk(e, pctx.lvl)) && (off.geb || !contra(e, geb)) &&
+      (off.pre || ((rating(e.id) > 0 || f.allowBanned) && katOk(e, pctx.flt)))));
+  };
+  const rowsHtml = pool => pool.map(p => {
+    const bad = !off.geb && contra(p, geb) && p.id !== curId, r = rating(p.id), warn = (p.x || []).filter(g => geb.includes(g)).map(g => GEBRECHEN[g]);
     const meta = `<div class="pkmeta">${lvDots(p)}<span>${esc(lvName(p))}</span><span class="muted">· ${fmtMin(p.m)} Min.</span>${r === 0 ? '<span class="chip warn">ausgeschlossen</span>' : rstars(r)}</div>`;
     return `<button class="pko cat-${p.c}${p.id === curId ? ' cur' : ''}" data-a="pkpick" data-id="${p.id}" ${bad ? 'disabled' : ''} data-q="${esc(norm(p.n + ' ' + (p.sa || '')))}"><span class="pkf">${figureSVG(p.pose)}${peakStar(p)}</span><div class="pkinfo"><div class="pkname"><b>${esc(p.n)}</b>${p.sa ? `<small class="sa">${esc(p.sa)}</small>` : ''}</div>${meta}<div class="pkch">${stRegChips(p)}</div>${warn.length ? `<div class="pkwarn">⚠ ${esc(warn.join(', '))}</div>` : ''}</div></button>`;
   }).join('');
+  const opt = (k, txt) => `<label class="pkopt"><input type="checkbox" data-pkopt="${k}" ${off[k] ? '' : 'checked'}> ${txt}</label>`;
+  const optsHtml = `<div class="pkopts">${opt('blk', 'Nur Übungen dieses Blocks')}${opt('pre', 'Vorauswahl der Stunde (Filter, Ausschlüsse)')}${opt('lvl', 'Schwierigkeitsstufe beachten')}${opt('geb', 'Gebrechen beachten')}</div>`;
   const panel = document.createElement('div'); panel.id = 'pkpanel';
   const ab0 = abOf(s, d.b), defCat = ab0 === 'asana' ? 'stand' : ab0 === 'mobi' ? ({ sitz: 'mobi_sitz', liegen: 'boden', stand: 'mobi_stand' })[s.mobiMode || 'sitz'] : ab0 === 'shakti' ? 'shakti' : ab0 === 'ausgl' ? 'boden' : (catsOf(s, d.b)[0] || 'stand');
   const newForm = `<div class="pknew"><button class="ghost sm" data-a="pkNewOpen" id="pkNewBtn">＋ Eigene Übung hinzufügen</button><div class="pknf" id="pkNewForm" hidden><div class="pkfig cat-${defCat}" id="pkNewFig">${figureSVG('ratlos')}</div><div class="pkfields"><input type="text" id="pknn" placeholder="Name der Übung" autocomplete="off"><select id="pknc" data-chg="pkNewCat">${Object.keys(CATS).map(k => `<option value="${k}"${k === defCat ? ' selected' : ''}>${esc(CATS[k])}</option>`).join('')}</select><small class="muted">Neue Übungen bekommen das Standardsymbol (ratloser Strichmensch mit Fragezeichen) in der Farbe der Kategorie und erscheinen auch im Übungskatalog.</small><div class="bar"><button class="primary sm" data-a="pkNewAdd">Übung anlegen und verwenden</button></div></div></div></div>`;
-  panel.innerHTML = `<input type="search" id="pkq" placeholder="Übung suchen …" autocomplete="off">${filtered > 0 ? `<div class="muted pknote">${pool.length} passende Übungen · ${filtered} durch Vorfilter/Filter ausgeblendet</div>` : ''}<div class="pkgrid">${rows}</div>${newForm}`;
+  const fill = () => { const pool = poolNow(), tot = (off.blk ? allEx : blockAll).length, n = tot - pool.length; panel.querySelector('.pkgrid').innerHTML = rowsHtml(pool); panel.querySelector('.pknote').textContent = n > 0 ? `${pool.length} von ${tot} Übungen · ${n} ausgeblendet – Haken entfernen zeigt sie` : `Alle ${tot} Übungen`; applyQ(); };
+  panel.innerHTML = `<input type="search" id="pkq" placeholder="Übung suchen …" autocomplete="off">${optsHtml}<div class="muted pknote"></div><div class="pkgrid"></div>${newForm}`;
   document.body.appendChild(panel);
   const r = btn.getBoundingClientRect(), w = Math.min(640, window.innerWidth - 16);
   panel.style.width = w + 'px'; panel.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + 'px';
@@ -1153,7 +1202,10 @@ function openPicker(btn, d) {
   if (spaceBelow >= 280 || spaceBelow >= spaceAbove) { panel.style.top = (r.bottom + 4) + 'px'; panel.style.maxHeight = Math.max(220, spaceBelow) + 'px'; }
   else { panel.style.bottom = (window.innerHeight - r.top + 4) + 'px'; panel.style.maxHeight = Math.max(220, spaceAbove) + 'px'; }
   const q = $('#pkq'); q.focus();
-  q.addEventListener('input', () => { const v = norm(q.value); panel.querySelectorAll('.pko').forEach(b => { b.style.display = !v || b.dataset.q.includes(v) ? '' : 'none'; }); });
+  const applyQ = () => { const v = norm(q.value); panel.querySelectorAll('.pko').forEach(b => { b.style.display = !v || b.dataset.q.includes(v) ? '' : 'none'; }); };
+  q.addEventListener('input', applyQ);
+  panel.querySelectorAll('[data-pkopt]').forEach(i => i.addEventListener('change', () => { off[i.dataset.pkopt] = !i.checked; fill(); }));
+  fill();
   const cu = panel.querySelector('.pko.cur'); if (cu) panel.scrollTop = Math.max(0, cu.offsetTop - 90);
 }
 // ---------- Mantra-Kacheln und -Auswahl ----------
@@ -1219,7 +1271,7 @@ function importFile(file) {
         if (replace) state = Object.assign(defaults(), j);
         else { const ids = new Set(state.courses.map(c => c.id)); j.courses.forEach(c => { if (!ids.has(c.id)) state.courses.push(c); }); Object.assign(state.ratings, j.ratings || {}); (j.customEx || []).forEach(e => { if (!state.customEx.some(x => x.id === e.id)) state.customEx.push(e); }); }
       } else throw new Error('Unbekanntes Dateiformat');
-      normalizeState(); save(); ui.view = 'courses'; render(); toast('Import erfolgreich.');
+      mergeCatalogImport(j); normalizeState(); applyCatalogState(); save(); ui.view = 'courses'; render(); toast('Import erfolgreich.');
     } catch (err) { toast('Import fehlgeschlagen: ' + err.message); }
   };
   r.readAsText(file);
@@ -1265,6 +1317,7 @@ Object.assign(CH, TXVORL_CH);
 Object.assign(A, rcpActions);
 Object.assign(A, { tglw: CH.tglw, pkbr: CH.pkbr, pkbrpick: CH.pkbrpick });
 normalizeState();
+applyCatalogState();
 document.head.insertAdjacentHTML('beforeend', `<style id="docCss">${DOC_CSS}</style>`);
 render();
 
@@ -1283,39 +1336,44 @@ if (typeof loadFromGoogleSheets === 'function') {
   }, 500);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// ---- Aktionen: Übungen bearbeiten ----
+Object.assign(A, {
+  exEditOpen(d) { const o = exById(d.id); if (!o) return; exDraftOpen(o); ui.exOpen.add(d.id); render(); },
+  exEditCancel() { ui.exEdit = null; render(); },
+  exEditResetBtn(d, el) { if (confirmTwice(el, 'exr' + d.id, 'Auf Original zurücksetzen?', '⚠ Wirklich zurücksetzen?')) { exEditReset(d.id); if (ui.exEdit === d.id) ui.exEdit = null; render(); toast('Übung auf Original zurückgesetzt.'); } },
+  exPickSym(d) { if (exIsBR(ui.exEdit)) ui.exDraft.ic = d.v; else ui.exDraft.pose = d.v; render(); },
+  newPose(d) { ui.newEx.pose = d.v; render(); },
+  dtog(d) {
+    const g = d.g, o = exById(ui.exEdit), dr = ui.exDraft;
+    if (g === 'st' || g === 'x') { const a = dr[g], i = a.indexOf(d.v); i < 0 ? a.push(d.v) : a.splice(i, 1); }
+    else if (g === 'c') dr.c = d.v;
+    else {
+      const cur_ = katEff(o, g); delete ui.exDraftKat[g]; ui.exDraftAuto = ui.exDraftAuto.filter(x => x !== g);
+      if (g === 'en') ui.exDraftKat[g] = cur_ === d.v ? '' : d.v;
+      else { const a = (Array.isArray(cur_) ? cur_ : []).slice(), i = a.indexOf(d.v); i < 0 ? a.push(d.v) : a.splice(i, 1); ui.exDraftKat[g] = a; }
+    }
+    render();
+  },
+  grpAuto(d) { delete ui.exDraftKat[d.g]; if (!ui.exDraftAuto.includes(d.g)) ui.exDraftAuto.push(d.g); render(); },
+  vocNew(d) {
+    const inp_ = document.getElementById(`vocIn-${d.t}-${d.g}`), lab = inp_ && inp_.value.trim(); if (!lab) { toast('Bitte einen Namen für den neuen Baustein eingeben.'); return; }
+    const id = vocabAdd(d.t, lab, d.g || undefined), o = exById(ui.exEdit), dr = ui.exDraft; if (!id) return;
+    if (d.t === 'cats') dr.c = id; else if (d.t === 'stile') { if (!dr.st.includes(id)) dr.st.push(id); } else if (d.t === 'geb') { if (!dr.x.includes(id)) dr.x.push(id); }
+    else { const cur_ = katEff(o, d.g); if (d.g === 'en') ui.exDraftKat.en = id; else { const a = (Array.isArray(cur_) ? cur_ : []).slice(); if (!a.includes(id)) a.push(id); ui.exDraftKat[d.g] = a; } ui.exDraftAuto = ui.exDraftAuto.filter(x => x !== d.g); }
+    render(); toast('Baustein „' + lab + '“ angelegt.');
+  },
+  vocRename(d) { const cur_ = vocabTargets(d.t, d.g || undefined)[d.v], lab = window.prompt('Neuer Name für den Baustein:', typeof cur_ === 'string' ? cur_ : ''); if (lab && lab.trim()) { vocabRename(d.t, d.v, lab, d.g || undefined); render(); } },
+  vocDel(d, el) { const n = vocabUsage(d.t, d.v, d.g || undefined); if (n > 0) { toast('Wird noch von ' + n + (n === 1 ? ' Übung' : ' Übungen') + ' verwendet – zuerst dort entfernen.', 5000); return; } if (confirmTwice(el, 'vd' + d.v, 'Baustein löschen?', '⚠')) { vocabRemove(d.t, d.v, d.g || undefined); render(); } },
+  exEditSave() {
+    const id = ui.exEdit, d = ui.exDraft, o = exById(id); if (!o) return;
+    if (!String(d.n).trim()) { toast('Bitte einen Namen eingeben.'); return; }
+    const br = exIsBR(id), orig = br ? BR_ORIG.get(id) : EX_ORIG.get(id), custom = !orig;
+    const val = { n: d.n.trim(), d: d.d, m: +d.m || 1, lv: +d.lv || 1, s: d.s ? 1 : 0, st: d.st.filter(k => STILE[k]), x: d.x.filter(k => GEBRECHEN[k]) };
+    if (br) { val.k = d.c; val.ic = d.ic === id ? '' : d.ic; } else { val.sa = d.sa.trim(); val.c = CATS[d.c] ? d.c : o.c; val.pose = d.pose; }
+    const { fields, unset } = diffFields(val, custom ? o : orig, custom);
+    const kat = {}; if (!ui.exDraftAll) Object.keys(ui.exDraftKat).forEach(g => { const v = ui.exDraftKat[g]; kat[g] = g === 'en' ? (KAT.en[v] ? v : '') : v.filter(k => KAT[g][k]); });
+    exEdit(id, { fields, unset, kat, auto: ui.exDraftAuto, recalcAll: ui.exDraftAll });
+    ui.exEdit = null; render();
+    const man = manualGroups(id).length; toast('Gespeichert.' + (br ? '' : ' Automatische Kategorien neu berechnet' + (man ? '; ' + man + ' manuelle unverändert (🔒).' : '.')));
+  }
+});

@@ -17,6 +17,8 @@ const KAT = {
 };
 const KATTITLE = { mat: 'Übungsmaterial (abgeleitet)', sup: 'Unterstützung (Adjustment, Hands-on) – abgeleitet', atm: 'Atmung (abgeleitet)', auf: 'Aufmerksamkeit (abgeleitet)', mus: 'Beanspruchte Muskulatur (abgeleitet)', reg: 'Körperregion', pos: 'Grundhaltung / Position im Raum', dir: 'Bewegungsrichtung der Wirbelsäule', wirk: 'Funktionelle / physiologische Wirkung', en: 'Energetischer Fokus', chakra: 'Zuordnung zu Chakren', ziel: 'Ziel der Praxis' };
 
+let deriveKat; // berechnet e.kat, e.chakraSrc, e.peak aus Haltung, Art, Schlagworten und Namen (auch für geänderte und eigene Übungen)
+const KAT_GROUPS = ['pos', 'dir', 'wirk', 'en', 'chakra', 'ziel', 'reg', 'mus', 'atm', 'auf', 'sup', 'mat'];
 (function () {
   const STAND = ['stand', 'prayer', 'arms_up', 'arms_side', 'side_bend', 'twist', 'fold', 'half_fold', 'rollup', 'backbend', 'hips_hands', 'stand_catcow', 'arm_swing', 'knee_lift', 'foot_lift', 'heel_raise', 'weight_shift', 'chair', 'squat', 'warrior1', 'warrior2', 'goddess', 'tree', 'eagle', 'sideangle', 'lunge', 'warrior3s', 'tandem', 'wide_stand', 'gomukhasana', 'plank_wall', 'pyramid', 'triangle', 'half_moon', 'hand_to_toe', 'bird', 'crescent', 'leg_side'];
   const SIT = ['sit', 'sit_arms', 'sit_shoulder', 'sit_neck', 'sit_elbow', 'sit_side', 'sit_twist', 'sit_leg', 'longsit', 'butterfly_sit', 'janu', 'seated_fold', 'wide_seat', 'turtle', 'hero', 'gomukhasana_sit', 'malasana'];
@@ -45,7 +47,7 @@ const KATTITLE = { mat: 'Übungsmaterial (abgeleitet)', sup: 'Unterstützung (Ad
     gewichtsverlagerung: { pos: ['stehen', 'balance'] }
   };
   const inRe = (re, id) => re.test(id);
-  EX.forEach(e => {
+  const stage1 = e => {
     const p = e.pose, t = e.t || [], id = e.id, c = e.c;
     const pos = [];
     if (INV.includes(p)) pos.push('umkehr');
@@ -81,11 +83,11 @@ const KATTITLE = { mat: 'Übungsmaterial (abgeleitet)', sup: 'Unterstützung (Ad
     e.chakraSrc = chakraSrc;
     e.peak = e.kat.ziel.includes('peak');
     if (!e.kat.pos.length) e.kat.pos = ['stehen'];
-  });
+  };
   // Körperregionen: aus Schlagworten (huefte, schulter, nacken, herz, ruecken …), Haltung und Namen abgeleitet
   const LEGP = ['chair', 'squat', 'warrior1', 'warrior2', 'goddess', 'lunge', 'warrior3s', 'pyramid', 'triangle', 'half_moon', 'hand_to_toe', 'crescent', 'leg_side', 'leg_stretch', 'seated_fold', 'janu', 'wide_seat', 'splits', 'half_splits', 'fold', 'half_fold', 'legs_wall', 'tree', 'tandem', 'knee_lift', 'hero', 'supta_hero', 'longsit', 'sit_leg', 'malasana', 'lizard', 'pigeon', 'swan', 'bird', 'heel_raise', 'foot_lift', 'downdog', 'sideangle', 'weight_shift', 'turtle', 'plow', 'bridge', 'butterfly_sit', 'butterfly_lying'];
   const ARMP = ['plank_hi', 'chatur', 'sideplank', 'plank_floor', 'plank_wall', 'handstand', 'forearm', 'scorpion', 'crow', 'downdog', 'updog', 'wheel', 'sit_shoulder', 'gomukhasana', 'gomukhasana_sit', 'eagle', 'arms_up', 'arms_side', 'arm_swing'];
-  EX.forEach(e => {
+  const stage2 = e => {
     const t = e.t || [], id = e.id, p = e.pose, k = e.kat, r = [];
     if (t.includes('nacken') || ['sit_neck', 'shoulderstand', 'plow', 'headstand', 'camel', 'forearm'].includes(p) || /matsya|fisch|sarvang|niralamba|halasana|sirsasana|mukta|ustra/.test(id)) r.push('nacken');
     if (t.includes('schulter') || ARMP.includes(p) || /schulter|arme|fluegel|adler|liegestuetz/.test(id)) r.push('schulter');
@@ -98,12 +100,12 @@ const KATTITLE = { mat: 'Übungsmaterial (abgeleitet)', sup: 'Unterstützung (Ad
     if (/fu(ss|ess)|zehen|fersen|knie|kniebeug|virasana|malasana|sit_leg/.test(id) || ['heel_raise', 'foot_lift', 'sit_leg', 'hero', 'supta_hero'].includes(p) || (t.includes('wurzel') && /stand|tadasana|tandem|gewicht/.test(id))) r.push('fuss');
     if (e.c === 'flow' || e.c === 'balance' || /sonnengruss|mondgruss|dancing|tadasana|adho_mukha|handstand|sirsasana|mukta|katze_kuh|vierfuessler|sarvang|niralamba|viparita/.test(id)) r.push('ganz');
     k.reg = r.length ? [...new Set(r)] : ['ganz'];
-  });
+  };
   // Muskeln: aus Körperregion, Haltung und Name abgeleitet (grobe Einordnung, nicht aus dem Skript übernommen)
   const QUAD = ['chair', 'squat', 'warrior1', 'warrior2', 'goddess', 'lunge', 'crescent', 'hero', 'supta_hero', 'camel', 'bow', 'knee_lift', 'tandem', 'weight_shift'];
   const HAMS = ['fold', 'half_fold', 'rollup', 'seated_fold', 'janu', 'pyramid', 'half_splits', 'splits', 'plow', 'downdog', 'legs_wall', 'leg_stretch', 'wide_seat', 'turtle'];
   const ADDU = ['goddess', 'wide_seat', 'butterfly_sit', 'butterfly_lying', 'happy_baby', 'malasana', 'sideangle', 'wide_stand', 'splits'];
-  EX.forEach(e => {
+  const stage3 = e => {
     const k = e.kat, id = e.id, p = e.pose, rg = k.reg || [], m = [];
     if (rg.includes('nacken') || rg.includes('schulter')) m.push('nackenm');
     if (rg.includes('haende') || ['plank_hi', 'chatur', 'sideplank', 'plank_floor', 'plank_wall', 'handstand', 'forearm', 'updog', 'crow', 'arm_swing', 'arms_up', 'arms_side'].includes(p)) m.push('arme');
@@ -117,9 +119,9 @@ const KATTITLE = { mat: 'Übungsmaterial (abgeleitet)', sup: 'Unterstützung (Ad
     if (ADDU.includes(p) || /skandasana|schmetterling|frosch/.test(id)) m.push('adduk');
     if (rg.includes('fuss') || ['heel_raise', 'foot_lift', 'downdog', 'pyramid'].includes(p) || /fersen|zehen|fuss/.test(id)) m.push('waden');
     k.mus = [...new Set(m)];
-  });
+  };
   // Atmung und Aufmerksamkeit: aus Katalog-Art, Schlagworten (Wurzel, Balance, Herz, Ruhe, Loslassen, Energie, Kraft, Mobi) und Wirbelsäulen-Richtung abgeleitet – grobe Einordnung, nicht wörtlich aus dem Skript
-  EX.forEach(e => {
+  const stage4 = e => {
     const k = e.kat, t = e.t || [], c = e.c, a = [], f = [];
     if (['mobi_sitz', 'mobi_stand', 'flow'].includes(c) || t.includes('mobi')) a.push('folgt');
     if (['stand', 'balance', 'boden'].includes(c) && !t.includes('mobi')) a.push('halten');
@@ -134,15 +136,15 @@ const KATTITLE = { mat: 'Übungsmaterial (abgeleitet)', sup: 'Unterstützung (Ad
     if (t.includes('energie')) f.push('energie');
     if (t.includes('herz')) f.push('herz');
     k.atm = [...new Set(a)]; k.auf = [...new Set(f)];
-  });
+  };
   // Unterstützung (Adjustment / Hands-on Support / Assistance): aus Haltung, Katalog-Art und Schlagworten abgeleitet – pädagogische Grobeinordnung, nicht aus dem Skript. Berührung immer nur nach Einverständnis der Teilnehmenden.
-  EX.forEach(e => {
+  const stage5 = e => {
     const k = e.kat, t = e.t || [], c = e.c, pos = k.pos || [], dir = k.dir || [], s = [];
     if (pos.includes('umkehr') || pos.includes('balance') || c === 'balance' || e.peak || ['crow', 'handstand', 'forearm', 'scorpion', 'headstand', 'shoulderstand', 'plow', 'wheel'].includes(e.pose)) s.push('support');
     if (['stand', 'boden', 'kraft'].includes(c) && !t.includes('mobi') && (c !== 'boden' || e.lv >= 2 || dir.length || pos.includes('stehen'))) s.push('adjust');
     if (t.includes('ruhe') || (e.st || []).includes('yin') || (k.ziel || []).includes('schluss') || (t.includes('loslassen') && pos.includes('liegen'))) s.push('assist');
     k.sup = s.length ? [...new Set(s)] : ['keine'];
-  });
+  };
   // Übungsmaterial: Yogamatte für alle Übungen; Hilfsmittel (Decke, Kissen, Block, Gurt, Stuhl, Wand) aus Beschreibungstexten und Haltung abgeleitet – übliche Praxis, nicht wörtlich aus dem Skript. Als Zusatzmaterial gilt alles außer der Matte.
   const MAT_P = {
     decke: ['seated_fold', 'janu', 'wide_seat', 'butterfly_sit', 'hero', 'supta_hero', 'shoulderstand', 'plow', 'headstand', 'legs_wall', 'savasana', 'viparita', 'heart_supine', 'butterfly_lying', 'sit_twist'],
@@ -152,11 +154,13 @@ const KATTITLE = { mat: 'Übungsmaterial (abgeleitet)', sup: 'Unterstützung (Ad
     wand: ['legs_wall', 'plank_wall', 'handstand', 'forearm']
   };
   const MAT_K = { decke: /Decke/i, kissen: /Kissen|Bolster|Polster/i, block: /\bBlock\b|Klotz|Ziegel/i, gurt: /Gurt|Handtuch/i, stuhl: /Stuhl(?!haltung|gruß)|Sessel/i, wand: /\bWand\b/i };
-  EX.forEach(e => {
+  const stage6 = e => {
     const txt = [e.d, e.w, e.how, e.ev].filter(Boolean).join(' '), m = ['matte'];
     Object.keys(MAT_K).forEach(k => { if (MAT_K[k].test(txt) || (MAT_P[k] || []).includes(e.pose)) m.push(k); });
     e.kat.mat = [...new Set(m)];
-  });
+  };
+  deriveKat = e => { stage1(e); stage2(e); stage3(e); stage4(e); stage5(e); stage6(e); return e.kat; };
+  EX.forEach(deriveKat);
 })();
 const peakStar = e => (e && e.peak) ? '<span class="star" title="Peak Pose (Gipfelposition)">★</span>' : '';
 const katLabels = (e, k) => { const v = e.kat && e.kat[k]; return (Array.isArray(v) ? v : v ? [v] : []).map(x => KAT[k][x]).filter(Boolean); };
