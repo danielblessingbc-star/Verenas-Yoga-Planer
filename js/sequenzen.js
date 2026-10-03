@@ -70,24 +70,16 @@ function seqWrapRows(s, key, items, rows) {
       + `<button class="ghost sm" data-a="seqGrpMv" data-id="${s.id}" data-b="${key}" data-bid="${u.seq}" data-d="1" ${k === units.length - 1 ? 'disabled' : ''} title="Ganze Sequenz nach unten">▼</button></div>${html}</div>`;
   }).join('');
 }
-// Kachelreihen (zugeklappter Block, Übersicht): zusammengehörige Sequenz-Übungen stehen in einer farbigen Kapsel mit Sequenz-Symbol (ohne Text)
+// Kachelreihen (zugeklappter Block, Übersicht): Kacheln wie normale Asanas; Farbpunkt links oben (seqDot)
 function seqTiles(items, fn) {
-  return seqUnits(items).map(u => {
-    const html = u.its.map((it, n) => fn(it, u.from + n)).join('');
-    if (!u.seq) return html;
-    const f = u.its[0], t = SEQ_TYPES[f.seqType] ? f.seqType : 'asana';
-    return `<span class="mtg t-${t}" title="Sequenz „${esc(f.seqName || '')}“ (${SEQ_TYPES[t].n}) · ${sqCount(u.its.length)} · gehören zusammen">${html}</span>`;
-  }).join('');
+  return items.map((it, j) => { const h = fn(it, j), d = seqDot(items, j); return d && h ? h.replace('>', '>' + d) : h; }).join('');
 }
-// Stundenübersicht (Dokument): ganz leichter Rahmen um zusammengehörige Sequenz-Kacheln, als Schatten der Kachelränder (Kachelabstand 3–4 px wird überbrückt)
-function seqFrame(items, j) {
+// Sequenzen in Kachelreihen: Farbpunkt (Farbe der Sequenzart) links oben; erste und letzte Kachel einer Sequenz mit vollem Punkt, die dazwischen mit Hohlpunkt
+const SEQ_COL = { mobilisation: '#c8a25e', asana: '#4f8a6e', cooldown: '#a2688c' };
+function seqDot(items, j) {
   const it = items[j]; if (!it || !it.seq) return '';
-  const c = 'rgba(61,74,66,.38)', first = !items[j - 1] || items[j - 1].seq !== it.seq, last = !items[j + 1] || items[j + 1].seq !== it.seq;
-  const sh = ['0 -2px 0 0 ' + c, '0 2px 0 0 ' + c];
-  if (first) sh.push('-2px 0 0 0 ' + c, '-2px -2px 0 0 ' + c, '-2px 2px 0 0 ' + c);
-  if (last) sh.push('2px 0 0 0 ' + c, '2px -2px 0 0 ' + c, '2px 2px 0 0 ' + c);
-  else sh.push('4px 0 0 0 ' + c, '4px -2px 0 0 ' + c, '4px 2px 0 0 ' + c);
-  return ';box-shadow:' + sh.join(',');
+  const first = !items[j - 1] || items[j - 1].seq !== it.seq, last = !items[j + 1] || items[j + 1].seq !== it.seq;
+  return `<i class="sqd${first || last ? '' : ' hol'}" style="--c:${SEQ_COL[it.seqType] || SEQ_COL.asana}"></i>`;
 }
 // Alle Übungen eines Sequenzblocks aus der Stunde entfernen (egal in welchem Stundenblock sie stehen)
 const seqPurge = (s, bid) => Object.keys(s.blk || {}).forEach(k => { s.blk[k] = (s.blk[k] || []).filter(i => i.seq !== bid); });

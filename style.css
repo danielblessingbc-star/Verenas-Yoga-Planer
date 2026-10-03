@@ -174,7 +174,7 @@ table.ovt td.dc{width:150px}table.ovt td.mc{min-width:220px}table.ovt td input{p
 .bcard.cat-atem{--k:#6fb8bd}.bcard.cat-shava{--k:#7d8fa8}.bcard.cat-schluss{--k:#cdb463}.bcard.cat-einl{--k:#b9a684}
 .bcard.cat-mobi{--k:#d4b483}.bcard.cat-aufw{--k:#86b394}.bcard.cat-asana{--k:#4f8a6e}.bcard.cat-kraft{--k:#b0443a}.bcard.cat-ausgl{--k:#cf8fa3}
 .mts{display:inline-flex;gap:3px;flex-wrap:wrap;align-items:center}
-.mt{display:inline-flex;width:30px;height:30px;border-radius:9px;align-items:center;justify-content:center;background:color-mix(in srgb,var(--k) 30%,var(--card));border:1px solid color-mix(in srgb,var(--k) 60%,var(--line))}
+.mt{position:relative;display:inline-flex;width:30px;height:30px;border-radius:9px;align-items:center;justify-content:center;background:color-mix(in srgb,var(--k) 30%,var(--card));border:1px solid color-mix(in srgb,var(--k) 60%,var(--line))}
 .mt .fig{width:24px;height:24px;color:var(--accent-deep)}
 .msep{display:inline-block;width:2px;height:22px;background:var(--line);margin:0 3px;border-radius:2px}
 table.ovt td.tlc{min-width:300px;max-width:520px}
@@ -745,4 +745,4 @@ body.plon{overflow:hidden}
 .seqgh button[disabled]{opacity:.35;cursor:default}
 .seqgrp .xrow{border-left:0}
 .seqb.t-mobilisation,.seqb.t-asana,.seqb.t-cooldown{border-left:4px solid var(--sq);padding-left:10px}
-.mtg{display:inline-flex;align-items:center;gap:3px;padding:3px 4px;border-radius:13px;border:2px solid var(--sq);background:color-mix(in srgb,var(--sq) 16%,var(--card))}
+.mt .sqd{position:absolute;top:2px;left:2px;width:8px;height:8px;border-radius:50%;background:var(--c);border:1.5px solid var(--c);box-sizing:border-box;pointer-events:none}.mt .sqd.hol{background:var(--card)}
