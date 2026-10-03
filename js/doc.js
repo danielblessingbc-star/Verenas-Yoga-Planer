@@ -45,6 +45,7 @@ const DOC_CSS = `
 .ex .fg{position:relative;display:inline-block;line-height:0}
 .ex .pk{position:absolute;top:-3px;right:-5px;width:15px;height:15px;border-radius:50%;background:#e0a82e;color:#fff;font-size:10px;line-height:15px;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .ex small{color:#8a8376;font-size:10px;margin-top:1px}
+.ex.opt .fg{outline:1.5px dashed #6b6558;outline-offset:2px;border-radius:6px}.ex small.optl{font-weight:700;color:#6b6558}.mx.opt{border-style:dashed;border-width:1.5px}.praxt .pt.opt{outline:1.2px dashed #6b6558;outline-offset:-1px;border-radius:4px}
 .ex small.sa{font-style:italic;color:#7b8f80}
 .exg{display:inline-flex;align-items:flex-end;gap:0;border:1px dashed #c4d0c6;border-radius:10px;padding:2px 3px;margin:3px 2px;background:#f8faf6}
 .ex.alt{width:78px;font-size:10px;opacity:.92}.ex.alt .fig{width:38px;height:38px}.ex.alt small.lv{color:#c9826b;font-weight:700;margin:0 0 1px}
@@ -129,14 +130,14 @@ function exCell(it) {
   const e = exById(it.id); if (!e) return '';
   if (e.txt && !isTxb(it)) { const b = sbInfo(it, e); return `<span class="ex"><span class="fg">${b.fig}</span><span>${esc(b.title)}</span>${b.sub ? `<small class="sa">${esc(b.sub)}</small>` : ''}</span>`; }
   if (e.txt) return `<span class="ex"><span class="fg">${figureSVG(e.pose)}</span><span>Text</span><small class="sa">${esc(String(it.tx || '').replace(/\s+/g, ' ').trim().slice(0, 70))}${String(it.tx || '').length > 70 ? ' …' : ''}</small></span>`;
-  const main = `<span class="ex"><span class="fg">${figureSVG(e.pose)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span>${esc(e.n)}</span>${e.sa ? `<small class="sa">${esc(e.sa)}</small>` : ''}${SHOW_REPS && it.rep ? `<small>${esc(it.rep)}</small>` : ''}</span>`;
+  const main = `<span class="ex${it.opt ? ' opt' : ''}"><span class="fg">${figureSVG(e.pose)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span>${esc(e.n)}</span>${it.opt ? '<small class="optl">(optional)</small>' : ''}${e.sa ? `<small class="sa">${esc(e.sa)}</small>` : ''}${SHOW_REPS && it.rep ? `<small>${esc(it.rep)}</small>` : ''}</span>`;
   const ea = effE(it) ? altE(e) : null, ha = effH(it) ? altH(e) : null; if (!ea && !ha) return main;
   const v = (x, lab) => x ? `<span class="ex alt"><span class="fg">${figureSVG(x.pose)}${x.peak ? '<b class="pk">★</b>' : ''}</span><small class="lv">${lab}</small><span>${esc(x.n)}</span></span>` : '';
   return `<span class="exg">${v(ea, '↓ leichter')}${main}${v(ha, '↑ schwerer')}</span>`;
 }
 // Texte der Textblöcke, die zwischen den Übungen stehen (Reihenfolge wie in der Stunde)
 const txbParts = (rs, s) => rs.map(r => r.items.filter(i => isTxb(i) && String(i.tx || '').trim()).map(i => `<div class="txt"><b>Text (${esc(r.name)})</b>${paras(i.tx, s)}</div>`).join('')).join('');
-const rowTable = rs => `<table class="flowt">${rs.map(r => `<tr><td class="lab">${esc(r.name)}<br><span class="pr">(${fmtMin(r.min)} Min.)</span></td><td>${r.items.map(exCell).join('')}</td></tr>`).join('')}</table>`;
+const rowTable = rs => `<table class="flowt">${rs.map(r => `<tr><td class="lab">${esc(r.name)}<br><span class="pr">(${fmtMin(r.min)} Min.${optMin(r.items) > 0 ? ', ' + optNote(optMin(r.items)) : ''})</span></td><td>${r.items.map(exCell).join('')}</td></tr>`).join('')}</table>`;
 function kraftBox(s) {
   return blkAll(s).filter(i => (exById(i.id) || {}).c === 'kraft').map(it => {
     const e = exById(it.id); if (!e) return '';
@@ -225,7 +226,7 @@ function renderOverview(c) {
 // Stundenübersicht (wie in der App): je Stunde Datum, Titel, farbiger Verlauf und alle Übungen als Kacheln
 const OV_BC = { einl: '#b9a684', atem: '#6fb8bd', mantra: '#d4d8e2', mobi: '#d4b483', shakti: '#8e6bb8', aufw: '#86b394', asana: '#4f8a6e', kraft: '#b0443a', ausgl: '#cf8fa3', schluss: '#cdb463', shava: '#7d8fa8' };
 function renderStundenUeb(c, only) {
-  const mt = (col, svg, nm, pk, sq) => `<span class="mx${sq ? ' sq' : ''}" style="background:${col}33;border-color:${col};--bc:${col}"><span class="fg">${svg}${pk ? '<b class="pk">★</b>' : ''}</span><span class="nm">${esc(nm)}</span></span>`;
+  const mt = (col, svg, nm, pk, sq, opt) => `<span class="mx${sq ? ' sq' : ''}${opt ? ' opt' : ''}" style="background:${col}33;border-color:${col};--bc:${col}"><span class="fg">${svg}${pk ? '<b class="pk">★</b>' : ''}</span><span class="nm">${esc(nm)}</span></span>`;
   const cards = c.sessions.map((s, i) => {
     if (only && only.s !== s) return '';
     const ks = order(s).filter(k => bon(s, k)), col = k => OV_BC[abOf(s, k)] || '#a9b4c2';
@@ -236,7 +237,7 @@ function renderStundenUeb(c, only) {
       const ty = bty(s, k);
       if (ty === 'atem') { [s.atem && s.atem.a, s.atem && s.atem.w].filter(Boolean).forEach(id => { const e = exById(id); if (e) tiles.push(mt(col(k), figureSVG(e.pose), e.n)); }); }
       else if (ty === 'mantra') { const m = s.mantra && typeof manById === 'function' && manById(s.mantra.id); if (m) tiles.push(mt(col(k), manIconSVG(m.id), m.n.replace(/\s*\(.*$/, ''))); }
-      else if (ty === 'ex') (s.blk[k] || []).forEach((it, j, arr) => { const e = exById(it.id); if (e) tiles.push(mt(col(k), figureSVG(e.pose), e.n, e.peak, !!it.seq)); });
+      else if (ty === 'ex') (s.blk[k] || []).forEach((it, j, arr) => { const e = exById(it.id); if (e) tiles.push(mt(col(k), figureSVG(e.pose), e.n, e.peak, !!it.seq, !!it.opt)); });
     });
     if (only) { // eine Stunde füllt die Seite: Kachelgröße nach Anzahl
       const W = 267, n = Math.max(tiles.length, 1), fsOf = cell => Math.max(7.5, Math.min(11, cell * 0.36));
@@ -255,8 +256,8 @@ function renderStundenUeb(c, only) {
 function renderPrax(c, s, i) {
   const ks = order(s).filter(k => bon(s, k));
   const minOf = k => bty(s, k) === 'ex' ? sumMin(s.blk[k] || []) : (+s.dur[k] || 0);
-  const names = items => (items || []).map(it => exById(it.id)).filter(Boolean).map(e => esc(e.n) + (e.peak ? ' ★' : '')).join(', ');
-  const fig = it => { const e = exById(it.id); return e ? `<span class="pt${e.c === 'kraft' ? ' kr' : ''}"><span class="fg">${figureSVG(e.pose)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span class="nm">${esc(e.n)}</span></span>` : ''; };
+  const names = items => (items || []).filter(it => exById(it.id)).map(it => { const e = exById(it.id); return esc(e.n) + (e.peak ? ' ★' : '') + (it.opt ? ' (optional)' : ''); }).join(', ');
+  const fig = it => { const e = exById(it.id); return e ? `<span class="pt${e.c === 'kraft' ? ' kr' : ''}${it.opt ? ' opt' : ''}"><span class="fg">${figureSVG(e.pose)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span class="nm">${esc(e.n)}</span></span>` : ''; };
   const n = ks.reduce((a, k) => a + (bty(s, k) === 'ex' && ['asana', 'ausgl'].includes(abOf(s, k)) ? (s.blk[k] || []).length : 0), 0);
   const per = n > 64 ? 8 : n > 48 ? 7 : n > 34 ? 6 : 5, figMm = n > 64 ? 8.5 : n > 48 ? 11 : n > 34 ? 14 : 17;
   const row = (min, left, right, cls) => `<tr class="${cls || ''}"><td class="pm">${min != null ? esc(fmtMin(min)) + ' Min.' : ''}</td><td class="pl">${left}</td><td class="pr2">${right}</td></tr>`;
@@ -492,11 +493,11 @@ function renderSpick(c, s, i) {
   const rows = order(s).filter(k => bon(s, k)).map(k => {
     const ty = bty(s, k), m = ty === 'ex' ? sumMin(s.blk[k] || []) : blockMin(s, k), a = t; t += m;
     let inh;
-    if (ty === 'ex') inh = (s.blk[k] || []).map(it => { const e = exById(it.id); if (!e) return ''; if (e.txt && !isTxb(it)) return esc(e.n + ': ' + sbInfo(it, e).title); if (e.txt) return 'Text: ' + esc(String(it.tx || '').replace(/\s+/g, ' ').trim().slice(0, 50) || '…'); const ea = effE(it) ? altE(e) : null; return esc(e.n) + (e.peak ? ' ★' : '') + (ea ? ` <span class="pr">(leichter: ${esc(ea.n)})</span>` : ''); }).filter(Boolean).join(' · ') || '–';
+    if (ty === 'ex') inh = (s.blk[k] || []).map(it => { const e = exById(it.id); if (!e) return ''; if (e.txt && !isTxb(it)) return esc(e.n + ': ' + sbInfo(it, e).title); if (e.txt) return 'Text: ' + esc(String(it.tx || '').replace(/\s+/g, ' ').trim().slice(0, 50) || '…'); const ea = effE(it) ? altE(e) : null; return esc(e.n) + (e.peak ? ' ★' : '') + (it.opt ? ' <span class="pr">(optional)</span>' : '') + (ea ? ` <span class="pr">(leichter: ${esc(ea.n)})</span>` : ''); }).filter(Boolean).join(' · ') || '–';
     else if (ty === 'mantra') { const mm = s.mantra && manById(s.mantra.id); inh = mm ? esc(mm.n + ': ' + mm.text.join(' – ')) : '–'; }
     else if (ty === 'atem') inh = esc([(exById(s.atem.a) || {}).n, s.atem.w && (exById(s.atem.w) || {}).n].filter(Boolean).join(' + '));
     else inh = k === 'einl' ? esc(s.motto.title + ' – ' + (s.tx.focus || s.motto.focus)) : k === 'shava' ? '„' + esc(s.tx.kern || s.motto.kern) + '“' : k === 'schluss' ? 'Nachspüren' : 'Text';
-    return `<tr><td class="min">${fmtMin(a)}–${fmtMin(t)}</td><td class="lab">${esc(bn(s, k))}<br><span class="pr">${fmtMin(m)} Min.</span></td><td>${inh}</td></tr>`;
+    return `<tr><td class="min">${fmtMin(a)}–${fmtMin(t)}</td><td class="lab">${esc(bn(s, k))}<br><span class="pr">${fmtMin(m)} Min.${ty === 'ex' && optMin(s.blk[k]) > 0 ? '<br>' + optNote(optMin(s.blk[k])) : ''}</span></td><td>${inh}</td></tr>`;
   }).join('');
   const geb = (c.gebrechen || []).map(g => GEBRECHEN[g]).join(', ');
   return `<section class="paper sess spick">${paperHead(c, esc(sessionTitle(c, s, i)) + '<br><span style="font-size:15px">Spickzettel – ' + fmtMin(sessionTotal(s)) + ' Minuten</span>')}

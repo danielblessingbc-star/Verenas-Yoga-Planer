@@ -360,6 +360,10 @@ function applyAlt(s, only) {
 const blkAll = s => (s.bm ? exKeys(s).filter(k => bon(s, k)) : EXKEYS).reduce((a, k) => a.concat(s.blk[k] || []), []);
 const blkIds = s => blkAll(s).map(i => i.id);
 const sumMin = items => items.reduce((a, i) => a + (+i.min || 0), 0);
+// Optionale Übungen (it.opt): zählen voll zur Stundenzeit, werden aber zusätzlich separat ausgewiesen
+const optMin = items => sumMin((items || []).filter(i => i.opt));
+const sessionOptMin = s => s.bm ? exKeys(s).reduce((a, k) => a + (bon(s, k) ? optMin(s.blk[k]) : 0), 0) : 0;
+const optNote = m => m > 0 ? `davon ${fmtMin(m)} Min. optional` : '';
 const plannedHaupt = s => sumMin(blkAll(s));
 // Kraftübungen: Anzahl im Block „Asanas (Hauptteil)“ an den Rahmen angleichen
 function syncKraft(c, s) {
