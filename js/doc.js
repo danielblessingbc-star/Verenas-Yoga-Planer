@@ -127,6 +127,7 @@ const groupHeading = rs => rs.every(r => EXKEYS.includes(r.k)) ? 'Mobilisation, 
 
 function exCell(it) {
   const e = exById(it.id); if (!e) return '';
+  if (e.txt && !isTxb(it)) { const b = sbInfo(it, e); return `<span class="ex"><span class="fg">${b.fig}</span><span>${esc(b.title)}</span>${b.sub ? `<small class="sa">${esc(b.sub)}</small>` : ''}</span>`; }
   if (e.txt) return `<span class="ex"><span class="fg">${figureSVG(e.pose)}</span><span>Text</span><small class="sa">${esc(String(it.tx || '').replace(/\s+/g, ' ').trim().slice(0, 70))}${String(it.tx || '').length > 70 ? ' …' : ''}</small></span>`;
   const main = `<span class="ex"><span class="fg">${figureSVG(e.pose)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span>${esc(e.n)}</span>${e.sa ? `<small class="sa">${esc(e.sa)}</small>` : ''}${SHOW_REPS && it.rep ? `<small>${esc(it.rep)}</small>` : ''}</span>`;
   const ea = effE(it) ? altE(e) : null, ha = effH(it) ? altH(e) : null; if (!ea && !ha) return main;
@@ -491,7 +492,7 @@ function renderSpick(c, s, i) {
   const rows = order(s).filter(k => bon(s, k)).map(k => {
     const ty = bty(s, k), m = ty === 'ex' ? sumMin(s.blk[k] || []) : blockMin(s, k), a = t; t += m;
     let inh;
-    if (ty === 'ex') inh = (s.blk[k] || []).map(it => { const e = exById(it.id); if (!e) return ''; if (e.txt) return 'Text: ' + esc(String(it.tx || '').replace(/\s+/g, ' ').trim().slice(0, 50) || '…'); const ea = effE(it) ? altE(e) : null; return esc(e.n) + (e.peak ? ' ★' : '') + (ea ? ` <span class="pr">(leichter: ${esc(ea.n)})</span>` : ''); }).filter(Boolean).join(' · ') || '–';
+    if (ty === 'ex') inh = (s.blk[k] || []).map(it => { const e = exById(it.id); if (!e) return ''; if (e.txt && !isTxb(it)) return esc(e.n + ': ' + sbInfo(it, e).title); if (e.txt) return 'Text: ' + esc(String(it.tx || '').replace(/\s+/g, ' ').trim().slice(0, 50) || '…'); const ea = effE(it) ? altE(e) : null; return esc(e.n) + (e.peak ? ' ★' : '') + (ea ? ` <span class="pr">(leichter: ${esc(ea.n)})</span>` : ''); }).filter(Boolean).join(' · ') || '–';
     else if (ty === 'mantra') { const mm = s.mantra && manById(s.mantra.id); inh = mm ? esc(mm.n + ': ' + mm.text.join(' – ')) : '–'; }
     else if (ty === 'atem') inh = esc([(exById(s.atem.a) || {}).n, s.atem.w && (exById(s.atem.w) || {}).n].filter(Boolean).join(' + '));
     else inh = k === 'einl' ? esc(s.motto.title + ' – ' + (s.tx.focus || s.motto.focus)) : k === 'shava' ? '„' + esc(s.tx.kern || s.motto.kern) + '“' : k === 'schluss' ? 'Nachspüren' : 'Text';

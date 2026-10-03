@@ -87,6 +87,8 @@ function figureParts(key, ground) {
 }
 function figureSVG(key, size) {
   const px = size ? ` width="${size}" height="${size}"` : '';
+  if (key === 'lied') return LIEDICON.replace('<svg class="fig"', '<svg class="fig"' + px);   // Sonderbaustein „Lied“
+  if (key === 'mantrasb') return manIconSVG('om').replace('<svg class="fig"', '<svg class="fig"' + px);   // Sonderbaustein „Mantra“
   if (key === 'textblock') return TEXTICON.replace('<svg class="fig"', '<svg class="fig"' + px);   // Sonderbaustein „Textblock“
   return `<svg class="fig" viewBox="0 0 100 100"${px} aria-hidden="true">${figureParts(key)}</svg>`;
 }
@@ -127,6 +129,7 @@ Object.assign(ICONS, {
   king_kong: '<g transform="translate(0 6) scale(.9 .9) translate(5 0)">%arms_up%</g><path d="M14 32c-8 8-8 20 0 28M86 32c8 8 8 20 0 28" opacity=".8"/>'
 });
 
+const LIEDICON = '<svg class="fig" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M40 70V22l34-8v48"/><path d="M40 40l34-8"/><ellipse cx="30" cy="72" rx="10" ry="8"/><ellipse cx="64" cy="64" rx="10" ry="8"/></g></svg>';
 const TEXTICON = '<svg class="fig" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M24 8h36l18 18v66H24z"/><path d="M60 8v18h18"/><path d="M34 46h34M34 58h34M34 70h22"/></g></svg>';
 
 POSES.ratlos = POSES.stand; // Auswahl im Katalog; Zeichnung (mit Fragezeichen) siehe figureParts

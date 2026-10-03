@@ -39,7 +39,7 @@ const sqMin = q => sumMin(q.items);
 const sqTile = it => { const e = exById(it.id); return e ? `<span class="mt cat-${e.c}" title="${esc(e.n)} · ${fmtMin(it.min)} Min.">${figureSVG(e.pose)}${peakStar(e)}</span>` : ''; };
 const sqCount = n => n + (n === 1 ? ' Übung' : ' Übungen');
 const sqExs = q => q.items.map(i => exById(i.id)).filter(e => e && !e.txt);
-const sqTxN = q => q.items.filter(isTxb).length;
+const sqTxN = q => q.items.filter(isSb).length;   // Sonderbausteine (Text, Lied, Mantra)
 // Eigenschaften einer Sequenz: Zielgruppe, Vorsicht bei, Wirkung, Körperregion, Atmung, Hilfsmittel (aus den Übungen abgeleitet; q.man überschreibt je Gruppe)
 const SQ_PROPS = [['lv', 'Geeignet für', () => ({ anf: LEVELS.anf, mittel: LEVELS.mittel, fort: LEVELS.fort, sen: LEVELS.sen })], ['x', 'Vorsicht bei', () => GEBRECHEN], ['wirk', 'Wirkung', () => KAT.wirk], ['reg', 'Körperregion', () => KAT.reg], ['atm', 'Atmung', () => KAT.atm], ['mat', 'Hilfsmittel', () => KAT.mat]];
 function sqAuto(q) {
@@ -56,6 +56,8 @@ function sqPropChips(q, withLabels) {
   const p = sqProps(q);
   return SQ_PROPS.map(([g, lab, map]) => { const m = map(), v = (p[g] || []).filter(x => m[x]); if (!v.length) return ''; return `<span class="sqp">${withLabels ? `<small class="muted">${esc(lab)}</small>` : ''}${v.map(x => `<span class="chip${g === 'x' ? ' warn' : ' kc'}">${esc(String(m[x]).replace(/\s*\*$/, ''))}</span>`).join('')}</span>`; }).join('');
 }
+// Eigenschaften einklappbar (Zustand in ui.open, wie beim Übungskatalog); ohne Werte entfällt der Block
+const sqPropsFold = (q, key) => { const h = sqPropChips(q, true); return h ? `<details class="sqfold" data-id="sqp:${key}" ${ui.open.has('sqp:' + key) ? 'open' : ''}><summary>Eigenschaften</summary><div class="sqps">${h}</div></details>` : ''; };
 // Quelle als Link (nur http/https)
 const sqSrc = q => { const s = q.src || {}, u = String(s.u || '').trim(), n = String(s.n || '').trim(); if (!u && !n) return ''; return /^https?:\/\//i.test(u) ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(n || u)}</a>` : esc(n); };
 
@@ -75,7 +77,7 @@ function seqApplyBlock(c, s, key) {
   if (seqActive(s, key)) mine.forEach(b => {
     const q = sqById(b.seqId);
     if (!q) { if (old[b.id]) ins.push(...old[b.id]); return; }
-    sqItems(q).forEach(x => { const it = mkItem(exById(x.id), x.min); if (isTxb(it)) it.tx = x.tx || ''; it.seq = b.id; it.seqName = q.name; it.seqType = sqPType(b); it.seqPos = +b.pos || 0; applyAlt(s, it); ins.push(it); });
+    sqItems(q).forEach(x => { const it = mkItem(exById(x.id), x.min); if (isTxb(it)) it.tx = x.tx || ''; else if (isSb(it)) it.ref = x.ref || ''; it.seq = b.id; it.seqName = q.name; it.seqType = sqPType(b); it.seqPos = +b.pos || 0; applyAlt(s, it); ins.push(it); });
   });
   const have = new Set(ins.map(i => i.id));
   s.blk[key] = ins.concat(items.filter(i => !i.seq && !have.has(i.id)));
@@ -145,10 +147,10 @@ ${blocked ? '<p class="banner">Alle drei Blöcke (Mobilisation, Asanas, Cool dow
 
 // ---------- Seite „Sequenzen“ (anlegen, bearbeiten, speichern) ----------
 function seqRow(it, i, n) {
-  const e = exById(it.id), tx = isTxb(it), tile = e
-    ? `<div class="xtile cat-${e.c} pkt" data-a="seqPk" data-i="${i}" title="Klicken: andere Übung wählen">${figureSVG(e.pose)}${peakStar(e)}</div>`
+  const e = exById(it.id), tx = isSb(it), tile = e
+    ? `<div class="xtile cat-${e.c} pkt" data-a="seqPk" data-i="${i}" title="Klicken: andere Übung wählen">${tx ? sbInfo(it, e).fig : figureSVG(e.pose)}${peakStar(e)}</div>`
     : `<div class="xtile empty pkt" data-a="seqPk" data-i="${i}" title="Klicken: Übung wählen"><span class="plus">＋</span></div>`;
-  return `<div class="seqrow${tx ? ' txb' : ''}"><span class="seqno">${i + 1}</span>${tile}<div class="seqnm">${e ? `<b>${esc(e.n)}</b>${e.sa ? `<i class="sa">${esc(e.sa)}</i>` : ''}${tx ? `<textarea rows="3" class="seqtx" data-chg="seqTx" data-i="${i}" placeholder="Text an dieser Stelle der Sequenz …">${esc(it.tx || '')}</textarea>` : ''}` : '<b class="muted">noch keine Übung gewählt</b>'}</div>
+  return `<div class="seqrow${tx ? ' txb' : ''}"><span class="seqno">${i + 1}</span>${tile}<div class="seqnm">${e ? `<b>${esc(e.n)}</b>${e.sa ? `<i class="sa">${esc(e.sa)}</i>` : ''}${tx ? (isTxb(it) ? `<textarea rows="3" class="seqtx" data-chg="seqTx" data-i="${i}" placeholder="Text an dieser Stelle der Sequenz …">${esc(it.tx || '')}</textarea>` : sbRefSelect(it, e, `data-chg="seqRef" data-i="${i}"`) + sbPreview(it, e)) : ''}` : '<b class="muted">noch keine Übung gewählt</b>'}</div>
 <div class="am"><input type="number" min="0.5" max="30" step="0.5" value="${it.min}" data-chg="seqMin" data-i="${i}"><span>Min.</span></div>
 <button class="ghost sm" data-a="seqMv" data-i="${i}" data-d="-1" ${i === 0 ? 'disabled' : ''} title="Nach oben">▲</button><button class="ghost sm" data-a="seqMv" data-i="${i}" data-d="1" ${i === n - 1 ? 'disabled' : ''} title="Nach unten">▼</button>
 <button class="ghost sm danger" data-a="seqRm" data-i="${i}" title="Übung entfernen">🗑</button></div>`;
@@ -175,12 +177,12 @@ ${fld('Quelle (Link)', inp('u:seqDraft.src.u', 'url', (d.src || {}).u || '', 'pl
 <p class="muted">Die Anzahl legt fest, wie viele Übungen die Sequenz hat; wähle für jede die Übung per Klick auf die Kachel. Dieselbe Übung darf mehrfach vorkommen (z. B. Vorbeuge am Anfang und Ende). Für einen Textabschnitt statt einer Übung (z. B. eine Ansage) wähle im Auswahlfenster ganz oben „Textblock“.</p>
 <div class="seqlist">${d.items.map((it, i) => seqRow(it, i, d.items.length)).join('')}</div>
 <button class="pkb add" data-a="seqAdd">＋ Übung hinzufügen</button>
-<div class="panel mini sqprops"><h3>Eigenschaften</h3><p class="muted">Werden aus den Übungen der Sequenz abgeleitet und ändern sich mit ihnen. Ein Klick auf einen Wert setzt die Gruppe auf „manuell“, dann bleibt sie so, wie du sie einstellst, bis du sie mit „↻ automatisch“ zurücksetzt.</p>${sqPropEdit(d)}</div>
+<details class="panel mini sqprops" data-id="sqp:edit" ${ui.open.has('sqp:edit') ? 'open' : ''}><summary>Eigenschaften</summary><p class="muted">Werden aus den Übungen der Sequenz abgeleitet und ändern sich mit ihnen. Ein Klick auf einen Wert setzt die Gruppe auf „manuell“, dann bleibt sie so, wie du sie einstellst, bis du sie mit „↻ automatisch“ zurücksetzt.</p>${sqPropEdit(d)}</details>
 <div class="bar"><button class="primary" data-a="seqSave">💾 Sequenz speichern</button><button data-a="seqCancel">Abbrechen</button><span class="grow"></span><span>Summe: <b id="seqsum">${fmtMin(sumMin(d.items))}</b> Min.</span></div></section>`;
   }
   const list = state.sequences || [];
   const card = q => `<div class="card course"><div class="grow"><b class="title" data-a="seqEdit" data-id="${q.id}">${esc(q.name)}</b> ${sqTypeChip(sqType(q))}
-<div class="meta">${sqCount(q.items.length - sqTxN(q))}${sqTxN(q) ? ' + ' + sqTxN(q) + ' Text' : ''} · ${fmtMin(sqMin(q))} Min.${sqSrc(q) ? ' · Quelle: ' + sqSrc(q) : ''}</div>${q.desc ? `<p class="sqd">${esc(q.desc)}</p>` : ''}<div class="sqps">${sqPropChips(q, true)}</div><span class="mts">${q.items.map(sqTile).join('')}</span></div>
+<div class="meta">${sqCount(q.items.length - sqTxN(q))}${sqTxN(q) ? ' + ' + sqTxN(q) + ' Sonderbaustein' + (sqTxN(q) > 1 ? 'e' : '') : ''} · ${fmtMin(sqMin(q))} Min.${sqSrc(q) ? ' · Quelle: ' + sqSrc(q) : ''}</div>${sqPropsFold(q, 'l' + q.id)}<span class="mts">${q.items.map(sqTile).join('')}</span></div>
 <button data-a="seqEdit" data-id="${q.id}" class="primary">Bearbeiten</button><button data-a="seqDup" data-id="${q.id}" class="ghost" title="Duplizieren">⧉</button><button data-a="seqDel" data-id="${q.id}" class="ghost danger" title="Löschen">🗑</button></div>`;
   return `<div class="bar"><h1>Sequenzen</h1><span class="muted">${list.length} gespeichert</span><span class="grow"></span><button class="primary" data-a="seqNew">＋ Neue Sequenz</button></div>
 <p class="muted">Eine Sequenz ist eine feste Folge von Übungen mit Namen. Gespeicherte Sequenzen liegen im Sequenzkatalog und lassen sich in der Einzelstundenplanung unter „Sequenzplanung“ einplanen.</p>
@@ -191,12 +193,12 @@ ${list.map(card).join('') || '<div class="card"><p class="muted">Noch keine Sequ
 function viewSeqCatalog() {
   const q = norm(ui.seqQ || ''), tf = ui.seqT || '', lf = ui.seqL || '', gf = ui.seqG || '';
   const list = (state.sequences || []).filter(x => (!tf || sqType(x) === tf) && (!lf || sqProps(x).lv.includes(lf)) && (!gf || !sqProps(x).x.includes(gf)) && (!q || norm(x.name).includes(q) || norm(x.desc || '').includes(q) || x.items.some(i => norm((exById(i.id) || {}).n || '').includes(q))));
-  const step = (it, i) => { const e = exById(it.id); return e && e.txt ? `<div class="sqstep"><span class="seqno">${i + 1}</span><div class="ktile cat-${e.c}">${figureSVG(e.pose)}</div><b>Text</b><small class="muted">${esc(String(it.tx || '').replace(/\s+/g, ' ').trim().slice(0, 60))}${String(it.tx || '').length > 60 ? ' …' : ''}</small><small class="muted">${fmtMin(it.min)} Min.</small></div>` : e ? `<div class="sqstep"><span class="seqno">${i + 1}</span><div class="ktile cat-${e.c}">${figureSVG(e.pose)}${peakStar(e)}</div><b>${esc(e.n)}</b>${e.sa ? `<i class="sa">${esc(e.sa)}</i>` : ''}<small class="muted">${fmtMin(it.min)} Min.</small></div>` : ''; };
+  const step = (it, i) => { const e = exById(it.id); if (e && e.txt) { const b = sbInfo(it, e), tx = isTxb(it) ? String(it.tx || '').replace(/\s+/g, ' ').trim().slice(0, 60) + (String(it.tx || '').length > 60 ? ' …' : '') : b.sub; return `<div class="sqstep"><span class="seqno">${i + 1}</span><div class="ktile cat-${e.c}">${b.fig}</div><b>${esc(isTxb(it) ? 'Text' : b.title)}</b><small class="muted">${esc(tx)}</small><small class="muted">${fmtMin(it.min)} Min.</small></div>`; } return e ? `<div class="sqstep"><span class="seqno">${i + 1}</span><div class="ktile cat-${e.c}">${figureSVG(e.pose)}${peakStar(e)}</div><b>${esc(e.n)}</b>${e.sa ? `<i class="sa">${esc(e.sa)}</i>` : ''}<small class="muted">${fmtMin(it.min)} Min.</small></div>` : ''; };
   const used = id => (state.courses || []).reduce((n, c) => n + c.sessions.filter(s => s.seqPlan && s.seqPlan.on && s.seqPlan.blocks.some(b => b.seqId === id)).length, 0);
   return `<div class="bar"><h1>Sequenzkatalog</h1><span class="muted">${list.length} von ${(state.sequences || []).length} Sequenzen</span><span class="grow"></span><button class="primary" data-a="seqNew">＋ Neue Sequenz</button></div>
 <div class="panel"><div class="grid">${fld('Art', sel('u:seqT', [['', 'Alle Arten']].concat(Object.keys(SEQ_TYPES).map(k => [k, SEQ_TYPES[k].n])), tf, 'data-chg="seqFilt"'))}${fld('Geeignet für', sel('u:seqL', [['', 'Alle']].concat(Object.keys(LEVELS).filter(k => k !== 'gemischt').map(k => [k, LEVELS[k]])), lf, 'data-chg="seqFilt"'))}${fld('Ohne Belastung für', sel('u:seqG', [['', '–']].concat(Object.keys(GEBRECHEN).map(k => [k, GEBRECHEN[k]])), gf, 'data-chg="seqFilt"'))}${fld('Suche', `<input type="search" data-f="u:seqQ" data-live="1" value="${esc(ui.seqQ || '')}" placeholder="Sequenz, Beschreibung oder Übung, z. B. Sonnengruß">`)}</div></div>
-${list.map(x => `<section class="panel sqcat"><div class="bar"><h3>${esc(x.name)}</h3>${sqTypeChip(sqType(x))}<span class="muted">${sqCount(x.items.length - sqTxN(x))}${sqTxN(x) ? ' + ' + sqTxN(x) + ' Text' : ''} · ${fmtMin(sqMin(x))} Min. · in ${used(x.id)} Stunde(n) eingeplant</span><span class="grow"></span><button class="sm" data-a="seqEdit" data-id="${x.id}">✎ Bearbeiten</button></div>
-${x.desc ? `<p class="sqd">${esc(x.desc)}</p>` : ''}<div class="sqps">${sqPropChips(x, true)}</div>${sqSrc(x) ? `<p class="muted sqsrc">Quelle: ${sqSrc(x)}</p>` : ''}
+${list.map(x => `<section class="panel sqcat"><div class="bar"><h3>${esc(x.name)}</h3>${sqTypeChip(sqType(x))}<span class="muted">${sqCount(x.items.length - sqTxN(x))}${sqTxN(x) ? ' + ' + sqTxN(x) + ' Sonderbaustein' + (sqTxN(x) > 1 ? 'e' : '') : ''} · ${fmtMin(sqMin(x))} Min. · in ${used(x.id)} Stunde(n) eingeplant</span><span class="grow"></span><button class="sm" data-a="seqEdit" data-id="${x.id}">✎ Bearbeiten</button></div>
+${x.desc ? `<p class="sqd">${esc(x.desc)}</p>` : ''}${sqPropsFold(x, 'k' + x.id)}${sqSrc(x) ? `<p class="muted sqsrc">Quelle: ${sqSrc(x)}</p>` : ''}
 <div class="sqsteps">${x.items.map(step).join('')}</div></section>`).join('') || '<div class="card"><p class="muted">Keine Sequenz gefunden.</p></div>'}`;
 }
 
@@ -205,7 +207,7 @@ function openSeqPicker(btn, i) {
   closePicker();
   const d = ui.seqDraft; if (!d || !d.items[i]) return;
   const curId = d.items[i].id; ui.pk = { kind: 'seq', i };
-  const txbRow = `<button class="pko cat-textblock${curId === TXB_ID ? ' cur' : ''}" data-a="seqPick" data-id="${TXB_ID}" data-q="textblock text sonderbaustein anleitung hinweis"><span class="pkf">${figureSVG('textblock')}</span><div class="pkinfo"><div class="pkname"><b>Textblock</b><small class="sa">Sonderbaustein</small></div><div class="pkmeta"><span>Statt einer Übung: ein Textabschnitt an dieser Stelle</span></div></div></button>`;
+  const txbRow = sbPickRows('seqPick', curId);
   const rows = txbRow + exAll().slice().sort((a, b) => seqIdx(a.id) - seqIdx(b.id)).map(p => `<button class="pko cat-${p.c}${p.id === curId ? ' cur' : ''}" data-a="seqPick" data-id="${p.id}" data-q="${esc(norm(p.n + ' ' + (p.sa || '')))}"><span class="pkf">${figureSVG(p.pose)}${peakStar(p)}</span><div class="pkinfo"><div class="pkname"><b>${esc(p.n)}</b>${p.sa ? `<small class="sa">${esc(p.sa)}</small>` : ''}</div><div class="pkmeta"><span>${esc(CATS[p.c] || '')}</span><span class="muted">· ${esc(lvName(p))}</span></div></div></button>`).join('');
   const panel = document.createElement('div'); panel.id = 'pkpanel';
   panel.innerHTML = `<input type="search" id="pkq" placeholder="Übung suchen …" autocomplete="off"><div class="pkgrid">${rows}</div>`;
@@ -237,7 +239,7 @@ const SEQ_ACTIONS = {
   seqPick(d) {
     const p = ui.pk, dr = ui.seqDraft; if (!p || p.kind !== 'seq' || !dr || !dr.items[p.i]) return;
     const it = dr.items[p.i]; it.id = d.id;
-    if (d.id === TXB_ID) it.tx = it.tx || ''; else delete it.tx;
+    if (d.id === TXB_ID) { it.tx = it.tx || ''; delete it.ref; } else if (d.id === LIED_ID || d.id === MANSB_ID) { it.ref = ''; delete it.tx; it.min = (exById(d.id) || {}).m || it.min; } else { delete it.tx; delete it.ref; }
     closePicker(); render();
   },
   // Eigenschaften: Klick setzt die Gruppe auf „manuell“ (Startwert = bisheriger automatischer Wert); „↻ automatisch“ hebt das auf
@@ -249,8 +251,9 @@ const SEQ_ACTIONS = {
     const name = String(d.name || '').trim();
     if (!name) { toast('Bitte einen Sequenznamen eingeben.'); return; }
     if (d.items.some(i => !i.id)) { toast('Bitte für jede Übung eine Auswahl treffen oder die Anzahl verringern.'); return; }
+    if (d.items.some(i => (i.id === LIED_ID || i.id === MANSB_ID) && !i.ref)) { toast('Bitte bei jedem Lied bzw. Mantra eine Auswahl treffen.'); return; }
     if ((state.sequences || []).some(q => q.id !== d.id && norm(q.name) === norm(name))) { toast('Eine Sequenz mit diesem Namen gibt es schon.'); return; }
-    const q = { id: d.id, name, type: SEQ_TYPES[d.type] ? d.type : 'asana', items: d.items.map(i => Object.assign({ id: i.id, min: Math.max(0.5, +i.min || 0.5) }, i.id === TXB_ID ? { tx: String(i.tx || '') } : {})) }, k = state.sequences.findIndex(x => x.id === d.id);
+    const q = { id: d.id, name, type: SEQ_TYPES[d.type] ? d.type : 'asana', items: d.items.map(i => Object.assign({ id: i.id, min: Math.max(0.5, +i.min || 0.5) }, i.id === TXB_ID ? { tx: String(i.tx || '') } : isSb(i) ? { ref: String(i.ref || '') } : {})) }, k = state.sequences.findIndex(x => x.id === d.id);
     if (String(d.desc || '').trim()) q.desc = String(d.desc).trim();
     const sn = String((d.src || {}).n || '').trim(), su = String((d.src || {}).u || '').trim(); if (sn || su) q.src = { n: sn, u: su };
     if (d.man && Object.keys(d.man).length) q.man = deepCopy(d.man);
@@ -280,6 +283,7 @@ const SEQ_ACTIONS = {
   seqApply(d) { const { c, s } = sessionOf(d.id); ui.open.add('seq:' + s.id); applySeqPlan(c, s); save(); render(); toast('Sequenzen neu aus dem Sequenzkatalog übernommen.'); }
 };
 const SEQ_CH = {
+  seqRef(el) { const d = ui.seqDraft, it = d && d.items[+el.dataset.i]; if (!it) return; it.ref = el.value; const x = it.id === LIED_ID ? songById(it.ref) : null; if (x && +x.dur > 0) it.min = +x.dur; render(); },
   seqFilt(el) { const f = el.dataset.f || ''; if (f.startsWith('u:')) ui[f.slice(2)] = el.value; render(); },
   seqTx(el) { const d = ui.seqDraft; if (d && d.items[+el.dataset.i]) d.items[+el.dataset.i].tx = el.value; },
   seqType(el) {

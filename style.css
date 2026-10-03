@@ -761,3 +761,11 @@ body.plon{overflow:hidden}
 .sqsrc{margin:2px 0 6px}
 .seqrow.txb .seqnm{flex:1 1 280px}.seqrow .seqtx{width:100%;margin-top:4px}
 .sqprops{margin-top:14px}
+details.sqfold{margin:6px 0}details.sqfold>summary{cursor:pointer;font:600 13px var(--sans);color:var(--accent-deep)}
+/* Sonderbausteine Lied und Mantra, Lied-Katalog */
+.cat-lied{--k:#d9a5b3}.cat-mantrasb{--k:#d4d8e2}
+.panel.sonder .ktile .fig{width:58px;height:58px}
+select.sbref{width:100%;box-sizing:border-box}.sbprev{display:block;margin-top:4px}
+.songh{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}.songh .xtile{flex:none;cursor:default}.songh h3{margin:0 0 2px}.songb{display:flex;gap:8px;flex-wrap:wrap}
+.songl{margin-top:4px;word-break:break-all}.songtx{margin:6px 0 0;line-height:1.5}
+.songl a{color:var(--accent-deep)}.hero>.primary{white-space:nowrap}
