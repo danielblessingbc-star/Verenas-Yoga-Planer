@@ -105,6 +105,7 @@ function render() {
   else if (ui.view === 'catalog') body = viewCatalog();
   else if (ui.view === 'mantras') body = viewMantras();
   else if (ui.view === 'texts') body = viewTexts();
+  else if (ui.view === 'email') body = renderEmailView();
   else if (ui.view === 'settings') body = viewSettings();
   else { ui.view = 'courses'; body = viewCourses(); }
   $('#app').innerHTML = nav() + '<main>' + body + '</main>';
@@ -152,6 +153,7 @@ const HI = {
   analyse: '<circle cx="12" cy="12" r="8"/><path d="M12 4v8l6 4"/>',
   panalyse: '<path d="M5 20V10M10 20V5M15 20v-7M20 20V8"/>',
   mantra: '<path d="M4 12h2M8 8v8M12 5v14M16 8v8M20 12h-2"/>',
+  email: '<path d="M4 4h16v12H4z"/><path d="M20 4l-8 5L4 4"/>',
   zahnrad: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>'
 };
 const hicon = k => `<svg class="hi" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${HI[k]}</svg>`;
@@ -179,7 +181,7 @@ function nav() {
       + (isP ? `<button class="hact" data-a="newCourse">＋ Neues Programm</button>${act('fromTpl', '＋ Programm aus Vorlagen' + cnt(nt), 'data-a="ptab" data-v="fromTpl"')}${act('build', '＋ Programm aus Einzelstunden', 'data-a="ptab" data-v="build"')}`
         : `<button class="hact" data-a="newSingle">＋ Neue Einzelstunde</button>${act('fromTpl', '＋ Einzelstunde aus Vorlage' + cnt(nt), 'data-a="stab" data-v="fromTpl"')}${act('playMin', '▶ Minimalistischer Player', 'data-a="stab" data-v="playMin"')}${act('playDet', '▶ Detailplayer', 'data-a="stab" data-v="playDet"')}`) + '</div>';
   }
-  return `<header class="noprint hdr${c ? (isS ? ' c-single' : ' c-prog') : ''}"><div class="hrow"><div class="brand">${LOTUS}Verenas Yoga Planomat<small class="ver" title="Programmversion">${typeof APP_VER !== 'undefined' ? APP_VER : ''}</small></div>${b('courses', 'Programme', 'prog')}${b('singles', 'Stunden', 'stunde')}${b('catalog', 'Übungskatalog', 'katalog')}${b('mantras', 'Mantras', 'mantra')}${b('texts', 'Textvorlagen', 'textvorl')}${c ? '<span class="hname ' + (isS ? 'is-single' : 'is-prog') + '\" title="' + esc(c.name) + '\">' + '<b>' + esc(c.name) + '</b></span>' : ''}<span class="grow"></span><button class="tab gear${ui.view === 'settings' ? ' on' : ''}" data-a="nav" data-v="settings" title="Einstellungen & Backup" aria-label="Einstellungen & Backup">${hicon('zahnrad')}</button></div>${ctx}</header>`;
+  return `<header class="noprint hdr${c ? (isS ? ' c-single' : ' c-prog') : ''}"><div class="hrow"><div class="brand">${LOTUS}Verenas Yoga Planomat<small class="ver" title="Programmversion">${typeof APP_VER !== 'undefined' ? APP_VER : ''}</small></div>${b('courses', 'Programme', 'prog')}${b('singles', 'Stunden', 'stunde')}${b('catalog', 'Übungskatalog', 'katalog')}${b('mantras', 'Mantras', 'mantra')}${b('texts', 'Textvorlagen', 'textvorl')}${b('email', 'Emails', 'email')}${c ? '<span class="hname ' + (isS ? 'is-single' : 'is-prog') + '\" title="' + esc(c.name) + '\">' + '<b>' + esc(c.name) + '</b></span>' : ''}<span class="grow"></span><button class="tab gear${ui.view === 'settings' ? ' on' : ''}" data-a="nav" data-v="settings" title="Einstellungen & Backup" aria-label="Einstellungen & Backup">${hicon('zahnrad')}</button></div>${ctx}</header>`;
 }
 function viewCourses() {
   const pt = ui.pTab || 'list', cs = state.courses.filter(c => !c.template && !c.single), ts = state.courses.filter(c => c.template && !c.single);
