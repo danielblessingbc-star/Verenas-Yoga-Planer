@@ -169,7 +169,7 @@ ${fld('Quelle (Link)', inp('u:seqDraft.src.u', 'url', (d.src || {}).u || '', 'pl
   }
   const list = state.sequences || [];
   const card = q => `<div class="card course"><div class="grow"><b class="title" data-a="seqEdit" data-id="${q.id}">${esc(q.name)}</b> ${sqTypeChip(sqType(q))}
-<div class="meta">${sqCount(q.items.length - sqTxN(q))}${sqTxN(q) ? ' + ' + sqTxN(q) + ' Sonderbaustein' + (sqTxN(q) > 1 ? 'e' : '') : ''} · ${fmtMin(sqMin(q))} Min.${sqSrc(q) ? ' · Quelle: ' + sqSrc(q) : ''}</div>${q.desc ? `<p class="sqd">${esc(q.desc)}</p>` : ''}${sqPropsFold(q, 'l' + q.id)}<span class="mts">${q.items.map(sqTile).join('')}</span></div>
+<div class="meta">${sqCount(q.items.length - sqTxN(q))}${sqTxN(q) ? ' + ' + sqTxN(q) + ' Sonderbaustein' + (sqTxN(q) > 1 ? 'e' : '') : ''} · ${fmtMin(sqMin(q))} Min.${sqSrc(q) ? ' · Quelle: ' + sqSrc(q) : ''}</div>${sqPropsFold(q, 'l' + q.id)}<span class="mts">${q.items.map(sqTile).join('')}</span></div>
 <button data-a="seqEdit" data-id="${q.id}" class="primary">Bearbeiten</button><button data-a="seqDup" data-id="${q.id}" class="ghost" title="Duplizieren">⧉</button><button data-a="seqDel" data-id="${q.id}" class="ghost danger" title="Löschen">🗑</button></div>`;
   return `<div class="bar"><h1>Sequenzen</h1><span class="muted">${list.length} gespeichert</span><span class="grow"></span><button class="primary" data-a="seqNew">＋ Neue Sequenz</button></div>
 <p class="muted">Eine Sequenz ist eine feste Folge von Übungen mit Namen. Gespeicherte Sequenzen liegen im Sequenzkatalog und lassen sich in der Einzelstundenplanung unter „Sequenzplanung“ einplanen.</p>
