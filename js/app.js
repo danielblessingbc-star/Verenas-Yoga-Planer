@@ -3,7 +3,7 @@ const KEY = 'yogaplaner.v1';
 const $ = s => document.querySelector(s);
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
-function defaults() { return { v: 1, courses: [], ratings: {}, customEx: [], exEdits: {}, vocab: {}, sequences: seqDefaults(), textTpl: [], settings: { apiKey: '', model: 'claude-sonnet-5-5', email: '', recipients: [] } }; }
+function defaults() { return { v: 1, courses: [], ratings: {}, customEx: [], exEdits: {}, vocab: {}, sequences: seqDefaults(), songs: songDefaults(), textTpl: [], settings: { apiKey: '', model: 'claude-sonnet-5-5', email: '', recipients: [] } }; }
 function loadState() {
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && Array.isArray(s.courses)) return Object.assign(defaults(), s, { settings: Object.assign(defaults().settings, s.settings || {}) }); } catch (e) { }
   return defaults();
@@ -107,6 +107,7 @@ function render() {
   else if (ui.view === 'sequences') body = viewSequences();
   else if (ui.view === 'seqcat') body = viewSeqCatalog();
   else if (ui.view === 'mantras') body = viewMantras();
+  else if (ui.view === 'songs') body = viewSongs();
   else if (ui.view === 'texts') body = viewTexts();
   else if (ui.view === 'email') body = renderEmailView();
   else if (ui.view === 'settings') body = viewSettings();
@@ -158,6 +159,7 @@ const HI = {
   sequenz: '<rect x="3.5" y="5" width="4.5" height="4.5" rx="1"/><rect x="10" y="5" width="4.5" height="4.5" rx="1"/><rect x="16.5" y="5" width="4" height="4.5" rx="1"/><path d="M5.5 14.5h13M5.5 19h8"/>',
   seqkat: '<path d="M4 5h6v6H4zM14 5h6v6h-6z"/><path d="M4 15h16M4 19h10"/>',
   mantra: '<path d="M4 12h2M8 8v8M12 5v14M16 8v8M20 12h-2"/>',
+  lied: '<path d="M9 18V5l10-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>',
   email: '<path d="M4 4h16v12H4z"/><path d="M20 4l-8 5L4 4"/>',
   zahnrad: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>'
 };
@@ -186,7 +188,7 @@ function nav() {
       + (isP ? `<button class="hact" data-a="newCourse">＋ Neues Programm</button>${act('fromTpl', '＋ Programm aus Vorlagen' + cnt(nt), 'data-a="ptab" data-v="fromTpl"')}${act('build', '＋ Programm aus Einzelstunden', 'data-a="ptab" data-v="build"')}`
         : `<button class="hact" data-a="newSingle">＋ Neue Einzelstunde</button>${act('fromTpl', '＋ Einzelstunde aus Vorlage' + cnt(nt), 'data-a="stab" data-v="fromTpl"')}${act('playMin', '▶ Minimalistischer Player', 'data-a="stab" data-v="playMin"')}${act('playDet', '▶ Detailplayer', 'data-a="stab" data-v="playDet"')}`) + '</div>';
   }
-  return `<header class="noprint hdr${c ? (isS ? ' c-single' : ' c-prog') : ''}"><div class="hrow"><div class="brand">${LOTUS}Verenas Yoga Planomat<small class="ver" title="Programmversion">${typeof APP_VER !== 'undefined' ? APP_VER : ''}</small></div>${b('courses', 'Programme', 'prog')}${b('singles', 'Stunden', 'stunde')}${b('sequences', 'Sequenzen', 'sequenz')}${b('catalog', 'Übungskatalog', 'katalog')}${b('seqcat', 'Sequenzkatalog', 'seqkat')}${b('mantras', 'Mantras', 'mantra')}${b('texts', 'Textvorlagen', 'textvorl')}${b('email', 'Emails', 'email')}${c ? '<span class="hname ' + (isS ? 'is-single' : 'is-prog') + '\" title="' + esc(c.name) + '\">' + '<b>' + esc(c.name) + '</b></span>' : ''}<span class="grow"></span><button class="tab gear${ui.view === 'settings' ? ' on' : ''}" data-a="nav" data-v="settings" title="Einstellungen & Backup" aria-label="Einstellungen & Backup">${hicon('zahnrad')}</button></div>${ctx}</header>`;
+  return `<header class="noprint hdr${c ? (isS ? ' c-single' : ' c-prog') : ''}"><div class="hrow"><div class="brand">${LOTUS}Verenas Yoga Planomat<small class="ver" title="Programmversion">${typeof APP_VER !== 'undefined' ? APP_VER : ''}</small></div>${b('courses', 'Programme', 'prog')}${b('singles', 'Stunden', 'stunde')}${b('sequences', 'Sequenzen', 'sequenz')}${b('catalog', 'Übungskatalog', 'katalog')}${b('seqcat', 'Sequenzkatalog', 'seqkat')}${b('mantras', 'Mantras', 'mantra')}${b('songs', 'Lied-Katalog', 'lied')}${b('texts', 'Textvorlagen', 'textvorl')}${b('email', 'Emails', 'email')}${c ? '<span class="hname ' + (isS ? 'is-single' : 'is-prog') + '\" title="' + esc(c.name) + '\">' + '<b>' + esc(c.name) + '</b></span>' : ''}<span class="grow"></span><button class="tab gear${ui.view === 'settings' ? ' on' : ''}" data-a="nav" data-v="settings" title="Einstellungen & Backup" aria-label="Einstellungen & Backup">${hicon('zahnrad')}</button></div>${ctx}</header>`;
 }
 function viewCourses() {
   const pt = ui.pTab || 'list', cs = state.courses.filter(c => !c.template && !c.single), ts = state.courses.filter(c => c.template && !c.single);
@@ -464,7 +466,7 @@ function blockCard(c, s, k) {
   if (type === 'ex') {
     const items = s.blk[k] || (s.blk[k] = []);
     mins = `${fmtMin(sumMin(items))} / ${fmtMin((s.bm[k] || {}).min)} Min.`;
-    sum = `<span class="mts">${seqTiles(items, exTile)}</span><span class="muted"> ${items.filter(i => !isTxb(i)).length} Übungen${items.some(isTxb) ? ' + Text' : ''}</span>`;
+    sum = `<span class="mts">${seqTiles(items, exTile)}</span><span class="muted"> ${items.filter(i => !isSb(i)).length} Übungen${items.some(isSb) ? ' + Sonderbausteine' : ''}</span>`;
     body = blockEditor(c, s, [k, name, catsOf(s, k)]);
   } else if (type === 'atem' && k === 'atem') {
     mins = `${s.dur.atem} Min.`;
@@ -531,10 +533,10 @@ function blockEditor(c, s, [key, label, cats]) {
     normAlt(it);
     const e = exById(it.id) || { n: '?', pose: 'stand', lv: 1, x: [], c: 'stand' };
     const ea = altE(e), ha = altH(e), P = `s:${s.id}:blk.${key}.${j}`;
-    if (e.txt) return `<div class="xrow xtxb" data-dsid="${s.id}" data-db="${key}" data-di="${j}"><div class="xc xt"><div class="xtile cat-${e.c} pkt"${it.seq ? '' : ' draggable="true"'} data-a="pk" data-sid="${s.id}" data-b="${key}" data-i="${j}" title="${it.seq ? 'Teil der Sequenz (als Ganzes verschiebbar) · Klick: Übung wählen' : 'Zum Verschieben ziehen · Klick: Übung oder Textblock wählen'}">${figureSVG(e.pose)}</div><b class="an">Textblock</b><i class="sa">Sonderbaustein</i></div>
-<div class="xc xtx"><textarea rows="${Math.min(10, Math.max(3, Math.ceil(String(it.tx || '').length / 90)))}" data-f="${P}.tx" placeholder="Text für diese Stelle der Stunde …">${esc(it.tx || '')}</textarea></div>
+    if (e.txt) return `<div class="xrow xtxb" data-dsid="${s.id}" data-db="${key}" data-di="${j}"><div class="xc xt"><div class="xtile cat-${e.c} pkt"${it.seq ? '' : ' draggable="true"'} data-a="pk" data-sid="${s.id}" data-b="${key}" data-i="${j}" title="${it.seq ? 'Teil der Sequenz (als Ganzes verschiebbar) · Klick: Übung wählen' : 'Zum Verschieben ziehen · Klick: Übung oder Sonderbaustein wählen'}">${sbInfo(it, e).fig}</div><b class="an">${esc(e.n)}</b><i class="sa">Sonderbaustein</i></div>
+<div class="xc xtx">${e.sb === 'text' ? `<textarea rows="${Math.min(10, Math.max(3, Math.ceil(String(it.tx || '').length / 90)))}" data-f="${P}.tx" placeholder="Text für diese Stelle der Stunde …">${esc(it.tx || '')}</textarea>` : sbRefSelect(it, e, `data-chg="sbRef" data-sid="${s.id}" data-b="${key}" data-i="${j}"`) + sbPreview(it, e)}</div>
 <div class="xc xd"><input type="number" data-f="${P}.min" data-num="1" data-sum="1" data-sid="${s.id}" min="0.5" max="60" step="0.5" value="${it.min}"><span class="muted">Min.</span></div>
-<div class="xc xdel">${it.seq ? '' : `<button class="ghost trash" data-a="rm" data-id="${s.id}" data-b="${key}" data-i="${j}" title="Textblock löschen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>`}</div></div>`;
+<div class="xc xdel">${it.seq ? '' : `<button class="ghost trash" data-a="rm" data-id="${s.id}" data-b="${key}" data-i="${j}" title="Baustein löschen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>`}</div></div>`;
     return `<div class="xrow" data-dsid="${s.id}" data-db="${key}" data-di="${j}"><div class="xc xt"><div class="xtile cat-${e.c} pkt"${it.seq ? '' : ' draggable="true"'} data-a="pk" data-sid="${s.id}" data-b="${key}" data-i="${j}" title="${it.seq ? 'Teil der Sequenz (als Ganzes verschiebbar) · Klick: Übung wählen' : 'Zum Verschieben ziehen · Klick: Übung wählen (mit Strichmännchen)'}">${figureSVG(e.pose)}${peakStar(e)}</div>
 <b class="an">${esc(e.n)}</b>${e.sa ? `<i class="sa">${esc(e.sa)}</i>` : ''}</div>
 <div class="xc">${altTile(s, key, j, ea, 'down', effE(it))}</div>
@@ -670,7 +672,7 @@ ${fld('Geeignet für', sel('u:cat.lvl', [['', 'Alle'], ['Anfänger', 'Anfänger'
 ${fld('Ohne Belastung für', sel('u:cat.geb', [['', '–']].concat(Object.keys(GEBRECHEN).map(k => [k, GEBRECHEN[k]])), f.geb))}
 ${fld('Yogastil', sel('u:cat.st', [['', 'Alle']].concat(Object.keys(STILE).map(k => [k, STILE[k]])), f.st))}</div></div>
 <details class="panel mini" data-id="katf" ${ui.open.has('katf') ? 'open' : ''}><summary>Weitere Kategorien <span class="muted">(Filter nach Körperregion, Muskulatur, Atmung, Aufmerksamkeit, Unterstützung, Material, Haltung, Wirbelsäule, Wirkung, Energetik, Chakra, Ziel)</span></summary><div class="grid">${['reg', 'mus', 'atm', 'auf', 'sup', 'mat', 'pos', 'dir', 'wirk', 'en', 'chakra', 'ziel'].map(k => fld(KATTITLE[k], sel('u:cat.k_' + k, [['', 'Alle']].concat(Object.keys(KAT[k]).map(x => [x, KAT[k][x]])), f['k_' + k]))).join('')}</div><p class="muted">* ergänzt. Die Kategorien werden aus Haltung, Art und Schlagworten abgeleitet; das Chakra folgt – wo vorhanden – dem Skript (Modul 3). Die Angaben stehen im aufgeklappten Detail jeder Übung.</p></details>
-${(!f.cat && !f.lvl && !f.geb && !f.st && !katOn && (!q || 'textblock sonderbaustein text'.includes(q))) ? `<div class="panel sonder"><div class="ktile cat-textblock">${figureSVG('textblock')}</div><div><b>Sonderbaustein: Textblock</b><p class="muted">Im Auswahlfenster einer Stunde (Klick auf eine Übungskachel oder „＋ Übung auswählen“) und in der Sequenz steht ganz oben der Eintrag „Textblock“. Wählst du ihn, entsteht an dieser Stelle statt einer Übung ein Textabschnitt mit eigener Dauer, z. B. für eine Anleitung, einen Hinweis oder Yoga Nidra. Er wird im Ausdruck und im Player mit ausgegeben und erscheint nie automatisch.</p></div></div>` : ''}
+${(!f.cat && !f.lvl && !f.geb && !f.st && !katOn) ? sonderPanels(q) : ''}
 <div class="legend catlegend">${Object.keys(CATS).map(k => `<span class="lg cat-${k}"><i></i>${esc(CATS[k])}</span>`).join('')}</div>
 <div class="tblwrap"><table class="cat"><thead><tr><th></th><th>Übung / Sanskrit</th><th>Yogastile</th><th>Stufe</th><th>Vorsicht bei</th><th>↓ Leichter</th><th>↑ Anspruchsvoller</th><th>Gefällt mir</th></tr></thead><tbody>${list.map(row).join('')}</tbody></table></div>
 <h2>Atem- und Wahrnehmungsübungen</h2><div class="legend catlegend"><span class="lg cat-br_atem"><i></i>Atemübung</span><span class="lg cat-br_wahr"><i></i>Wahrnehmungsübung</span></div><div class="tblwrap"><table class="cat"><thead><tr><th></th><th>Übung</th><th>Yogastile</th><th>Stufe</th><th>Vorsicht bei</th><th>Gefällt mir</th></tr></thead><tbody>${blist.map(brow).join('')}</tbody></table></div>
@@ -841,17 +843,17 @@ const A = {
     const p = ui.pk; if (!p) return; const { c, s } = sessionOf(p.sid), e = exById(d.id); closePicker();
     if (p.i === '' || p.i == null) { const ni = mkItem(e); applyAlt(s, ni); s.blk[p.b].push(ni); }
     else {
-      const it = s.blk[p.b][+p.i], wasTx = isTxb(it);
+      const it = s.blk[p.b][+p.i], wasSb = isSb(it);
       it.id = e.id; it.repAuto = true;
-      if (e.txt) { it.tx = it.tx || ''; it.rep = ''; it.repAuto = false; it.altE = it.altH = it.both = false; }
-      else { if (wasTx) { delete it.tx; it.min = e.m; } syncRep(it); applyAlt(s, it); }
+      if (e.txt) { if (e.sb === 'text') { it.tx = it.tx || ''; delete it.ref; } else { it.ref = ''; delete it.tx; } it.rep = ''; it.repAuto = false; it.altE = it.altH = it.both = false; }
+      else { if (wasSb) { delete it.tx; delete it.ref; it.min = e.m; } syncRep(it); applyAlt(s, it); }
     }
     save(); render();
   },
   toggleDay(d) { const c = cur(); c.days = c.days || []; const k = +d.k, i = c.days.indexOf(k); i < 0 ? c.days.push(k) : c.days.splice(i, 1); c.dirty = true; save(); render(); },
   cntBlk(d) {
     const { c, s } = sessionOf(d.id), k = d.b, a = s.blk[k];
-    if (+d.d < 0) { const i = a.map(x => !x.seq && !isTxb(x)).lastIndexOf(true); if (i < 0) return; a.splice(i, 1); }
+    if (+d.d < 0) { const i = a.map(x => !x.seq && !isSb(x)).lastIndexOf(true); if (i < 0) return; a.splice(i, 1); }
     else {
       const ctx = mkCtx(c, s, Math.random); ctx.have = new Set(blkIds(s));
       const pool = withPref(poolOf(...catsOf(s, k)), abOf(s, k), ctx).concat(FALLBACK[abOf(s, k)] ? poolOf(...FALLBACK[abOf(s, k)]) : []);
@@ -924,6 +926,12 @@ const A = {
   resetAll(d, el) { if (confirmTwice(el, 'all', 'ALLE Programme, Vorlagen und Bewertungen löschen?')) { state = defaults(); save(); ui.view = 'courses'; render(); } }
 };
 const CH = {
+  sbRef(el) {
+    const { s } = sessionOf(el.dataset.sid), it = s.blk[el.dataset.b][+el.dataset.i], e = it && exById(it.id); if (!e || !e.txt) return;
+    it.ref = el.value; touch(s);
+    const x = e.sb === 'lied' ? songById(it.ref) : null; it.min = x && +x.dur > 0 ? +x.dur : e.m;
+    save(); render();
+  },
   pkNewCat(el) { const f = document.getElementById('pkNewFig'); if (f) f.className = 'pkfig cat-' + el.value; },
   atemOn(el) { const c = cur(); if (+el.value) c.breath = c.breathPrev && c.breathPrev !== 'aus' ? c.breathPrev : 'gemischt'; else { if (c.breath !== 'aus') c.breathPrev = c.breath; c.breath = 'aus'; } breathChanged(c); },
   wahrMode(el) { const c = cur(); if (c.breath === 'aus') return; c.breath = { aus: 'atem', immer: 'atem_wahr', wechsel: 'gemischt', zufall: 'zufall' }[el.value] || 'gemischt'; c.breathPrev = c.breath; breathChanged(c); },
@@ -1200,7 +1208,7 @@ function openPicker(btn, d) {
       (off.lvl || levelOk(e, pctx.lvl)) && (off.geb || !contra(e, geb)) &&
       (off.pre || ((rating(e.id) > 0 || f.allowBanned) && katOk(e, pctx.flt)))));
   };
-  const txbRow = `<button class="pko cat-textblock${curId === TXB_ID ? ' cur' : ''}" data-a="pkpick" data-id="${TXB_ID}" data-q="textblock text sonderbaustein anleitung hinweis"><span class="pkf">${figureSVG('textblock')}</span><div class="pkinfo"><div class="pkname"><b>Textblock</b><small class="sa">Sonderbaustein</small></div><div class="pkmeta"><span>Statt einer Übung: ein Textabschnitt an dieser Stelle</span></div></div></button>`;
+  const txbRow = sbPickRows('pkpick', curId);
   const rowsHtml = pool => txbRow + pool.map(p => {
     const bad = !off.geb && contra(p, geb) && p.id !== curId, r = rating(p.id), warn = (p.x || []).filter(g => geb.includes(g)).map(g => GEBRECHEN[g]);
     const meta = `<div class="pkmeta">${lvDots(p)}<span>${esc(lvName(p))}</span><span class="muted">· ${fmtMin(p.m)} Min.</span>${r === 0 ? '<span class="chip warn">ausgeschlossen</span>' : rstars(r)}</div>`;
@@ -1287,7 +1295,7 @@ function importFile(file) {
       else if (Array.isArray(j.courses)) {
         const replace = confirm('OK = vorhandene Daten ERSETZEN\nAbbrechen = mit vorhandenen Daten ZUSAMMENFÜHREN');
         if (replace) state = Object.assign(defaults(), j);
-        else { const ids = new Set(state.courses.map(c => c.id)); j.courses.forEach(c => { if (!ids.has(c.id)) state.courses.push(c); }); Object.assign(state.ratings, j.ratings || {}); (j.customEx || []).forEach(e => { if (!state.customEx.some(x => x.id === e.id)) state.customEx.push(e); }); (j.sequences || []).forEach(q => { if (!state.sequences.some(x => x.id === q.id)) state.sequences.push(q); }); }
+        else { const ids = new Set(state.courses.map(c => c.id)); j.courses.forEach(c => { if (!ids.has(c.id)) state.courses.push(c); }); Object.assign(state.ratings, j.ratings || {}); (j.customEx || []).forEach(e => { if (!state.customEx.some(x => x.id === e.id)) state.customEx.push(e); }); (j.sequences || []).forEach(q => { if (!state.sequences.some(x => x.id === q.id)) state.sequences.push(q); }); (j.songs || []).forEach(q => { if (!state.songs.some(x => x.id === q.id)) state.songs.push(q); }); }
       } else throw new Error('Unbekanntes Dateiformat');
       mergeCatalogImport(j); normalizeState(); applyCatalogState(); save(); ui.view = 'courses'; render(); toast('Import erfolgreich.');
     } catch (err) { toast('Import fehlgeschlagen: ' + err.message); }
@@ -1301,6 +1309,7 @@ Object.assign(A, SINGLE_ACTIONS);
 Object.assign(A, SEQ_ACTIONS);
 Object.assign(CH, SEQ_CH);
 Object.assign(A, MANTRA_ACTIONS);
+Object.assign(A, SONG_ACTIONS);
 Object.assign(A, TXVORL_ACTIONS);
 Object.assign(A, PLAYER_ACTIONS);
 Object.assign(A, VIDEO_ACTIONS);
