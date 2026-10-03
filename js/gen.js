@@ -886,7 +886,7 @@ const AI_PROV = {
   custom: { n: 'Eigener Dienst (OpenAI-kompatibel)', url: '', model: '' }
 };
 const aiProvider = () => (AI_PROV[state.settings.provider] ? state.settings.provider : 'anthropic');
-async function aiCall(prompt, maxTokens) {
+async function aiCall(prompt, maxTokens, retried) {
   const st = state.settings, key = (st.apiKey || '').trim(), prov = aiProvider();
   if (!key) throw new Error('Kein API-Schlüssel hinterlegt (Einstellungen).');
   let url, headers, body, model;
@@ -918,6 +918,9 @@ async function aiCall(prompt, maxTokens) {
   }
   const j = await res.json();
   const out = prov === 'anthropic' ? (j.content || []).map(p => p.text || '').join('') : ((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '');
+  // „Denk“-Modelle (z. B. DeepSeek) verbrauchen das Token-Limit zuerst für ihre Überlegungen: dann einmal mit deutlich mehr Tokens wiederholen
+  const ch0 = (j.choices && j.choices[0]) || {};
+  if (!out.trim() && prov !== 'anthropic' && !retried && (ch0.finish_reason === 'length' || (ch0.message && ch0.message.reasoning_content))) return aiCall(prompt, Math.min(16000, (maxTokens || 3000) * 5), true);
   if (!out.trim()) throw new Error('Der Dienst hat geantwortet, aber ohne Text (' + JSON.stringify(j).slice(0, 200) + '). Evtl. ist das Modell ein „Denk“-Modell, das mehr Tokens braucht, oder der Modellname passt nicht.');
   return out;
 }
