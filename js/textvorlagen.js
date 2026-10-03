@@ -17,14 +17,16 @@ const TX_MUSTER = [
   { id: 'm_nidra_2', kind: 'nidra', name: 'Yoga Nidra, kurz', text: 'Komm in die Rückenlage, die Arme neben dem Körper, die Beine leicht geöffnet. Schließe die Augen und werde ganz still. Du musst jetzt nichts mehr tun, außer wach zuzuhören.\n\nSpüre die Auflagefläche deines Körpers und lass dich tragen. Nimm drei tiefe Atemzüge und lass mit jeder Ausatmung etwas mehr los.\n\nSprich nun innerlich deinen Vorsatz: „{kernsatz}“. Wiederhole ihn dreimal ruhig und klar.\n\nLass dein Bewusstsein jetzt durch den Körper wandern: rechte Hand, rechter Arm, rechte Schulter, rechtes Bein, rechter Fuß. Dann links, Hand, Arm, Schulter, Bein, Fuß. Dann Rücken, Gesäß, Bauch, Brust, Hals und das ganze Gesicht. Zuletzt der ganze Körper als Einheit.\n\nBeobachte deinen Atem, wie er von selbst kommt und geht. Folge ihm, ohne ihn zu lenken.\n\nSpüre nun Schwere im ganzen Körper, dann Leichtigkeit. Lass beides kommen und gehen.\n\nWiederhole deinen Vorsatz noch einmal dreimal: „{kernsatz}“.\n\nKehre langsam zurück. Vertiefe den Atem, bewege Finger und Zehen, räkle dich und öffne die Augen, wenn du so weit bist. Nimm dir Zeit, bevor du dich aufrichtest.' }
 ];
 const txKindOf = (s, k) => (TX_KINDS[abOf(s, k)] ? abOf(s, k) : TX_KINDS[k] ? k : 'einl');
+// Art der Vorlage im Auswahlfeld: manuell gewählt (ui.tplPick.kind) oder passend zum Textblock
+const txPickKind = (s, k) => { const p = ui.tplPick; return (p && p.sid === s.id && p.k === k && TX_KINDS[p.kind]) ? p.kind : txKindOf(s, k); };
 const txTplList = kind => TX_MUSTER.filter(t => t.kind === kind).concat((state.textTpl || []).filter(t => t.kind === kind));
 const txTplFill = (t, s) => String(t.text || '').replace(/\{motto\}/g, (s && s.motto && s.motto.title) || '').replace(/\{kernsatz\}/g, (s && s.motto && (s.tx.kern || s.motto.kern)) || '').replace(/\{fokus\}/g, (s && s.motto && (s.tx.focus || s.motto.focus)) || '');
 const txWords = t => (String(t).trim().match(/\S+/g) || []).length;
 
 // Auswahl in der Einzelstundenplanung (unter dem Textfeld-Kopf)
 function tplPickPanel(s, k) {
-  const kind = txKindOf(s, k), list = txTplList(kind);
-  return `<div class="tplpick"><div class="tph"><b>Vorlage für „${esc(TX_KINDS[kind])}“ einfügen</b><span class="muted">ersetzt den aktuellen Text · {motto} und {kernsatz} werden ausgefüllt</span><span class="grow"></span><button class="ghost sm" data-a="tplOpen" data-id="${s.id}" data-k="${k}">✕ schließen</button></div>${list.map(t => `<button class="tpo" data-a="tplUse" data-id="${s.id}" data-k="${k}" data-tid="${t.id}"><b>${esc(t.name)}</b> <span class="tag${t.id.startsWith('m_') ? '' : ' own'}">${t.id.startsWith('m_') ? 'Muster' : 'Eigene'}</span> <small class="muted">${txWords(txTplFill(t, s))} Wörter</small><span class="tpp">${esc(txTplFill(t, s).replace(/\s+/g, ' ').slice(0, 160))} …</span></button>`).join('') || '<p class="muted">Keine Vorlagen vorhanden.</p>'}<p class="muted">Eigene Vorlagen legst du auf der Seite „Textvorlagen“ an.</p></div>`;
+  const kind = txPickKind(s, k), list = txTplList(kind);
+  return `<div class="tplpick"><div class="tph"><b>Vorlage einfügen</b><label class="tpk">Art: <select data-chg="tplKind" data-id="${s.id}" data-k="${k}">${Object.keys(TX_KINDS).map(x => `<option value="${x}"${x === kind ? ' selected' : ''}>${esc(TX_KINDS[x])}</option>`).join('')}</select></label><span class="muted">ersetzt den aktuellen Text · {motto} und {kernsatz} werden ausgefüllt</span><span class="grow"></span><button class="ghost sm" data-a="tplOpen" data-id="${s.id}" data-k="${k}">✕ schließen</button></div>${list.map(t => `<button class="tpo" data-a="tplUse" data-id="${s.id}" data-k="${k}" data-tid="${t.id}"><b>${esc(t.name)}</b> <span class="tag${t.id.startsWith('m_') ? '' : ' own'}">${t.id.startsWith('m_') ? 'Muster' : 'Eigene'}</span> <small class="muted">${txWords(txTplFill(t, s))} Wörter</small><span class="tpp">${esc(txTplFill(t, s).replace(/\s+/g, ' ').slice(0, 160))} …</span></button>`).join('') || '<p class="muted">Keine Vorlagen vorhanden.</p>'}<p class="muted">Eigene Vorlagen legst du auf der Seite „Textvorlagen“ an.</p></div>`;
 }
 
 // Seite „Textvorlagen“
@@ -57,7 +59,7 @@ const TXVORL_ACTIONS = {
   tplCopy(d) { const t = TX_MUSTER.find(x => x.id === d.id); if (!t) return; (state.textTpl = state.textTpl || []).push({ id: 'u_' + uid(), kind: t.kind, name: t.name + ' (eigene)', text: t.text }); save(); render(); toast('Eigene Kopie angelegt – direkt darunter änderbar.'); },
   tplOpen(d) { ui.tplPick = (ui.tplPick && ui.tplPick.sid === d.id && ui.tplPick.k === d.k) ? null : { sid: d.id, k: d.k }; render(); },
   tplUse(d) {
-    const { c, s } = sessionOf(d.id), t = txTplList(txKindOf(s, d.k)).find(x => x.id === d.tid); if (!t) return;
+    const { c, s } = sessionOf(d.id), t = txTplList(txPickKind(s, d.k)).find(x => x.id === d.tid); if (!t) return;
     s.tx[d.k] = txTplFill(t, s); s.txEdited[d.k] = true; ui.tplPick = null; save(); render(); toast(`Vorlage „${t.name}“ eingefügt.`);
   },
   txClear(d) { const { s } = sessionOf(d.id); s.tx[d.k] = ''; s.txEdited[d.k] = true; save(); render(); toast('Text geleert.'); },
@@ -68,5 +70,6 @@ const TXVORL_ACTIONS = {
   }
 };
 const TXVORL_CH = {
+  tplKind(el) { if (ui.tplPick && TX_KINDS[el.value]) { ui.tplPick.kind = el.value; render(); } },
   tplEdit(el) { const t = (state.textTpl || []).find(x => x.id === el.dataset.id); if (t) { t[el.dataset.fld] = el.value; save(); } }
 };
