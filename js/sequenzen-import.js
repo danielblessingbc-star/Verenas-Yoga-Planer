@@ -63,5 +63,17 @@ const SEQ_IMPORT = [
     desc: 'Vier Möglichkeiten, den Nacken im Stehen zu öffnen: mit verschränkten Händen, mit Kinnkreisen (Schildkröte), Hamster im Glück und Backen aufplustern mit Tattva Mudra. Im Skript sind es Optionen; hier stehen alle vier nacheinander, einzelne lassen sich in der Stunde entfernen. Die letzten beiden mit angehaltenem Atem. Nicht bei Nackenverletzungen und Bluthochdruck, Option 4 auch nicht bei Glaukom.',
     src: { n: 'Ausbildungsskript Modul 6, S. 38 bis 43', u: '' },
     items: [['sn_nacken1', 2], ['sn_nacken2', 2], ['sn_hamster', 2], ['sn_tattva', 2]]
+  },
+  {
+    imp: 'imp_kundalini_spinal', name: 'Basic Spinal Energy Series (Kundalini)', type: 'asana',
+    desc: 'Kundalini-Kriya zur Mobilisierung und Energetisierung der Wirbelsäule: Flexe im Sitz und auf den Fersen, Drehung, Bärengriffe, Schulterzucken, Nackenrollen, Sat Kriya und Tiefenentspannung. Die klassischen Wiederholungen (108, 26) und Zeiten sind Zielwerte; Anfänger kürzen und ruhen länger. Die Tiefenentspannung ist im Original 15 Minuten lang.',
+    src: { n: 'Shakta Kaur: Basic Spinal Energy Series (nach Yogi Bhajan), Zusammenfassung', u: 'https://www.shaktakaur.com/yogic-resources/basic-spinal-energy-series-kriya' },
+    items: [['spinal_flex_sitz', 2], ['spinal_flex_fersen', 2], ['waschmaschine', 1.5], ['baerengriff_herz', 1], ['spinal_flex_oben', 1.5], ['schulterzucken', 1], ['nacken_mobi', 1], ['baerengriff_hals', 1], ['sat_kriya', 3], ['totenstellung', 5]]
+  },
+  {
+    imp: 'imp_kundalini_satkriya', name: 'Sat Kriya Workout (Kundalini, Auszug)', type: 'asana',
+    desc: 'Auszug aus dem Sat Kriya Workout: Sat Kriya wechselt mit Brustdehnung und Frosch. Die Quelle führt zwischen den Übungen 5 und 11 weitere abwechselnde Runden von Sat Kriya und Frosch mit kürzer werdenden Pausen; sie sind hier zu einer Abschlussrunde Sat Kriya zusammengefasst. Anfänger verkürzen alle Zeiten und ruhen länger. Nicht in Schwangerschaft und Menstruation; bei Herz-, Kreislaufproblemen oder Schwindel vorher klären.',
+    src: { n: 'Shakta Kaur: Sat Kriya Workout (nach Yogi Bhajan), Zusammenfassung', u: 'https://www.shaktakaur.com/yogic-resources/sat-kriya-workout' },
+    items: [['sat_kriya', 5], ['sat_kriya', 5], ['brustdehnung', 3], ['sat_kriya', 3], ['frosch_kundalini', 1], ['sat_kriya', 5]]
   }
 ];

@@ -37,15 +37,17 @@ const TXB_ID = 'textblock';
 const TEXTBLOCK = { id: TXB_ID, n: 'Textblock', sa: '', c: 'textblock', lv: 1, m: 1, pose: 'textblock', t: [], x: [], st: [], e: '', h: '', s: 1, o: 0, txt: true, sb: 'text', kat: {}, d: 'Sonderbaustein: ein Textabschnitt statt einer Übung, z. B. Anleitung, Hinweis oder Yoga Nidra. Der Text steht an dieser Stelle der Stunde oder der Sequenz.' };
 // Weitere Sonderbausteine: „Lied“ (aus dem Lied-Katalog) und „Mantra“ (aus der Seite Mantras). Sie verhalten sich wie der Textblock (txt: true, werden nie automatisch gewählt und von Auswertungen übersprungen), tragen aber statt eines Textes einen Verweis it.ref.
 // „Freie Übung“: wie der Textblock trägt sie einen Text (it.tx), der aber als Name in der Kachel steht.
-const LIED_ID = 'sb_lied', MANSB_ID = 'sb_mantra', FREI_ID = 'sb_frei';
+// „Pause“: nur Dauer und ein optionaler kurzer Hinweis (it.tx), der unter dem Namen „Pause“ steht.
+const LIED_ID = 'sb_lied', MANSB_ID = 'sb_mantra', FREI_ID = 'sb_frei', PAUSE_ID = 'sb_pause';
 const SB_DEFS = {
   [TXB_ID]: TEXTBLOCK,
   [LIED_ID]: Object.assign({}, TEXTBLOCK, { id: LIED_ID, n: 'Lied', c: 'lied', m: 4, pose: 'lied', sb: 'lied', d: 'Sonderbaustein: ein Lied aus dem Lied-Katalog an dieser Stelle der Stunde oder der Sequenz.' }),
   [MANSB_ID]: Object.assign({}, TEXTBLOCK, { id: MANSB_ID, n: 'Mantra', c: 'mantrasb', m: 3, pose: 'mantrasb', sb: 'mantra', d: 'Sonderbaustein: ein Mantra aus der Seite Mantras an dieser Stelle der Stunde oder der Sequenz.' }),
-  [FREI_ID]: Object.assign({}, TEXTBLOCK, { id: FREI_ID, n: 'Freie Übung', c: 'frei', m: 2, pose: 'frei', sb: 'frei', d: 'Sonderbaustein: eine Übung mit frei eingetragenem Namen. Der Text neben der Kachel steht in der Kachel.' })
+  [FREI_ID]: Object.assign({}, TEXTBLOCK, { id: FREI_ID, n: 'Freie Übung', c: 'frei', m: 2, pose: 'frei', sb: 'frei', d: 'Sonderbaustein: eine Übung mit frei eingetragenem Namen. Der Text neben der Kachel steht in der Kachel.' }),
+  [PAUSE_ID]: Object.assign({}, TEXTBLOCK, { id: PAUSE_ID, n: 'Pause', c: 'pause', m: 1, pose: 'pause', sb: 'pause', d: 'Sonderbaustein: eine Pause an dieser Stelle der Stunde oder der Sequenz, nur mit Dauer und einem kurzen Hinweis (optional).' })
 };
 const isTxb = i => !!i && i.id === TXB_ID;
-const hasTx = e => !!e && (e.sb === 'text' || e.sb === 'frei');   // Sonderbausteine mit eigenem Text (it.tx) statt Verweis (it.ref)
+const hasTx = e => !!e && (e.sb === 'text' || e.sb === 'frei' || e.sb === 'pause');   // Sonderbausteine mit eigenem Text (it.tx) statt Verweis (it.ref)
 const isSb = i => !!i && !!SB_DEFS[i.id];
 function exById(id) { return exAll().find(e => e.id === id) || BR.find(b => b.id === id) || SB_DEFS[id] || null; }
 function rating(id) { const r = state.ratings[id]; return r === undefined ? 3 : r; }

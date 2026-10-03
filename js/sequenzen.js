@@ -145,7 +145,7 @@ function seqRow(it, i, n) {
   const e = exById(it.id), tx = isSb(it), tile = e
     ? `<div class="xtile cat-${e.c} pkt" data-a="seqPk" data-i="${i}" title="Klicken: andere Übung wählen">${tx ? sbInfo(it, e).fig : figureSVG(e.pose)}${peakStar(e)}</div>`
     : `<div class="xtile empty pkt" data-a="seqPk" data-i="${i}" title="Klicken: Übung wählen"><span class="plus">＋</span></div>`;
-  return `<div class="seqrow${tx ? ' txb' : ''}"><span class="seqno">${i + 1}</span>${tile}<div class="seqnm">${e ? `<b>${esc(e.n)}</b>${e.sa ? `<i class="sa">${esc(e.sa)}</i>` : ''}${tx ? (e.sb === 'frei' ? `<input type="text" class="freitx" data-chg="seqTx" data-i="${i}" value="${esc(it.tx || '')}" maxlength="60" placeholder="Name der Übung, z. B. Handstand …" autocomplete="off">` : isTxb(it) ? `<textarea rows="3" class="seqtx" data-chg="seqTx" data-i="${i}" placeholder="Text an dieser Stelle der Sequenz …">${esc(it.tx || '')}</textarea>` : sbRefSelect(it, e, `data-chg="seqRef" data-i="${i}"`) + sbPreview(it, e)) : ''}` : '<b class="muted">noch keine Übung gewählt</b>'}</div>
+  return `<div class="seqrow${tx ? ' txb' : ''}"><span class="seqno">${i + 1}</span>${tile}<div class="seqnm">${e ? `<b>${esc(e.n)}</b>${e.sa ? `<i class="sa">${esc(e.sa)}</i>` : ''}${tx ? (e.sb === 'pause' ? `<input type="text" class="sbnote" data-chg="seqTx" data-i="${i}" value="${esc(it.tx || '')}" maxlength="60" placeholder="Hinweis (optional), z. B. Nachspüren …" autocomplete="off">` : e.sb === 'frei' ? `<input type="text" class="freitx" data-chg="seqTx" data-i="${i}" value="${esc(it.tx || '')}" maxlength="60" placeholder="Name der Übung, z. B. Handstand …" autocomplete="off">` : isTxb(it) ? `<textarea rows="3" class="seqtx" data-chg="seqTx" data-i="${i}" placeholder="Text an dieser Stelle der Sequenz …">${esc(it.tx || '')}</textarea>` : sbRefSelect(it, e, `data-chg="seqRef" data-i="${i}"`) + sbPreview(it, e)) : ''}` : '<b class="muted">noch keine Übung gewählt</b>'}</div>
 <div class="am"><input type="number" min="0.5" max="30" step="0.5" value="${it.min}" data-chg="seqMin" data-i="${i}"><span>Min.</span></div>
 <button class="ghost sm" data-a="seqMv" data-i="${i}" data-d="-1" ${i === 0 ? 'disabled' : ''} title="Nach oben">▲</button><button class="ghost sm" data-a="seqMv" data-i="${i}" data-d="1" ${i === n - 1 ? 'disabled' : ''} title="Nach unten">▼</button>
 <button class="ghost sm danger" data-a="seqRm" data-i="${i}" title="Übung entfernen">🗑</button></div>`;
@@ -234,7 +234,7 @@ const SEQ_ACTIONS = {
   seqPick(d) {
     const p = ui.pk, dr = ui.seqDraft; if (!p || p.kind !== 'seq' || !dr || !dr.items[p.i]) return;
     const it = dr.items[p.i]; it.id = d.id;
-    if (d.id === TXB_ID || d.id === FREI_ID) { it.tx = it.tx || ''; delete it.ref; } else if (d.id === LIED_ID || d.id === MANSB_ID) { it.ref = ''; delete it.tx; it.min = (exById(d.id) || {}).m || it.min; } else { delete it.tx; delete it.ref; }
+    if (d.id === TXB_ID || d.id === FREI_ID || d.id === PAUSE_ID) { it.tx = it.tx || ''; delete it.ref; } else if (d.id === LIED_ID || d.id === MANSB_ID) { it.ref = ''; delete it.tx; it.min = (exById(d.id) || {}).m || it.min; } else { delete it.tx; delete it.ref; }
     closePicker(); render();
   },
   // Eigenschaften: Klick setzt die Gruppe auf „manuell“ (Startwert = bisheriger automatischer Wert); „↻ automatisch“ hebt das auf
