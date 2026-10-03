@@ -113,7 +113,7 @@ function render() {
   else { ui.view = 'courses'; body = viewCourses(); }
   $('#app').innerHTML = nav() + '<main>' + body + '</main>';
   if (ui.view === 'course' && ui.tab === 'doc') { const dp = document.getElementById('docPreview'); if (dp) { try { paginateDoc(dp); } catch (e) { console.error(e); } } }
-  hlAll(); seqFixRows();
+  hlAll();
   window.scrollTo(0, y);
   if (fk && f.dataset.live) { const n = document.querySelector(`[data-f="${fk}"]`); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) { } } }
 }
