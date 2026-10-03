@@ -160,29 +160,33 @@ ${sess}`;
 }
 async function aiAnalyse(c, s) {
   const prog = !s, facts = aiAnaFacts(c, prog ? c.sessions : [s]);
-  const p = `Du bist eine erfahrene Yogalehrerin und gibst einer Kollegin eine fachliche Rückmeldung zu ${prog ? 'ihrem Kursprogramm (alle Stunden zusammen)' : 'einer von ihr geplanten Yogastunde'}. Sprich sie mit „du“ an, freundlich, klar und konkret.
-Stütze dich ausschließlich auf die Angaben unten. Erfinde keine Übungen, Zahlen oder Teilnehmerdaten. Gib keine medizinischen Ratschläge.
-Beurteile: ${prog ? 'Entwicklung und Steigerung über die Stunden, Abwechslung und Wiederholungen, Ausgewogenheit von Körperregionen und Wirkung, Passung zur Gruppe' : 'Spannungsbogen (Ankommen, Aufwärmen, Hauptteil, Gegenhaltungen, Ausklang), Ausgewogenheit von Körperregionen und Wirkung, Passung zur Gruppe, Zeitverteilung'}.
-Format: reiner Text ohne Markdown, genau diese vier Überschriften, jeweils allein in einer Zeile: Gesamteindruck, Stärken, Verbesserungsvorschläge, ${prog ? 'Verlauf' : 'Aufbau'}. Unter „Verbesserungsvorschläge“ 3 bis 5 konkrete Punkte, jeder beginnt mit „• “ und nennt, wo sinnvoll, Übungen oder Stunden beim Namen. Höchstens ${prog ? 350 : 250} Wörter. Keine Gedankenstriche.
+  const p = `Du bist eine erfahrene, fachlich strenge Yogalehrerin und gibst einer Kollegin ehrliche Rückmeldung zu ${prog ? 'ihrem Kursprogramm (alle Stunden zusammen)' : 'einer von ihr geplanten Yogastunde'}. Sprich sie mit „du“ an.
+Haltung: Du bist keine Schmeichlerin und redest ihr nicht nach dem Mund. Sie will besser werden, nicht bestätigt werden. Benenne Schwächen klar und direkt, ohne sie abzumildern oder in Lob zu verpacken. Lobe nur, was du an den Angaben belegen kannst, und lass Lob weg, wenn es nichts Besonderes gibt. Erfinde aber auch keine Mängel: ist etwas gut, sag das nüchtern. Bewerte die Planung, nicht die Person. Respektvoll im Ton, hart in der Sache.
+Stütze dich ausschließlich auf die Angaben unten und belege jede Aussage mit einer Zahl, einer Stunde oder einer Übung daraus. Erfinde keine Übungen, Zahlen oder Teilnehmerdaten. Gib keine medizinischen Ratschläge.
+Beurteile: ${prog ? 'Entwicklung und Steigerung über die Stunden, Abwechslung und Wiederholungen, Ausgewogenheit von Körperregionen und Wirkung, Passung zur Gruppe, Stimmigkeit der Mottos' : 'Spannungsbogen (Ankommen, Aufwärmen, Hauptteil, Gegenhaltungen, Ausklang), Ausgewogenheit von Körperregionen und Wirkung, Passung zur Gruppe, Zeitverteilung, Stimmigkeit zum Motto'}.
+Bewertungsmaßstab für die Note von 1 bis 10 (ganze Zahl): 1 bis 3 = erhebliche Mängel, so nicht einsetzbar. 4 bis 5 = deutliche Schwächen oder unausgewogen. 6 = brauchbar, aber mit spürbaren Lücken. 7 = solide und stimmig, kleinere Schwächen. 8 = sehr gut durchdacht, nur Feinschliff. 9 = herausragend. 10 = praktisch nie. Ein durchschnittlicher Plan bekommt 5 oder 6, nicht 8. Vergib die Note unabhängig davon, wie sehr sich die Kollegin über sie freut.
+Format: reiner Text ohne Markdown. Die erste Zeile lautet genau: „Bewertung: N/10“ (N ist die Note). Danach diese Überschriften, jeweils allein in einer Zeile: Gesamteindruck (2 bis 3 Sätze, begründet die Note), Stärken (nur belegbare, sonst „Keine nennenswerten.“), Schwächen, Verbesserungsvorschläge (3 bis 5 konkrete Punkte, jeder beginnt mit „• “ und nennt, wo sinnvoll, Übungen oder Stunden beim Namen), ${prog ? 'Verlauf' : 'Aufbau'}. Höchstens ${prog ? 420 : 320} Wörter. Keine Gedankenstriche.
 
 ${facts}`;
-  return (await aiCall(p, 1800)).replace(/\*\*/g, '').trim();
+  const raw = (await aiCall(p, 2500)).replace(/\*\*/g, '').trim(), m = raw.match(/^\s*Bewertung:?\s*(\d{1,2})(?:[.,]\d)?\s*(?:\/|von)\s*10[^\n]*\n?/i), score = m ? +m[1] : null;
+  return { text: (m ? raw.slice(m[0].length) : raw).trim(), score: score >= 1 && score <= 10 ? score : null };
 }
 function aiAnaHtml(text) {
-  return String(text).split('\n').map(l => l.trim()).filter(Boolean).map(l => /^(Gesamteindruck|Stärken|Verbesserungsvorschläge|Aufbau|Verlauf):?$/.test(l) ? `<div class="subh">${esc(l.replace(/:$/, ''))}</div>` : `<p>${esc(l)}</p>`).join('');
+  return String(text).split('\n').map(l => l.trim()).filter(Boolean).map(l => /^(Gesamteindruck|Stärken|Schwächen|Verbesserungsvorschläge|Aufbau|Verlauf):?$/.test(l) ? `<div class="subh">${esc(l.replace(/:$/, ''))}</div>` : `<p>${esc(l)}</p>`).join('');
 }
+const aiScoreHtml = o => o && o.score ? `<div class="aiscore sc-${o.score >= 8 ? 'hi' : o.score >= 6 ? 'mid' : 'lo'}" title="Skala 1 bis 10"><b>${o.score}</b><span>/ 10</span></div>` : '';
 function aiAnaPanel(c, s, asDoc) {
   const o = (s || c).aiAna, key = s ? 's' + s.id : 'p' + c.id, busy = ui.aiAnaBusy === key;
-  if (asDoc) return o && o.text ? `<h3>KI-Einschätzung</h3><div class="aiana">${aiAnaHtml(o.text)}</div>` : '';
+  if (asDoc) return o && o.text ? `<h3>KI-Einschätzung</h3>${aiScoreHtml(o)}<div class="aiana">${aiAnaHtml(o.text)}</div>` : '';
   const btn = `<button class="sm primary" data-a="aiAna" ${s ? `data-id="${s.id}"` : ''} ${ui.aiAnaBusy ? 'disabled' : ''}>${busy ? 'KI analysiert …' : o ? '↻ Neu erstellen' : '✨ KI-Einschätzung erstellen'}</button>${o && !busy ? ` <button class="sm ghost" data-a="aiAnaDel" ${s ? `data-id="${s.id}"` : ''} title="Einschätzung entfernen">🗑</button>` : ''}`;
-  return apanel('KI-Einschätzung', 'Fachliche Rückmeldung zu Aufbau, Ausgewogenheit und Passung zur Gruppe. Gesendet werden nur Mottos, Übungsnamen, Zeiten und Kennzahlen. Das ist ein Vorschlag: bitte fachlich prüfen.', `<div class="bar noprint">${btn}${o ? `<span class="muted"> erstellt am ${esc(fmtDate(o.at))}</span>` : ''}</div>${o && o.text ? `<div class="aiana">${aiAnaHtml(o.text)}</div>` : '<p class="muted">Noch keine Einschätzung erstellt. API-Schlüssel und Anbieter stellst du in den Einstellungen ein.</p>'}`, 'aipanel');
+  return apanel('KI-Einschätzung', 'Ehrliche fachliche Rückmeldung mit Note von 1 bis 10 zu Aufbau, Ausgewogenheit und Passung zur Gruppe. Bewusst ohne Schönfärberei. Gesendet werden nur Mottos, Übungsnamen, Zeiten und Kennzahlen. Die Note ist eine Einschätzung der KI, kein objektives Maß: bitte fachlich prüfen.', `<div class="bar noprint">${btn}${o ? `<span class="muted"> erstellt am ${esc(fmtDate(o.at))}</span>` : ''}</div>${o && o.text ? `${aiScoreHtml(o)}<div class="aiana">${aiAnaHtml(o.text)}</div>` : '<p class="muted">Noch keine Einschätzung erstellt. API-Schlüssel und Anbieter stellst du in den Einstellungen ein.</p>'}`, 'aipanel');
 }
 const ANA_ACTIONS = {
   async aiAna(d) {
     const c = cur(); if (!c || ui.aiAnaBusy) return;
     const s = d.id ? c.sessions.find(x => x.id === d.id) : null; if (d.id && !s) return;
     const key = s ? 's' + s.id : 'p' + c.id; ui.aiAnaBusy = key; render(); toast('KI analysiert …', 20000);
-    try { (s || c).aiAna = { text: await aiAnalyse(c, s), at: todayIso() }; save(); toast('KI-Einschätzung erstellt.'); }
+    try { { const r = await aiAnalyse(c, s); (s || c).aiAna = { text: r.text, score: r.score, at: todayIso() }; } save(); toast('KI-Einschätzung erstellt.'); }
     catch (e) { console.error(e); toast('⚠ ' + e.message, 12000); }
     finally { ui.aiAnaBusy = null; render(); }
   },
