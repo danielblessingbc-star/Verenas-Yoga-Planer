@@ -50,7 +50,7 @@ function plSteps(c, s) {
         if (achten.length) det.push({ ic: 'warn', h: 'Auf was achten', items: achten, w: true });
         const vari = [].concat(ea ? ['↓ leichter: ' + ea.n] : [], ha ? ['↑ anspruchsvoller: ' + ha.n] : []);
         if (vari.length) det.push({ ic: 'wirk', h: 'Varianten', items: vari });
-        steps.push({ block: name, title: e.n, sub: e.sa || '', min: +it.min || e.m || 1, cls: 'cat-' + e.c, tile: tile('cat-' + e.c, figureSVG(e.pose), peakStar(e)), det, dur: [fmtMin(+it.min || e.m || 1) + ' Min.'].concat(it.rep ? [it.rep] : []).join(' · ') });
+        steps.push({ block: name, title: e.n, sub: e.sa || '', opt: !!it.opt, min: +it.min || e.m || 1, cls: 'cat-' + e.c + (it.opt ? ' opt' : ''), tile: tile('cat-' + e.c + (it.opt ? ' opt' : ''), figureSVG(e.pose), peakStar(e)), det, dur: [fmtMin(+it.min || e.m || 1) + ' Min.'].concat(it.rep ? [it.rep] : []).join(' · ') });
       });
     } else if (ty === 'atem') {
       const d = +s.dur[k] || 0, a = BR.find(b => b.id === (s.atem && s.atem.a)), w = BR.find(b => b.id === (s.atem && s.atem.w));
@@ -93,9 +93,9 @@ function plRender() {
   o.innerHTML = `<div class="plt"><span class="pln">${esc(r.title)}</span><span class="grow"></span><span class="plall">Gesamt <b id="plTot"></b></span><button class="plx" data-a="plClose" title="Schließen (Esc)">✕</button></div>
 <div class="plprog"><i id="plProg"></i></div>
 <div class="plmain">
-<div class="plcur"><div class="plblk">${esc(st.block)} · ${r.i + 1} / ${r.steps.length}</div>${st.tile}<div class="plname">${esc(st.title)}</div>${st.sub ? `<div class="plsub">${esc(st.sub)}</div>` : ''}<div class="plcd" id="plCd"></div><div class="plbar"><i id="plBar"></i></div></div>
+<div class="plcur"><div class="plblk">${esc(st.block)} · ${r.i + 1} / ${r.steps.length}</div>${st.tile}<div class="plname">${esc(st.title)}${st.opt ? '<span class="plopt">optional</span>' : ''}</div>${st.sub ? `<div class="plsub">${esc(st.sub)}</div>` : ''}<div class="plcd" id="plCd"></div><div class="plbar"><i id="plBar"></i></div></div>
 ${det ? `<div class="pldet"><div class="pdh">${st.text ? 'Text' : 'Anleiten & Hands-on'}${st.dur ? '<span>' + esc(st.dur) + '</span>' : ''}</div><div class="pdb">${st.html}</div></div>` : ''}
-<div class="plnext">${nx ? `<div class="plnl">Danach</div>${nx.tile.replace('class="pltile', 'class="pltile sm')}<div class="plnn">${esc(nx.title)}</div><div class="plnm">${fmtMin(nx.min)} Min.</div>` : '<div class="plnl">Danach</div><div class="plnn">Schlussruhe 🙏</div>'}</div>
+<div class="plnext">${nx ? `<div class="plnl">Danach</div>${nx.tile.replace('class="pltile', 'class="pltile sm')}<div class="plnn">${esc(nx.title)}${nx.opt ? ' (optional)' : ''}</div><div class="plnm">${fmtMin(nx.min)} Min.</div>` : '<div class="plnl">Danach</div><div class="plnn">Schlussruhe 🙏</div>'}</div>
 </div>
 <div class="plctl"><button data-a="plPrev" title="Zurück (←)">⏮</button><button data-a="plToggle" id="plPP" class="plpp" title="Pause / Weiter (Leertaste)">${r.running ? '⏸' : '▶'}</button><button data-a="plNext" title="Weiter (→)">⏭</button></div>`;
   plTick(true);

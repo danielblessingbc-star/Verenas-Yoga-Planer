@@ -290,7 +290,8 @@ function stripHtml(s, labels) {
 }
 function timeInfo(s) {
   const pl = plannedTotal(s), T = sessionTotal(s), d = pl - T, ok = Math.abs(d) <= 1.01;
-  return `<span class="tinfo ${ok ? 'ok' : 'off'}">${fmtMin(pl)} / ${T} Min.${ok ? ' ✓' : ` (${d > 0 ? '+' : ''}${fmtMin(d)})`}</span>`;
+  const om = sessionOptMin(s);
+  return `<span class="tinfo ${ok ? 'ok' : 'off'}">${fmtMin(pl)} / ${T} Min.${ok ? ' ✓' : ` (${d > 0 ? '+' : ''}${fmtMin(d)})`}</span>${om > 0 ? `<span class="tinfo optm" title="Optionale Übungen sind in der Zeit enthalten">${optNote(om)}</span>` : ''}`;
 }
 function flatTiles(s) {
   const at = (bon(s, 'atem') ? brTileC(s, 'atem') + (s.atem.w ? brTileC(s, 'wahr') : '') : '') + (bon(s, 'mantra') ? manTileC(s) : '');
@@ -300,7 +301,7 @@ function flatTiles(s) {
 function ovBox(s, k) {
   const ty = bty(s, k), name = esc(bn(s, k));
   let min, tiles;
-  if (ty === 'ex') { const it = s.blk[k] || []; min = `${fmtMin(sumMin(it))} Min.`; tiles = seqTiles(it, exTileC(s, k)) || '<span class="muted">–</span>'; }
+  if (ty === 'ex') { const it = s.blk[k] || []; min = `${fmtMin(sumMin(it))} Min.${optMin(it) > 0 ? ' · ' + optNote(optMin(it)) : ''}`; tiles = seqTiles(it, exTileC(s, k)) || '<span class="muted">–</span>'; }
   else if (ty === 'atem' && k === 'atem') { min = `${s.dur.atem} Min.`; tiles = brTileC(s, 'atem') + (s.atem.w ? brTileC(s, 'wahr') : '') + textTile('atem'); }
   else if (ty === 'mantra') { min = `${fmtMin(s.dur[k] == null ? 0 : s.dur[k])} Min.`; tiles = manTileC(s) + textTile(k); }
   else { min = `${fmtMin(s.dur[k] == null ? 0 : s.dur[k])} Min.`; tiles = textTile(k); }
@@ -328,6 +329,7 @@ function updateSums(c, s) {
   set('ovs-' + s.id, stripHtml(s)); set('ovt-' + s.id, timeInfo(s)); set('strip-' + s.id, stripHtml(s, true)); set('tinfo-' + s.id, timeInfo(s)); set('tinfo0-' + s.id, timeInfo(s));
   exKeys(s).forEach(k => { const n = $(`#bs-${s.id}-${k}`); if (n) n.textContent = fmtMin(sumMin(s.blk[k])); });
   exKeys(s).forEach(k => { const n = $(`#bmin-${s.id}-${k}`); if (n && s.bm && s.bm[k]) n.textContent = `${fmtMin(sumMin(s.blk[k]))} / ${fmtMin(s.bm[k].min)} Min.`; });
+  exKeys(s).forEach(k => { const n = $(`#bo-${s.id}-${k}`); if (n) n.textContent = optMin(s.blk[k] || []) > 0 ? ' · ' + optNote(optMin(s.blk[k])) : ''; });
   const bs = $('#bmsum-' + s.id); if (bs) bs.textContent = sessionTotal(s);
   const tot = c.sessions.reduce((a, x) => a + plannedTotal(x), 0), h = Math.floor(tot / 60);
   set('ovtot', `· ${c.sessions.length} Stunden, geplant insgesamt ${h} h ${Math.round(tot - h * 60)} min`);
@@ -348,9 +350,9 @@ function twText(s, k) {
 }
 // ---- Kacheln des Übungskatalogs in den Übersichten ----
 // anklickbare Kacheln (Stundenübersicht): Klick öffnet die Übungsauswahl und tauscht diese Übung aus
-const exTileC = (s, k) => (it, j) => { const e = exById(it.id); if (!e) return ''; return `<span class="mt clk cat-${e.c}" data-a="pk" data-sid="${s.id}" data-b="${k}" data-i="${j}" title="${esc(e.n)}${it.min ? ' · ' + fmtMin(it.min) + ' Min.' : ''} – klicken zum Austauschen">${figureSVG(e.pose)}${peakStar(e)}</span>`; };
+const exTileC = (s, k) => (it, j) => { const e = exById(it.id); if (!e) return ''; return `<span class="mt clk${it.opt ? ' opt' : ''} cat-${e.c}" data-a="pk" data-sid="${s.id}" data-b="${k}" data-i="${j}" title="${esc(e.n)}${it.opt ? ' (optional)' : ''}${it.min ? ' · ' + fmtMin(it.min) + ' Min.' : ''} – klicken zum Austauschen">${figureSVG(e.pose)}${peakStar(e)}</span>`; };
 const brTileC = (s, kind) => { const id = kind === 'atem' ? s.atem.a : s.atem.w, b = BR.find(x => x.id === id); return b ? `<span class="mt clk cat-br_${b.k}" data-a="pkbr" data-sid="${s.id}" data-kind="${kind}" title="${esc(b.n)} – klicken zum Austauschen">${breathIconSVG(b.id)}</span>` : ''; };
-function exTile(it) { const e = exById(it.id); if (!e) return ''; return `<span class="mt cat-${e.c}" title="${esc(e.n)}${it.min ? ' · ' + fmtMin(it.min) + ' Min.' : ''}">${figureSVG(e.pose)}${peakStar(e)}</span>`; }
+function exTile(it) { const e = exById(it.id); if (!e) return ''; return `<span class="mt${it.opt ? ' opt' : ''} cat-${e.c}" title="${esc(e.n)}${it.opt ? ' (optional)' : ''}${it.min ? ' · ' + fmtMin(it.min) + ' Min.' : ''}">${figureSVG(e.pose)}${peakStar(e)}</span>`; }
 function brTile(id) { const b = BR.find(x => x.id === id); return b ? `<span class="mt cat-br_${b.k}" title="${esc(b.n)}">${breathIconSVG(b.id)}</span>` : ''; }
 function tilesOf(s) {
   const grp = exKeys(s).filter(k => bon(s, k) && (s.blk[k] || []).length).map(k => seqTiles(s.blk[k], exTile));
@@ -533,20 +535,20 @@ function blockEditor(c, s, [key, label, cats]) {
     normAlt(it);
     const e = exById(it.id) || { n: '?', pose: 'stand', lv: 1, x: [], c: 'stand' };
     const ea = altE(e), ha = altH(e), P = `s:${s.id}:blk.${key}.${j}`;
-    if (e.txt) return `<div class="xrow xtxb" data-dsid="${s.id}" data-db="${key}" data-di="${j}"><div class="xc xt"><div class="xtile cat-${e.c} pkt"${it.seq ? '' : ' draggable="true"'} data-a="pk" data-sid="${s.id}" data-b="${key}" data-i="${j}" title="${it.seq ? 'Teil der Sequenz (als Ganzes verschiebbar) · Klick: Übung wählen' : 'Zum Verschieben ziehen · Klick: Übung oder Sonderbaustein wählen'}">${sbInfo(it, e).fig}</div><b class="an">${esc(e.n)}</b><i class="sa">Sonderbaustein</i></div>
+    if (e.txt) return `<div class="xrow xtxb" data-dsid="${s.id}" data-db="${key}" data-di="${j}"><div class="xc xt"><div class="xtile${it.opt ? ' opt' : ''} cat-${e.c} pkt"${it.seq ? '' : ' draggable="true"'} data-a="pk" data-sid="${s.id}" data-b="${key}" data-i="${j}" title="${it.seq ? 'Teil der Sequenz (als Ganzes verschiebbar) · Klick: Übung wählen' : 'Zum Verschieben ziehen · Klick: Übung oder Sonderbaustein wählen'}">${sbInfo(it, e).fig}</div><b class="an">${esc(e.n)}</b><i class="sa">Sonderbaustein</i></div>
 <div class="xc xtx">${e.sb === 'text' ? `<textarea rows="${Math.min(10, Math.max(3, Math.ceil(String(it.tx || '').length / 90)))}" data-f="${P}.tx" placeholder="Text für diese Stelle der Stunde …">${esc(it.tx || '')}</textarea>` : sbRefSelect(it, e, `data-chg="sbRef" data-sid="${s.id}" data-b="${key}" data-i="${j}"`) + sbPreview(it, e)}</div>
 <div class="xc xd"><input type="number" data-f="${P}.min" data-num="1" data-sum="1" data-sid="${s.id}" min="0.5" max="60" step="0.5" value="${it.min}"><span class="muted">Min.</span></div>
-<div class="xc xdel">${it.seq ? '' : `<button class="ghost trash" data-a="rm" data-id="${s.id}" data-b="${key}" data-i="${j}" title="Baustein löschen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>`}</div></div>`;
-    return `<div class="xrow" data-dsid="${s.id}" data-db="${key}" data-di="${j}"><div class="xc xt"><div class="xtile cat-${e.c} pkt"${it.seq ? '' : ' draggable="true"'} data-a="pk" data-sid="${s.id}" data-b="${key}" data-i="${j}" title="${it.seq ? 'Teil der Sequenz (als Ganzes verschiebbar) · Klick: Übung wählen' : 'Zum Verschieben ziehen · Klick: Übung wählen (mit Strichmännchen)'}">${figureSVG(e.pose)}${peakStar(e)}</div>
+<div class="xc xdel">${it.seq ? '' : `<button class="ghost trash" data-a="rm" data-id="${s.id}" data-b="${key}" data-i="${j}" title="Baustein löschen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>`}${it.seq ? '' : `<button class="ghost optb${it.opt ? ' on' : ''}" data-a="optTog" data-id="${s.id}" data-b="${key}" data-i="${j}" aria-pressed="${it.opt ? 'true' : 'false'}" title="${it.opt ? 'Optional: wird nur bei Bedarf durchgeführt (anklicken: wieder fest einplanen)' : 'Als optional markieren: aufnehmen, aber erst in der Stunde entscheiden'}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><path d="M9.6 9.6a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1.1.9-1.1 1.7M12 17h.01"/></svg></button>`}</div></div>`;
+    return `<div class="xrow" data-dsid="${s.id}" data-db="${key}" data-di="${j}"><div class="xc xt"><div class="xtile${it.opt ? ' opt' : ''} cat-${e.c} pkt"${it.seq ? '' : ' draggable="true"'} data-a="pk" data-sid="${s.id}" data-b="${key}" data-i="${j}" title="${it.seq ? 'Teil der Sequenz (als Ganzes verschiebbar) · Klick: Übung wählen' : 'Zum Verschieben ziehen · Klick: Übung wählen (mit Strichmännchen)'}">${figureSVG(e.pose)}${peakStar(e)}</div>
 <b class="an">${esc(e.n)}</b>${e.sa ? `<i class="sa">${esc(e.sa)}</i>` : ''}</div>
 <div class="xc">${altTile(s, key, j, ea, 'down', effE(it))}</div>
 <div class="xc">${altTile(s, key, j, ha, 'up', effH(it))}</div>
 <div class="xc xk">${stRegChips(e)}</div>
 <div class="xc xl">${lvDots(e)}<span class="chip">${lvName(e)}</span>${rateStars(e.id)}${(e.x || []).length ? `<small class="muted" title="Vorsicht bei">⚠ ${esc(e.x.map(g => GEBRECHEN[g]).join(', '))}</small>` : ''}</div>
 <div class="xc xd"><input type="number" data-f="${P}.min" data-num="1" data-sum="1" data-sid="${s.id}" min="0.5" max="30" step="0.5" value="${it.min}"><span class="muted">Min.</span></div>
-<div class="xc xdel">${it.seq ? '' : `<button class="ghost trash" data-a="rm" data-id="${s.id}" data-b="${key}" data-i="${j}" title="Übung löschen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>`}</div></div>`;
+<div class="xc xdel">${it.seq ? '' : `<button class="ghost trash" data-a="rm" data-id="${s.id}" data-b="${key}" data-i="${j}" title="Übung löschen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>`}${it.seq ? '' : `<button class="ghost optb${it.opt ? ' on' : ''}" data-a="optTog" data-id="${s.id}" data-b="${key}" data-i="${j}" aria-pressed="${it.opt ? 'true' : 'false'}" title="${it.opt ? 'Optional: wird nur bei Bedarf durchgeführt (anklicken: wieder fest einplanen)' : 'Als optional markieren: aufnehmen, aber erst in der Stunde entscheiden'}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><path d="M9.6 9.6a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1.1.9-1.1 1.7M12 17h.01"/></svg></button>`}</div></div>`;
   });
-  return `<div class="blk"><div class="blkh"><span class="muted"><b id="bs-${s.id}-${key}">${fmtMin(tmin)}</b>${bud ? ' von ' + fmtMin(bud) : ''} Min.</span>
+  return `<div class="blk"><div class="blkh"><span class="muted"><b id="bs-${s.id}-${key}">${fmtMin(tmin)}</b>${bud ? ' von ' + fmtMin(bud) : ''} Min.<span id="bo-${s.id}-${key}">${optMin(items) > 0 ? ' · ' + optNote(optMin(items)) : ''}</span></span>
 <span class="grow"></span><button class="ghost sm" data-a="rerollBlk" data-id="${s.id}" data-b="${key}" title="Nur diesen Block neu würfeln">🎲 Block neu würfeln</button><button class="ghost sm" data-a="fitBlk" data-id="${s.id}" data-b="${key}" title="Minuten auf das Zeitbudget angleichen">⚖ auf Zeit</button></div>
 ${items.length ? `<div class="xhead"><div>Übung</div><div>↓ Leichtere Alternative</div><div>↑ Schwerere Alternative</div><div>Yogastil & Körperregion</div><div>Schwierigkeitsgrad · Gefällt mir</div><div>Dauer</div><div></div></div>` : ''}${seqWrapRows(s, key, items, rows) || '<div class="muted">keine Übung – mit „＋“ in der Kopfzeile oder hier hinzufügen</div>'}
 <button class="pkb add" data-a="pk" data-sid="${s.id}" data-b="${key}" data-i="" title="Übung hinzufügen (mit Strichmännchen)">＋ Übung auswählen …</button></div>`;
@@ -827,6 +829,7 @@ const A = {
   lock(d) { const { s } = sessionOf(d.id); s.locked = !s.locked; save(); render(); },
   mv(d) { const { s } = sessionOf(d.id), a = s.blk[d.b], i = +d.i, j = i + +d.d; if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; save(); render(); },
   rm(d) { const { s } = sessionOf(d.id); s.blk[d.b].splice(+d.i, 1); save(); render(); },
+  optTog(d) { const { s } = sessionOf(d.id), it = s.blk[d.b][+d.i]; if (!it) return; if (it.opt) delete it.opt; else it.opt = true; save(); render(); },
   alt(d) {
     const { c, s } = sessionOf(d.id), a = s.blk[d.b], cu = a[+d.i], e = exById(cu.id), t = d.w === 'e' ? altE(e) : altH(e);
     if (!t) return; if (contra(t, effGeb(c, s))) { toast('Die Alternative ist bei den gewählten Gebrechen nicht geeignet.'); return; }
