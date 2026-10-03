@@ -745,4 +745,4 @@ body.plon{overflow:hidden}
 .seqgh button[disabled]{opacity:.35;cursor:default}
 .seqgrp .xrow{border-left:0}
 .seqb.t-mobilisation,.seqb.t-asana,.seqb.t-cooldown{border-left:4px solid var(--sq);padding-left:10px}
-.mt.sqa,.mt.sqz{position:relative}.mt.sqa::before,.mt.sqz::after{content:"";position:absolute;top:0;width:var(--g,3px);height:100%;background:var(--sc)}.mt.sqa::before{right:100%}.mt.sqz::after{left:100%}.scf .mt{--g:4px}.mt.sq-mobilisation{--sc:#c8a25e}.mt.sq-asana{--sc:#4f8a6e}.mt.sq-cooldown{--sc:#a2688c}
+.mt.sq{box-shadow:inset 0 0 0 2px #fff}
