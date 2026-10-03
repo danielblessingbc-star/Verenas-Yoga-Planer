@@ -745,3 +745,5 @@ body.plon{overflow:hidden}
 .seqgh button[disabled]{opacity:.35;cursor:default}
 .seqgrp .xrow{border-left:0}
 .seqb.t-mobilisation,.seqb.t-asana,.seqb.t-cooldown{border-left:4px solid var(--sq);padding-left:10px}
+.mtg{display:inline-flex;align-items:center;gap:3px;padding:3px 5px 3px 4px;border-radius:13px;border:2px solid var(--sq);background:color-mix(in srgb,var(--sq) 16%,var(--card))}
+.mtg .hi{width:15px;height:15px;color:var(--sq);flex:none}

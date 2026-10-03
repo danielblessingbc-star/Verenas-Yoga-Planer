@@ -292,13 +292,13 @@ function timeInfo(s) {
 }
 function flatTiles(s) {
   const at = (bon(s, 'atem') ? brTileC(s, 'atem') + (s.atem.w ? brTileC(s, 'wahr') : '') : '') + (bon(s, 'mantra') ? manTileC(s) : '');
-  return at + exKeys(s).filter(k => bon(s, k)).map(k => (s.blk[k] || []).map(exTileC(s, k)).join('')).join('');
+  return at + exKeys(s).filter(k => bon(s, k)).map(k => seqTiles(s.blk[k] || [], exTileC(s, k))).join('');
 }
 // Block einer Einzelstunde (Stundenübersicht): Datum/Motto, Verlauf, Kacheln – auch oben in der Einzelstundenanalyse
 function ovBox(s, k) {
   const ty = bty(s, k), name = esc(bn(s, k));
   let min, tiles;
-  if (ty === 'ex') { const it = s.blk[k] || []; min = `${fmtMin(sumMin(it))} Min.`; tiles = it.map(exTileC(s, k)).join('') || '<span class="muted">–</span>'; }
+  if (ty === 'ex') { const it = s.blk[k] || []; min = `${fmtMin(sumMin(it))} Min.`; tiles = seqTiles(it, exTileC(s, k)) || '<span class="muted">–</span>'; }
   else if (ty === 'atem' && k === 'atem') { min = `${s.dur.atem} Min.`; tiles = brTileC(s, 'atem') + (s.atem.w ? brTileC(s, 'wahr') : '') + textTile('atem'); }
   else if (ty === 'mantra') { min = `${fmtMin(s.dur[k] == null ? 0 : s.dur[k])} Min.`; tiles = manTileC(s) + textTile(k); }
   else { min = `${fmtMin(s.dur[k] == null ? 0 : s.dur[k])} Min.`; tiles = textTile(k); }
@@ -351,7 +351,7 @@ const brTileC = (s, kind) => { const id = kind === 'atem' ? s.atem.a : s.atem.w,
 function exTile(it) { const e = exById(it.id); if (!e) return ''; return `<span class="mt cat-${e.c}" title="${esc(e.n)}${it.min ? ' · ' + fmtMin(it.min) + ' Min.' : ''}">${figureSVG(e.pose)}${peakStar(e)}</span>`; }
 function brTile(id) { const b = BR.find(x => x.id === id); return b ? `<span class="mt cat-br_${b.k}" title="${esc(b.n)}">${breathIconSVG(b.id)}</span>` : ''; }
 function tilesOf(s) {
-  const grp = exKeys(s).filter(k => bon(s, k) && (s.blk[k] || []).length).map(k => s.blk[k].map(exTile).join(''));
+  const grp = exKeys(s).filter(k => bon(s, k) && (s.blk[k] || []).length).map(k => seqTiles(s.blk[k], exTile));
   const at = bon(s, 'atem') ? brTile(s.atem.a) + (s.atem.w ? brTile(s.atem.w) : '') : '';
   return `<span class="mts">${[at].concat(grp).filter(Boolean).join('<i class="msep"></i>')}</span>`;
 }
@@ -463,7 +463,7 @@ function blockCard(c, s, k) {
   if (type === 'ex') {
     const items = s.blk[k] || (s.blk[k] = []);
     mins = `${fmtMin(sumMin(items))} / ${fmtMin((s.bm[k] || {}).min)} Min.`;
-    sum = `<span class="mts">${items.map(exTile).join('')}</span><span class="muted"> ${items.length} Übungen</span>`;
+    sum = `<span class="mts">${seqTiles(items, exTile)}</span><span class="muted"> ${items.length} Übungen</span>`;
     body = blockEditor(c, s, [k, name, catsOf(s, k)]);
   } else if (type === 'atem' && k === 'atem') {
     mins = `${s.dur.atem} Min.`;
