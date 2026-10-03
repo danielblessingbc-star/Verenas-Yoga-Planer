@@ -172,8 +172,8 @@ Bewertungsmaßstab für die Note von 1 bis 10 (ganze Zahl): 1 bis 3 = erhebliche
 Format: reiner Text ohne Markdown. Die erste Zeile lautet genau: „Bewertung: N/10“ (N ist die Note). Danach diese Überschriften, jeweils allein in einer Zeile: Gesamteindruck (2 bis 3 Sätze, begründet die Note), Stärken (nur belegbare, sonst „Keine nennenswerten.“), Schwächen, Passung zur Gruppe (Zielgruppe und Einschränkungen, 2 bis 4 Sätze), Verbesserungsvorschläge (3 bis 5 konkrete Punkte, jeder beginnt mit „• “ und nennt, wo sinnvoll, Übungen oder Stunden beim Namen), ${prog ? 'Verlauf' : 'Aufbau'}. Alle sechs Abschnitte müssen vorkommen, vor allem Passung zur Gruppe und Verbesserungsvorschläge: fasse dich in den anderen Abschnitten kürzer, statt sie wegzulassen. Höchstens ${prog ? 450 : 350} Wörter. Keine Gedankenstriche.
 
 ${facts}`;
-  const call = async pr => (await aiCall(pr, 4000)).replace(/\*\*/g, '').trim(), HEAD = /^(Gesamteindruck|Stärken|Schwächen|Passung zur Gruppe|Verbesserungsvorschläge|Aufbau|Verlauf):?\s*$/i;
-  const NEED = ['Passung zur Gruppe', 'Verbesserungsvorschläge'], missing = txt => NEED.filter(h => !new RegExp('^' + h + ':?\\s*$', 'mi').test(txt));
+  const call = async pr => (await aiCall(pr, 4000)).replace(/\*\*/g, '').trim(), HEAD = AI_HEAD;
+  const NEED = ['Passung zur Gruppe', 'Verbesserungsvorschläge'], missing = txt => NEED.filter(h => !new RegExp('^' + h + '(?::|\\s*$)', 'mi').test(txt));
   const raw = await call(p), m = raw.match(/^\s*Bewertung:?\s*(\d{1,2})(?:[.,]\d)?\s*(?:\/|von)\s*10[^\n]*\n?/i), score = m ? +m[1] : null;
   let body = (m ? raw.slice(m[0].length) : raw).trim();
   // Antwort abgeschnitten (Abschnitte fehlen): die KI setzt einmal nahtlos fort, unabhängig davon, warum der Dienst abgebrochen hat
@@ -186,8 +186,9 @@ ${facts}`;
   const miss = missing(body);
   return { text: body + (miss.length ? '\n\nHinweis: In dieser Antwort fehlen die Abschnitte ' + miss.join(' und ') + ' (die KI-Antwort wurde abgeschnitten). Bitte „Neu erstellen“ klicken.' : ''), score: score >= 1 && score <= 10 ? score : null };
 }
+const AI_HEAD = /^(Gesamteindruck|Stärken|Schwächen|Passung zur Gruppe|Verbesserungsvorschläge|Aufbau|Verlauf)(?::\s*(.*)|\s*)$/i;
 function aiAnaHtml(text) {
-  return String(text).split('\n').map(l => l.trim()).filter(Boolean).map(l => /^(Gesamteindruck|Stärken|Schwächen|Passung zur Gruppe|Verbesserungsvorschläge|Aufbau|Verlauf):?$/.test(l) ? `<div class="subh">${esc(l.replace(/:$/, ''))}</div>` : `<p>${esc(l)}</p>`).join('');
+  return String(text).split('\n').map(l => l.trim()).filter(Boolean).map(l => { const h = l.match(AI_HEAD); return h ? `<div class="subh">${esc(h[1])}</div>${h[2] ? `<p>${esc(h[2])}</p>` : ''}` : `<p>${esc(l)}</p>`; }).join('');
 }
 const aiScoreHtml = o => o && o.score ? `<div class="aiscore sc-${o.score >= 8 ? 'hi' : o.score >= 6 ? 'mid' : 'lo'}" title="Skala 1 bis 10"><b>${o.score}</b><span>/ 10</span></div>` : '';
 function aiAnaPanel(c, s, asDoc) {
