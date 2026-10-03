@@ -283,6 +283,8 @@ const seqIdx = id => {
   const g = e.g || (e.c === 'balance' ? 'bal' : e.c === 'stand' || e.c === 'flow' || e.c === 'mobi_stand' ? 'stand' : e.c === 'mobi_sitz' ? 'sit' : e.c === 'kraft' ? (onFloor(e) ? 'supine' : 'stand') : 'supine');
   return (B[g] === undefined ? 1000 : B[g]) + ((e.o || 0) % 1000) / 10000;
 };
+// Übungen aus eingeplanten Sequenzen (it.seq) stehen in ihrer Reihenfolge am Anfang des Blocks, die übrigen folgen in der Standardreihenfolge
+const sortItems = items => { const sq = items.filter(i => i.seq), rest = items.filter(i => !i.seq).sort((a, b) => seqIdx(a.id) - seqIdx(b.id)); items.splice(0, items.length, ...sq, ...rest); return items; };
 const FLOORPOSE = ['quad_cat', 'quad_diag', 'child', 'anahatasana', 'sphinx', 'cobra', 'plank_floor', 'bridge', 'supine_knee', 'supine_bent', 'leg_stretch', 'twist_supine', 'butterfly_lying', 'legs_wall', 'heart_supine', 'janu', 'malasana'];
 const onFloor = e => e && FLOORPOSE.includes(e.pose);
 
@@ -327,10 +329,10 @@ const plannedHaupt = s => sumMin(blkAll(s));
 // Kraftübungen: Anzahl im Block „Asanas (Hauptteil)“ an den Rahmen angleichen
 function syncKraft(c, s) {
   if (!bon(s, 'asana') || !s.blk || !s.blk.asana) return;
-  const items = s.blk.asana, want = s.kN != null ? s.kN : (c.kraft ? (c.kraftN || 1) : 0), ks = items.filter(i => (exById(i.id) || {}).c === 'kraft');
+  const items = s.blk.asana, want = s.kN != null ? s.kN : (c.kraft ? (c.kraftN || 1) : 0), ks = items.filter(i => !i.seq && (exById(i.id) || {}).c === 'kraft');
   while (ks.length > want) { const k = ks.pop(); items.splice(items.indexOf(k), 1); }
   if (ks.length < want) { const ctx = mkCtx(c, s, Math.random); ctx.have = new Set(blkIds(s)); pickN(poolOf('kraft'), want - ks.length, ctx).forEach(e => items.push(mkItem(e))); }
-  items.sort((a, b) => seqIdx(a.id) - seqIdx(b.id));
+  sortItems(items);
 }
 // Der frühere Block „Kraftübung“ ist jetzt Teil von „Asanas (Hauptteil)“
 function mergeKraft(s) {
@@ -465,8 +467,8 @@ function blockBudgets(c, H, noShakti) {
   return B;
 }
 // Minuten der Übungen proportional auf ein Zeitbudget skalieren (auf halbe Minuten gerundet)
-function fitItems(items, budget) {
-  budget = half(budget); const tot = sumMin(items);
+function fitItems(all, budget) {
+  const items = all.filter(i => !i.seq); budget = half(budget) - sumMin(all.filter(i => i.seq)); const tot = sumMin(items);
   if (!items.length || budget <= 0 || !tot) return;
   const f = budget / tot, mx = i => Math.max(1, ((exById(i.id) || {}).m || 1) * 3);
   items.forEach(i => { i.min = clamp(half(i.min * f), 0.5, mx(i)); });
@@ -565,7 +567,9 @@ function rebalanceBlock(c, s, k) {
   const ctx = mkCtx(c, s, Math.random); ctx.have = new Set(blkIds(s));
   const isK = i => (exById(i.id) || {}).c === 'kraft', main = abOf(s, k) === 'asana';
   const pool = poolFor(s, k).concat(FALLBACK[abOf(s, k)] ? poolOf(...FALLBACK[abOf(s, k)]) : []).filter(e => !(main && e.c === 'kraft'));
-  const popOne = () => { let i = items.length - 1; if (main) { while (i >= 0 && isK(items[i])) i--; if (i < 0) i = items.length - 1; } items.splice(i, 1); };
+  // Sequenz-Übungen werden nie entfernt; im Hauptblock gehen zuerst Nicht-Kraftübungen vom Ende
+  const pickIdx = () => { for (let i = items.length - 1; i >= 0; i--) if (!items[i].seq && !(main && isK(items[i]))) return i; for (let i = items.length - 1; i >= 0; i--) if (!items[i].seq) return i; return -1; };
+  const popOne = () => { const i = pickIdx(); if (i < 0) return false; items.splice(i, 1); return true; };
   const addBest = () => {
     const best = eligible(pool, ctx).map(e => ({ e, sc: scoreEx(e, ctx) })).sort((a, b) => b.sc - a.sc)[0];
     if (!best) return false;
@@ -575,12 +579,12 @@ function rebalanceBlock(c, s, k) {
   const tot = sumMin(items); let g = 0;
   if (items.length && tot > 0) {
     const target = Math.max(1, Math.round(items.length * T / tot));   // Verhältnis der Zeitänderung (Durchschnittszeit je Übung)
-    while (items.length > target) popOne();
+    while (items.length > target && popOne());
     while (items.length < target && g++ < 40) if (!addBest()) break;
   }
   g = 0; while (sumMin(items) < T - 0.75 && g++ < 40) if (!addBest()) break;        // fein: näher an die Zielzeit
-  g = 0; while (items.length > 1 && sumMin(items) - items[items.length - 1].min >= T - 0.25 && g++ < 40) popOne();
-  items.sort((a, b) => seqIdx(a.id) - seqIdx(b.id));
+  g = 0; while (items.length > 1 && g++ < 40) { const i = pickIdx(); if (i < 0 || sumMin(items) - items[i].min < T - 0.25) break; items.splice(i, 1); }
+  sortItems(items);
 }function rerollBlock(c, s, key) {
   const ctx = mkCtx(c, s, rng(Math.floor(Math.random() * 1e9)));
   Object.keys(s.blk).forEach(k => s.blk[k].forEach(i => { ctx.used[i.id] = (ctx.used[i.id] || 0) + (k === key ? 3 : 1); }));
@@ -589,6 +593,7 @@ function rebalanceBlock(c, s, k) {
   if (key === 'kraft') { B.kraftN = Math.max(1, s.blk.kraft.length || c.kraftN || 1); B.kraft = B.kraft || B.kraftN * 3; }
   else if (!(B[key] > 0)) B[key] = blockBudgets(c, +s.dur.haupt || 45)[key] || 5;
   s.blk[key] = pickBlock(c, key, ctx, B);
+  if (key === 'asana') applySeqPlan(c, s);
 }
 
 // ---------- Texte (Länge richtet sich nach der Dauer des Teils) ----------
@@ -775,6 +780,7 @@ function fillSession(c, s, idx, opts) {
   }
   s.mantra = mOn ? { id: pickMantra(c, s) } : null;
   fillExercises(c, s, idx);
+  applySeqPlan(c, s);
   if (!s.altDefSet) s.altDef = !!c.altDef;
   applyAlt(s);
   s.txEdited = {};

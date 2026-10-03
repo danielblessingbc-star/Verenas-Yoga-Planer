@@ -3,7 +3,7 @@ const KEY = 'yogaplaner.v1';
 const $ = s => document.querySelector(s);
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
-function defaults() { return { v: 1, courses: [], ratings: {}, customEx: [], exEdits: {}, vocab: {}, textTpl: [], settings: { apiKey: '', model: 'claude-sonnet-5-5', email: '', recipients: [] } }; }
+function defaults() { return { v: 1, courses: [], ratings: {}, customEx: [], exEdits: {}, vocab: {}, sequences: seqDefaults(), textTpl: [], settings: { apiKey: '', model: 'claude-sonnet-5-5', email: '', recipients: [] } }; }
 function loadState() {
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && Array.isArray(s.courses)) return Object.assign(defaults(), s, { settings: Object.assign(defaults().settings, s.settings || {}) }); } catch (e) { }
   return defaults();
@@ -104,6 +104,8 @@ function render() {
   else if (ui.view === 'course' && cur()) body = viewCourse(cur());
   else if (ui.view === 'singles') body = viewSingles();
   else if (ui.view === 'catalog') body = viewCatalog();
+  else if (ui.view === 'sequences') body = viewSequences();
+  else if (ui.view === 'seqcat') body = viewSeqCatalog();
   else if (ui.view === 'mantras') body = viewMantras();
   else if (ui.view === 'texts') body = viewTexts();
   else if (ui.view === 'email') body = renderEmailView();
@@ -153,6 +155,8 @@ const HI = {
   uebersicht: '<rect x="4" y="5" width="16" height="4" rx="1"/><rect x="4" y="11" width="16" height="4" rx="1"/><path d="M4 18h10"/>',
   analyse: '<circle cx="12" cy="12" r="8"/><path d="M12 4v8l6 4"/>',
   panalyse: '<path d="M5 20V10M10 20V5M15 20v-7M20 20V8"/>',
+  sequenz: '<rect x="3.5" y="5" width="4.5" height="4.5" rx="1"/><rect x="10" y="5" width="4.5" height="4.5" rx="1"/><rect x="16.5" y="5" width="4" height="4.5" rx="1"/><path d="M5.5 14.5h13M5.5 19h8"/>',
+  seqkat: '<path d="M4 5h6v6H4zM14 5h6v6h-6z"/><path d="M4 15h16M4 19h10"/>',
   mantra: '<path d="M4 12h2M8 8v8M12 5v14M16 8v8M20 12h-2"/>',
   email: '<path d="M4 4h16v12H4z"/><path d="M20 4l-8 5L4 4"/>',
   zahnrad: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>'
@@ -182,7 +186,7 @@ function nav() {
       + (isP ? `<button class="hact" data-a="newCourse">＋ Neues Programm</button>${act('fromTpl', '＋ Programm aus Vorlagen' + cnt(nt), 'data-a="ptab" data-v="fromTpl"')}${act('build', '＋ Programm aus Einzelstunden', 'data-a="ptab" data-v="build"')}`
         : `<button class="hact" data-a="newSingle">＋ Neue Einzelstunde</button>${act('fromTpl', '＋ Einzelstunde aus Vorlage' + cnt(nt), 'data-a="stab" data-v="fromTpl"')}${act('playMin', '▶ Minimalistischer Player', 'data-a="stab" data-v="playMin"')}${act('playDet', '▶ Detailplayer', 'data-a="stab" data-v="playDet"')}`) + '</div>';
   }
-  return `<header class="noprint hdr${c ? (isS ? ' c-single' : ' c-prog') : ''}"><div class="hrow"><div class="brand">${LOTUS}Verenas Yoga Planomat<small class="ver" title="Programmversion">${typeof APP_VER !== 'undefined' ? APP_VER : ''}</small></div>${b('courses', 'Programme', 'prog')}${b('singles', 'Stunden', 'stunde')}${b('catalog', 'Übungskatalog', 'katalog')}${b('mantras', 'Mantras', 'mantra')}${b('texts', 'Textvorlagen', 'textvorl')}${b('email', 'Emails', 'email')}${c ? '<span class="hname ' + (isS ? 'is-single' : 'is-prog') + '\" title="' + esc(c.name) + '\">' + '<b>' + esc(c.name) + '</b></span>' : ''}<span class="grow"></span><button class="tab gear${ui.view === 'settings' ? ' on' : ''}" data-a="nav" data-v="settings" title="Einstellungen & Backup" aria-label="Einstellungen & Backup">${hicon('zahnrad')}</button></div>${ctx}</header>`;
+  return `<header class="noprint hdr${c ? (isS ? ' c-single' : ' c-prog') : ''}"><div class="hrow"><div class="brand">${LOTUS}Verenas Yoga Planomat<small class="ver" title="Programmversion">${typeof APP_VER !== 'undefined' ? APP_VER : ''}</small></div>${b('courses', 'Programme', 'prog')}${b('singles', 'Stunden', 'stunde')}${b('sequences', 'Sequenzen', 'sequenz')}${b('catalog', 'Übungskatalog', 'katalog')}${b('seqcat', 'Sequenzkatalog', 'seqkat')}${b('mantras', 'Mantras', 'mantra')}${b('texts', 'Textvorlagen', 'textvorl')}${b('email', 'Emails', 'email')}${c ? '<span class="hname ' + (isS ? 'is-single' : 'is-prog') + '\" title="' + esc(c.name) + '\">' + '<b>' + esc(c.name) + '</b></span>' : ''}<span class="grow"></span><button class="tab gear${ui.view === 'settings' ? ' on' : ''}" data-a="nav" data-v="settings" title="Einstellungen & Backup" aria-label="Einstellungen & Backup">${hicon('zahnrad')}</button></div>${ctx}</header>`;
 }
 function viewCourses() {
   const pt = ui.pTab || 'list', cs = state.courses.filter(c => !c.template && !c.single), ts = state.courses.filter(c => c.template && !c.single);
@@ -397,7 +401,7 @@ function sessBlocks(c, s) {
       out.push(`<div class="ar sub${on ? '' : ' off'}"><div class="an"><i class="sk-atem"></i><div><b>↳ Wahrnehmungsübung</b><small>im Atemteil, die Zeit wird geteilt</small></div></div><div class="as">${sGrp(ONOFF, wOn ? 1 : 0, 'sbWahr', id, k, !on)}</div><div class="am muted">–</div></div>`);
     }
     if (ab === 'asana' && !custom) {
-      const kn = (s.blk.asana || []).filter(i => (exById(i.id) || {}).c === 'kraft').length;
+      const kn = (s.blk.asana || []).filter(i => !i.seq && (exById(i.id) || {}).c === 'kraft').length;
       out.push(`<div class="ar sub${on ? '' : ' off'}"><div class="an"><i class="sk-kraft"></i><div><b>↳ davon Kraftübungen</b><small>innerhalb der Asanas, rot markiert</small></div></div><div class="as">${sGrp([[1, '1'], [2, '2'], [3, '3'], [0, 'Rauslassen']], Math.min(kn, 3), 'sbKraft', id, k, !on)}</div><div class="am muted">${kn ? '≈ ' + kn * 3 + ' Min.' : '–'}</div></div>`);
     }
   });
@@ -492,6 +496,7 @@ ${fld('Kernsatz', inp(`s:${id}:motto.kern`, 'text', s.motto.kern, 'data-tx="kern
 ${fld('Körperlicher Fokus', inp(`s:${id}:motto.focus`, 'text', s.motto.focus, 'data-tx="focus"'), 'wide')}
 </div>
 ${defPanel(c, s)}
+${seqPanel(c, s)}
 ${fltPanel(c, s)}
 <div class="timebox"><div class="tbh"><b>Ablauf dieser Stunde</b> <span id="tinfo-${id}">${timeInfo(s)}</span> <span class="grow"></span><button class="ghost sm" data-a="bAll" data-id="${id}" data-v="1">▾ alle aufklappen</button><button class="ghost sm" data-a="bAll" data-id="${id}" data-v="0">▸ alle zuklappen</button></div><div id="strip-${id}">${stripHtml(s, true)}</div></div>
 ${order(s).filter(k => bon(s, k)).map(k => blockCard(c, s, k)).join('')}
@@ -526,7 +531,7 @@ function blockEditor(c, s, [key, label, cats]) {
     const e = exById(it.id) || { n: '?', pose: 'stand', lv: 1, x: [], c: 'stand' };
     const ea = altE(e), ha = altH(e), P = `s:${s.id}:blk.${key}.${j}`;
     return `<div class="xrow" data-dsid="${s.id}" data-db="${key}" data-di="${j}"><div class="xc xt"><div class="xtile cat-${e.c} pkt" draggable="true" data-a="pk" data-sid="${s.id}" data-b="${key}" data-i="${j}" title="Zum Verschieben ziehen · Klick: Übung wählen (mit Strichmännchen)">${figureSVG(e.pose)}${peakStar(e)}</div>
-<b class="an">${esc(e.n)}</b>${e.sa ? `<i class="sa">${esc(e.sa)}</i>` : ''}</div>
+<b class="an">${esc(e.n)}</b>${e.sa ? `<i class="sa">${esc(e.sa)}</i>` : ''}${it.seq ? `<span class="chip seqc" title="Aus der Sequenz „${esc(it.seqName)}“ (Sequenzplanung dieser Stunde)">⟳ ${esc(it.seqName)}</span>` : ''}</div>
 <div class="xc">${altTile(s, key, j, ea, 'down', effE(it))}</div>
 <div class="xc">${altTile(s, key, j, ha, 'up', effH(it))}</div>
 <div class="xc xk">${stRegChips(e)}</div>
@@ -689,7 +694,7 @@ function startCourse(c) { state.courses.unshift(c); planCourse(c); ui.view = 'co
 function sessionOf(id) { const c = cur(); return { c, s: c.sessions.find(x => x.id === id) }; }
 function regenIfNotEdited(c, s, k) { if (!s.txEdited[k]) genTexts(c, s, idxOf(c, s), [k]), s.txEdited[k] = false; }
 // ---- Status: Änderungen setzen die Stunde (bzw. den Rahmen) automatisch auf „In Planung“ ----
-const MUT = new Set(['mv', 'rm', 'alt', 'togAlt', 'cntBlk', 'rerollBlk', 'fitBlk', 'fitS', 'pkpick', 'pkbrpick', 'pkmanpick', 'tglw', 'addBlock', 'delBlock', 'mvBlock', 'bmReset', 'bmOff', 'sbOn', 'sbWahr', 'sbMobi', 'sbKraft', 'tplUse', 'txClear', 'aiTx', 'bothAll']);
+const MUT = new Set(['seqOn', 'seqBlkAdd', 'seqBlkDel', 'seqApply', 'mv', 'rm', 'alt', 'togAlt', 'cntBlk', 'rerollBlk', 'fitBlk', 'fitS', 'pkpick', 'pkbrpick', 'pkmanpick', 'tglw', 'addBlock', 'delBlock', 'mvBlock', 'bmReset', 'bmOff', 'sbOn', 'sbWahr', 'sbMobi', 'sbKraft', 'tplUse', 'txClear', 'aiTx', 'bothAll']);
 const MUTC = new Set(['toggleGeb', 'toggleDay', 'cTog']);
 function setStatusDom(f, v) { document.querySelectorAll(`select[data-f="${f}"]`).forEach(n => { n.value = v; n.className = n.className.replace(/stat-\w+/, 'stat-' + v); }); }
 function touch(s) {
@@ -835,13 +840,13 @@ const A = {
   toggleDay(d) { const c = cur(); c.days = c.days || []; const k = +d.k, i = c.days.indexOf(k); i < 0 ? c.days.push(k) : c.days.splice(i, 1); c.dirty = true; save(); render(); },
   cntBlk(d) {
     const { c, s } = sessionOf(d.id), k = d.b, a = s.blk[k];
-    if (+d.d < 0) { if (!a.length) return; a.pop(); }
+    if (+d.d < 0) { const i = a.map(x => !x.seq).lastIndexOf(true); if (i < 0) return; a.splice(i, 1); }
     else {
       const ctx = mkCtx(c, s, Math.random); ctx.have = new Set(blkIds(s));
       const pool = withPref(poolOf(...catsOf(s, k)), abOf(s, k), ctx).concat(FALLBACK[abOf(s, k)] ? poolOf(...FALLBACK[abOf(s, k)]) : []);
       const best = eligible(pool, ctx).map(e => ({ e, sc: scoreEx(e, ctx) })).sort((x, y) => y.sc - x.sc)[0];
       if (!best) { toast('Keine weitere passende Übung gefunden.'); return; }
-      const ni = mkItem(best.e); applyAlt(s, ni); a.push(ni); a.sort((x, y) => seqIdx(x.id) - seqIdx(y.id));
+      const ni = mkItem(best.e); applyAlt(s, ni); a.push(ni); sortItems(a);
     }
     save(); render();
   },
@@ -1269,7 +1274,7 @@ function importFile(file) {
       else if (Array.isArray(j.courses)) {
         const replace = confirm('OK = vorhandene Daten ERSETZEN\nAbbrechen = mit vorhandenen Daten ZUSAMMENFÜHREN');
         if (replace) state = Object.assign(defaults(), j);
-        else { const ids = new Set(state.courses.map(c => c.id)); j.courses.forEach(c => { if (!ids.has(c.id)) state.courses.push(c); }); Object.assign(state.ratings, j.ratings || {}); (j.customEx || []).forEach(e => { if (!state.customEx.some(x => x.id === e.id)) state.customEx.push(e); }); }
+        else { const ids = new Set(state.courses.map(c => c.id)); j.courses.forEach(c => { if (!ids.has(c.id)) state.courses.push(c); }); Object.assign(state.ratings, j.ratings || {}); (j.customEx || []).forEach(e => { if (!state.customEx.some(x => x.id === e.id)) state.customEx.push(e); }); (j.sequences || []).forEach(q => { if (!state.sequences.some(x => x.id === q.id)) state.sequences.push(q); }); }
       } else throw new Error('Unbekanntes Dateiformat');
       mergeCatalogImport(j); normalizeState(); applyCatalogState(); save(); ui.view = 'courses'; render(); toast('Import erfolgreich.');
     } catch (err) { toast('Import fehlgeschlagen: ' + err.message); }
@@ -1280,6 +1285,8 @@ function importFile(file) {
 // Atem-Kacheln-Aktionen (liegen im CH-Objekt definiert, werden per data-a aufgerufen)
 A.bmOff = function (d) { const { c, s } = sessionOf(d.id), k = d.b; s.bm[k].on = false; s.bmCustom = true; syncHaupt(s); genTexts(c, s, idxOf(c, s)); save(); render(); toast((k === 'atem' ? 'Atemteil' : 'Mantra') + ' ausgeblendet – wieder einschaltbar unter „Ablauf & Blöcke definieren“.', 5000); };
 Object.assign(A, SINGLE_ACTIONS);
+Object.assign(A, SEQ_ACTIONS);
+Object.assign(CH, SEQ_CH);
 Object.assign(A, MANTRA_ACTIONS);
 Object.assign(A, TXVORL_ACTIONS);
 Object.assign(A, PLAYER_ACTIONS);
@@ -1307,10 +1314,10 @@ Object.assign(A, {
     s.blk.mobi = []; rerollBlock(c, s, 'mobi'); genTexts(c, s, idxOf(c, s)); save(); render();
   },
   sbKraft(d) {
-    const { c, s } = sessionOf(d.id), n = +d.v, items = s.blk.asana || (s.blk.asana = []), ks = items.filter(i => (exById(i.id) || {}).c === 'kraft');
+    const { c, s } = sessionOf(d.id), n = +d.v, items = s.blk.asana || (s.blk.asana = []), ks = items.filter(i => !i.seq && (exById(i.id) || {}).c === 'kraft');
     while (ks.length > n) { const k = ks.pop(); items.splice(items.indexOf(k), 1); }
     if (ks.length < n) { const ctx = mkCtx(c, s, Math.random); ctx.have = new Set(blkIds(s)); pickN(poolOf('kraft'), n - ks.length, ctx).forEach(e => items.push(mkItem(e))); }
-    s.kN = n; items.sort((a, b) => seqIdx(a.id) - seqIdx(b.id)); s.bmCustom = true; save(); render();
+    s.kN = n; sortItems(items); s.bmCustom = true; save(); render();
   }
 });
 Object.assign(CH, TXVORL_CH);
