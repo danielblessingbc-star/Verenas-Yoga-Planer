@@ -507,7 +507,7 @@ function renderSpick(c, s, i) {
   const rows = order(s).filter(k => bon(s, k)).map(k => {
     const ty = bty(s, k), m = ty === 'ex' ? sumMin(s.blk[k] || []) : blockMin(s, k), a = t; t += m;
     let inh;
-    if (ty === 'ex') inh = (s.blk[k] || []).map(it => { const e = exById(it.id); if (!e) return ''; if (e.txt && !isTxb(it)) return esc(e.n + ': ' + sbInfo(it, e).title); if (e.txt) return 'Text: ' + esc(String(it.tx || '').replace(/\s+/g, ' ').trim().slice(0, 50) || '…'); const ea = effE(it) ? altE(e) : null; return esc(e.n) + (e.peak ? ' ★' : '') + (it.opt ? ' <span class="pr">(optional)</span>' : '') + (ea ? ` <span class="pr">(leichter: ${esc(ea.n)})</span>` : ''); }).filter(Boolean).join(' · ') || '–';
+    if (ty === 'ex') inh = (s.blk[k] || []).map(it => { const e = exById(it.id); if (!e) return ''; if (isRepSb(it)) return esc(e.sb === 'rep' ? e.rn + 'x [' : ']'); if (e.txt && !isTxb(it)) return esc(e.n + ': ' + sbInfo(it, e).title); if (e.txt) return 'Text: ' + esc(String(it.tx || '').replace(/\s+/g, ' ').trim().slice(0, 50) || '…'); const ea = effE(it) ? altE(e) : null; return esc(e.n) + (e.peak ? ' ★' : '') + (it.opt ? ' <span class="pr">(optional)</span>' : '') + (ea ? ` <span class="pr">(leichter: ${esc(ea.n)})</span>` : ''); }).filter(Boolean).join(' · ') || '–';
     else if (ty === 'mantra') { const mm = s.mantra && manById(s.mantra.id); inh = mm ? esc(mm.n + ': ' + mm.text.join(' – ')) : '–'; }
     else if (ty === 'atem') inh = esc([(exById(s.atem.a) || {}).n, s.atem.w && (exById(s.atem.w) || {}).n].filter(Boolean).join(' + '));
     else inh = k === 'einl' ? esc(s.motto.title + ' – ' + (s.tx.focus || s.motto.focus)) : k === 'shava' ? '„' + esc(s.tx.kern || s.motto.kern) + '“' : k === 'schluss' ? 'Nachspüren' : 'Text';

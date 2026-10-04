@@ -25,16 +25,17 @@ function plSteps(c, s) {
   order(s).filter(k => bon(s, k)).forEach(k => {
     const ty = bty(s, k), ab = abOf(s, k), name = bn(s, k);
     if (ty === 'ex') {
-      (s.blk[k] || []).forEach(it => {
+      repExpand(s.blk[k] || []).forEach(({ it, rds }) => {   // Wiederholungen ausgeschrieben, jede Runde als eigene Schritte
         const e = exById(it.id); if (!e) return;
+        const bk = name + (rds.length ? ' · Runde ' + rds.map(([r, n]) => r + '/' + n).join(' · ') : '');
         if (e.txt && !isTxb(it)) { // Sonderbaustein Lied / Mantra
           const b = sbInfo(it, e), cls = 'cat-' + e.c;
-          steps.push({ block: name, title: b.title, sub: b.sub || e.n, min: +it.min || e.m, cls, tile: tile(cls, b.fig), det: sbDet(it, e), text: true });
+          steps.push({ block: bk, title: b.title, sub: b.sub || e.n, min: +it.min || e.m, cls, tile: tile(cls, b.fig), det: sbDet(it, e), text: true });
           return;
         }
         if (e.txt) { // Sonderbaustein Textblock: Text wie ein Textblock der Stunde anzeigen
           const d = +it.min || 1;
-          steps.push({ block: name, title: 'Text', sub: name, min: d, cls: 'cat-textblock', tile: tile('cat-textblock', figureSVG('textblock')), det: [{ ic: 'cue', h: 'Text', paras: String(it.tx || '').split(/\n{2,}/).filter(x => x.trim()) }], text: true });
+          steps.push({ block: bk, title: 'Text', sub: name, min: d, cls: 'cat-textblock', tile: tile('cat-textblock', figureSVG('textblock')), det: [{ ic: 'cue', h: 'Text', paras: String(it.tx || '').split(/\n{2,}/).filter(x => x.trim()) }], text: true });
           return;
         }
         const kraft = e.c === 'kraft' && e.how, ea = altE(e), ha = altH(e), lab = key => katLabels(e, key);
@@ -50,7 +51,7 @@ function plSteps(c, s) {
         if (achten.length) det.push({ ic: 'warn', h: 'Auf was achten', items: achten, w: true });
         const vari = [].concat(ea ? ['↓ leichter: ' + ea.n] : [], ha ? ['↑ anspruchsvoller: ' + ha.n] : []);
         if (vari.length) det.push({ ic: 'wirk', h: 'Varianten', items: vari });
-        steps.push({ block: name, title: e.n, sub: e.sa || '', opt: !!it.opt, min: +it.min || e.m || 1, cls: 'cat-' + e.c + (it.opt ? ' opt' : ''), tile: tile('cat-' + e.c + (it.opt ? ' opt' : ''), figureSVG(e.pose), peakStar(e) + handsMark(it, e)), det, dur: [fmtMin(+it.min || e.m || 1) + ' Min.'].concat(it.rep ? [it.rep] : []).join(' · ') });
+        steps.push({ block: bk, title: e.n, sub: e.sa || '', opt: !!it.opt, min: +it.min || e.m || 1, cls: 'cat-' + e.c + (it.opt ? ' opt' : ''), tile: tile('cat-' + e.c + (it.opt ? ' opt' : ''), figureSVG(e.pose), peakStar(e) + handsMark(it, e)), det, dur: [fmtMin(+it.min || e.m || 1) + ' Min.'].concat(it.rep ? [it.rep] : []).join(' · ') });
       });
     } else if (ty === 'atem') {
       const d = +s.dur[k] || 0, a = BR.find(b => b.id === (s.atem && s.atem.a)), w = BR.find(b => b.id === (s.atem && s.atem.w));
