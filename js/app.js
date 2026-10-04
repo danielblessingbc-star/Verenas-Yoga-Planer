@@ -50,14 +50,14 @@ function defaultCourse(over) {
   return Object.assign({
     id: uid(), name: 'Neues Programm', created: todayIso(), count: 10, start: todayIso(), rhythm: 'weekly', days: [], pauses: '', durMode: 'einzeln', total: 75, durs: splitTotal(75), st: [], reg: [],
     status: 'vorgeplant', bm: {}, level: 'sen', breath: 'gemischt', kraft: true, kraftN: 1, mantra: 'immer', mobi: 'sitz', shakti: 0, shaktiMode: 'aus', einlOn: 1, schlussOn: 1, shavaOn: 1, ausglOn: 1, gebrechen: [], showAlt: false, email: state.settings.email || '',
-    motto: { mode: 'uebermotto', preset: 'alltag', free: '', eigen: '' }, seed: Math.floor(Math.random() * 1e9), sessions: [], dirty: false, template: false
+    motto: { einzel: 'keine', mode: '', preset: 'alltag', free: '', eigen: '' }, seed: Math.floor(Math.random() * 1e9), sessions: [], dirty: false, template: false
   }, over || {});
 }
 function defaultCourseFixed(over) { const c = defaultCourse(over); if (over && over.durs) { if (!(over.total > 0)) c.total = durKeys(c).reduce((x, k) => x + (+c.durs[k] || 0), 0); fitDurs(c, 'norm'); } else { c.durs = splitTotal(c.total); fitDurs(c, 'total'); } return c; }
 const BUILTIN = [
-  { name: 'Senioren Herbst–Winter (15 Stunden, nach Vorlage)', over: { count: 15, start: '2026-09-22', pauses: '27.10.2026; 22.12.2026 bis 05.01.2027', level: 'sen', total: 75, breath: 'gemischt', kraft: true, motto: { mode: 'uebermotto', preset: 'herbstwinter', free: '', eigen: '' } } },
-  { name: 'Anfänger Frühling (10 Stunden)', over: { count: 10, level: 'anf', total: 60, breath: 'atem', kraft: false, motto: { mode: 'uebermotto', preset: 'fruehling', free: '', eigen: '' } } },
-  { name: 'Gemischte Gruppe Sommer (10 Stunden)', over: { count: 10, level: 'gemischt', total: 75, breath: 'atem_wahr', kraft: true, showAlt: true, motto: { mode: 'uebermotto', preset: 'sommer', free: '', eigen: '' } } }
+  { name: 'Senioren Herbst–Winter (15 Stunden, nach Vorlage)', over: { count: 15, start: '2026-09-22', pauses: '27.10.2026; 22.12.2026 bis 05.01.2027', level: 'sen', total: 75, breath: 'gemischt', kraft: true, motto: { einzel: 'auto', mode: 'uebermotto', preset: 'herbstwinter', free: '', eigen: '' } } },
+  { name: 'Anfänger Frühling (10 Stunden)', over: { count: 10, level: 'anf', total: 60, breath: 'atem', kraft: false, motto: { einzel: 'auto', mode: 'uebermotto', preset: 'fruehling', free: '', eigen: '' } } },
+  { name: 'Gemischte Gruppe Sommer (10 Stunden)', over: { count: 10, level: 'gemischt', total: 75, breath: 'atem_wahr', kraft: true, showAlt: true, motto: { einzel: 'auto', mode: 'uebermotto', preset: 'sommer', free: '', eigen: '' } } }
 ];
 function cloneCourse(src, over) {
   const c = JSON.parse(JSON.stringify(src));
@@ -266,15 +266,18 @@ function frameView(c) {
   const chipsC = (field, map) => Object.keys(map).map(k => `<label class="fchip${(c[field] || []).includes(k) ? ' on' : ''}"><input type="checkbox" data-a="cTog" data-f2="${field}" data-v="${k}" ${(c[field] || []).includes(k) ? 'checked' : ''}> ${esc(map[k])}</label>`).join('');  
   const ml = mottoLines(c), gb = (a, extra, tip) => `<button type="button" class="gbtn" data-a="${a}" ${extra || ''} title="${tip}">${state.settings.apiKey ? '🤖' : '✨'}</button>`;
   const mrow = (i, lab) => `<div class="frow">${lab ? `<span class="fno">${lab}</span>` : ''}<input type="text" data-chg="mline" data-i="${i}" value="${esc(ml[i])}" placeholder="${esc(((c.sessions[i] || {}).motto || {}).title || 'leer = wird generiert')}" autocomplete="off">${gb('genMotto', 'data-i="' + i + '"', 'Dieses Motto neu generieren' + (state.settings.apiKey ? ' (KI)' : ' (aus den eingebauten Mottos)'))}</div>`;
+  const em = mottoMode(c);
   const mottoFld = c.single
-    ? fld('Motto', mrow(0), 'wide')
-    : fld('Mottos der Stunden (eine Zeile je Stunde, optional „Titel | Kernsatz“)', ml.map((_, i) => mrow(i, i + 1)).join(''), 'wide');
+    ? fld('Motto <span class="muted">(leer = generiert)</span>', mrow(0), 'wide')
+    : fld('Übermotto <span class="muted">(leer = entfällt)</span>', `<div class="frow">${inp('c:motto.free', 'text', uebermottoText(c), 'data-dirty="1" data-chg="ueber" placeholder="z. B. Reise durch den Herbst"')}${gb('genUeber', '', 'Übermotto generieren' + (state.settings.apiKey ? ' (KI)' : ' (aus den Vorschlägen)'))}</div>`, 'wide')
+      + fld('Einzelmottos', `<div class="radios">${[['keine', 'Keine'], ['eigen', 'Einzeln definieren'], ['auto', 'Automatisch generiert' + (state.settings.apiKey ? ' (KI, passend zum Übermotto)' : ' (passend zum Übermotto)')]].map(([v, l]) => `<label class="chk"><input type="radio" name="em" data-f="c:motto.einzel" value="${v}" ${em === v ? 'checked' : ''} data-dirty="1"> ${l}</label>`).join('')}</div>`, 'wide')
+      + (em === 'eigen' ? fld(`Mottos der ${c.count} Stunden <span class="muted">(eine Zeile je Stunde, optional „Titel | Kernsatz“, leer = generiert)</span>`, ml.map((_, i) => mrow(i, i + 1)).join(''), 'wide') : '');
   const tot = c.sessions.reduce((a, s) => a + plannedTotal(s), 0), h = Math.floor(tot / 60);
   const pn = (n, t, hint) => `<h3><span class="pn">${n}</span>${t}</h3><p class="phint">${hint}</p>`;
   return `<p class="muted noprint">${c.single ? 'Die Vorgaben legen Gruppe, Einschränkungen, Dauer und Auswahl für diese Einzelstunde fest. Danach planst du die Stunde (Schritt 2).' : 'Die Rahmenplanung legt fest, was für das ganze Programm gilt. Danach planst du jede Stunde einzeln (Schritt 2).'}</p>
 <div class="fcards noprint">
 <section class="panel span2"><h2 class="ph">${pn(1, c.single ? 'Einzelstunde & Motto' : 'Programm & Motto', c.single ? 'Name, Vorlage und Motto der Stunde.' : 'Name, Vorlage und roter Faden der Stunden.')}</h2><div class="grid">
-${fld((c.single ? 'Name der Einzelstunde' : 'Programmname') + ' <span class="muted">(leer = Motto)</span>', `<div class="frow">${inp('c:name', 'text', c.name, 'class="h1in" data-chg="cname" placeholder="leer = Motto' + (c.single ? '' : ' der ersten bis letzten Stunde') + '"')}${gb('genName', '', 'Namen generieren' + (state.settings.apiKey ? ' (KI)' : ' (aus dem Motto)'))}</div>`, 'wide')}
+${fld((c.single ? 'Name der Einzelstunde' : 'Programmname') + ' <span class="muted">(leer = ' + (c.single ? 'Motto' : 'Übermotto') + ')</span>', `<div class="frow">${inp('c:name', 'text', c.name, 'class="h1in" data-chg="cname" placeholder="leer = ' + (c.single ? 'Motto' : 'Übermotto') + '"')}${gb('genName', '', 'Namen generieren' + (state.settings.apiKey ? ' (KI)' : c.single ? ' (aus dem Motto)' : ' (aus dem Übermotto)'))}</div>`, 'wide')}
 ${mottoFld}
 </div></div></section>
 <section class="panel"><h2 class="ph">${pn(2, c.single ? 'Datum' : 'Termine & Rhythmus', c.single ? 'Wann findet die Einzelstunde statt?' : 'Wie viele Stunden, wann und wie oft?')}</h2><div class="grid">
@@ -790,7 +793,8 @@ const A = {
       const msg = edited || textsEdited ? `${edited ? edited + ' Stunde(n) mit eigenen Änderungen' : 'Von Hand bearbeitete Texte'} werden neu befüllt/überschrieben (Stunden mit Status „Fertig“ und gesperrte Stunden bleiben)` : 'Der Rahmen hat den Status „Fertig“ – Stunden trotzdem neu anlegen';
       if (!confirmTwice(el, 'plan', msg, '⚠ Ja, jetzt anwenden')) return;
     }
-    if (state.settings.apiKey && mottoLines(c).some(x => !x)) { toast('KI entwirft die leeren Mottos …'); for (let i = 0; i < mottoLines(c).length; i++) if (!mottoLines(c)[i]) setMottoLine(c, i, (await genOneMotto(c, mottoLines(c))).text); }
+    if (state.settings.apiKey && !c.single && mottoMode(c) === 'auto') { toast('KI entwirft die Einzelmottos …'); try { c.motto.aiList = await aiMottos(c); } catch (e) { console.error(e); c.motto.aiList = null; toast('⚠ KI nicht erreichbar, Einzelmottos aus den Vorschlägen: ' + e.message, 8000); } }
+    if (state.settings.apiKey && (c.single || mottoMode(c) === 'eigen') && mottoLines(c).some(x => !x)) { toast('KI entwirft die leeren Mottos …'); for (let i = 0; i < mottoLines(c).length; i++) if (!mottoLines(c)[i]) setMottoLine(c, i, (await genOneMotto(c, mottoLines(c))).text); }
     planCourse(c); ui.sel = c.sessions[0] && c.sessions[0].id; ui.tab = 'sessions'; save(); render(); window.scrollTo(0, 0); toast('Rahmen auf die Stunden angewendet – weiter mit der Einzelstundenplanung.');
   },
   dates() { const c = cur(); calcDates(c); save(); render(); },
@@ -852,11 +856,17 @@ const A = {
     if (r.err) toast('⚠ KI nicht erreichbar, Motto aus den eingebauten Mottos: ' + r.err, 8000);
   },
   async genName() {
-    const c = cur(); let mn = mottoName(c);
-    if (!mn) { const ml = mottoLines(c); if (!ml[0]) { setMottoLine(c, 0, (await genOneMotto(c, [])).text); } mn = mottoLines(c)[0].split('|')[0].trim(); }
+    const c = cur(); let mn = autoName(c);
+    if (c.single && !mn) { const ml = mottoLines(c); if (!ml[0]) { setMottoLine(c, 0, (await genOneMotto(c, [])).text); } mn = mottoLines(c)[0].split('|')[0].trim(); }
+    if (!mn && !c.single && !state.settings.apiKey) { toast('Bitte zuerst ein Übermotto eingeben (oder erzeugen lassen).'); return; }
     toast(state.settings.apiKey ? 'KI entwirft einen Namen …' : 'Name wird erzeugt …');
     const r = await genName(c); c.name = r.text || mn; save(); render();
     if (r.err) toast('⚠ KI nicht erreichbar, Name aus dem Motto: ' + r.err, 8000);
+  },
+  async genUeber() {
+    const c = cur(); toast(state.settings.apiKey ? 'KI entwirft ein Übermotto …' : 'Übermotto wird erzeugt …');
+    const r = await genUeber(c); c.motto.free = r.text; c.dirty = true; save(); render();
+    if (r.err) toast('⚠ KI nicht erreichbar, Übermotto aus den Vorschlägen: ' + r.err, 8000);
   },
   async aiMottos() {
     const c = cur(); toast('KI entwirft Mottos …');
@@ -970,7 +980,8 @@ const A = {
 };
 const CH = {
   mline(el) { const c = cur(); setMottoLine(c, +el.dataset.i, el.value); c.dirty = true; save(); const b = $('#dirtyBanner'); if (b) b.classList.remove('hide'); },
-  cname(el) { const c = cur(); c.name = el.value.trim(); if (!c.name) { const mn = mottoName(c) || (mottoLines(c)[0] || '').split('|')[0].trim(); if (mn) { c.name = mn; el.value = mn; } } save(); },
+  ueber(el) { const c = cur(); c.motto.free = el.value.trim(); c.motto.mode = ''; c.dirty = true; save(); },
+  cname(el) { const c = cur(); c.name = el.value.trim(); if (!c.name) { const mn = autoName(c) || (c.single ? (mottoLines(c)[0] || '').split('|')[0].trim() : ''); if (mn) { c.name = mn; el.value = mn; } } save(); },
   sbRef(el) {
     const { s } = sessionOf(el.dataset.sid), it = s.blk[el.dataset.b][+el.dataset.i], e = it && exById(it.id); if (!e || !e.txt) return;
     it.ref = el.value; touch(s);
