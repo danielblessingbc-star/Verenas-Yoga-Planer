@@ -105,6 +105,7 @@ function render() {
   else if (ui.view === 'singles') body = viewSingles();
   else if (ui.view === 'catalog') body = viewCatalog();
   else if (ui.view === 'sequences') body = viewSequences();
+  else if (ui.view === 'player') body = viewPlayers(ui.plTab === 'playDet' ? 'playDet' : 'playMin');
   else if (ui.view === 'seqcat') body = viewSeqCatalog();
   else if (ui.view === 'mantras') body = viewMantras();
   else if (ui.view === 'songs') body = viewSongs();
@@ -148,6 +149,7 @@ function refreshFields() {
 const HI = {
   textvorl: '<path d="M6 3.5h8.5L18 7v13.5H6z"/><path d="M14 3.5V7h4"/><path d="M9 11.5h6M9 14.5h6M9 17.5h3.5"/>',
   prog: '<path d="M4 6h16v13H4z"/><path d="M4 10h16M8 3v4M16 3v4"/><path d="M8 14h3M13 14h3"/>',
+  player: '<circle cx="12" cy="12" r="8.5"/><path d="M10 8.5v7l5.5-3.5z"/>',
   stunde: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/>',
   katalog: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
   rahmen: '<path d="M5 7h9M18 7h1M5 17h2M11 17h8M5 12h5M14 12h5"/><circle cx="16" cy="7" r="2"/><circle cx="9" cy="17" r="2"/><circle cx="12" cy="12" r="2"/>',
@@ -186,9 +188,13 @@ function nav() {
     const nl = state.courses.filter(x => isP ? (!x.template && !x.single) : (x.single && !x.template)).length, nt = state.courses.filter(x => x.template && (isP ? !x.single : x.single)).length + (isP ? BUILTIN.length : 0);
     ctx = `<div class="hctx is-actions">${tab('list', (isP ? 'Vorhandene Programme' : 'Vorhandene Einzelstunden') + cnt(nl))}<span class="hsep"></span>`
       + (isP ? `<button class="hact" data-a="newCourse">＋ Neues Programm</button>${act('fromTpl', '＋ Programm aus Vorlagen' + cnt(nt), 'data-a="ptab" data-v="fromTpl"')}${act('aiProg', '✨ Programm KI-generiert', 'data-a="ptab" data-v="aiProg"')}${act('build', '＋ Programm aus Einzelstunden', 'data-a="ptab" data-v="build"')}`
-        : `<button class="hact" data-a="newSingle">＋ Neue Einzelstunde</button>${act('fromTpl', '＋ Einzelstunde aus Vorlage' + cnt(nt), 'data-a="stab" data-v="fromTpl"')}${act('aiGen', '✨ KI-generierte Stunde', 'data-a="stab" data-v="aiGen"')}${act('playMin', '▶ Minimalistischer Player', 'data-a="stab" data-v="playMin"')}${act('playDet', '▶ Detailplayer', 'data-a="stab" data-v="playDet"')}`) + '</div>';
+        : `<button class="hact" data-a="newSingle">＋ Neue Einzelstunde</button>${act('fromTpl', '＋ Einzelstunde aus Vorlage' + cnt(nt), 'data-a="stab" data-v="fromTpl"')}<button class="hact" data-a="newEmptyTpl" title="Neue Einzelstunden-Vorlage ohne vorausgewählte Übungen anlegen">＋ Leere Vorlage</button>${act('aiGen', '✨ KI-generierte Stunde', 'data-a="stab" data-v="aiGen"')}`) + '</div>';
   }
-  return `<header class="noprint hdr${c ? (isS ? ' c-single' : ' c-prog') : ''}"><div class="hrow"><div class="brand">${LOTUS}Verenas Yoga Planomat<small class="ver" title="Programmversion">${typeof APP_VER !== 'undefined' ? APP_VER : ''}</small></div>${b('courses', 'Programme', 'prog')}${b('singles', 'Stunden', 'stunde')}${b('sequences', 'Sequenzen', 'sequenz')}${b('catalog', 'Übungskatalog', 'katalog')}${b('seqcat', 'Sequenzkatalog', 'seqkat')}${b('mantras', 'Mantras', 'mantra')}${b('songs', 'Lied-Katalog', 'lied')}${b('texts', 'Textvorlagen', 'textvorl')}${b('email', 'Emails', 'email')}${c ? '<span class="hname ' + (isS ? 'is-single' : 'is-prog') + '\" title="' + esc(c.name) + '\">' + '<b>' + esc(c.name) + '</b></span>' : ''}<span class="grow"></span><button class="tab gear${ui.view === 'settings' ? ' on' : ''}" data-a="nav" data-v="settings" title="Einstellungen & Backup" aria-label="Einstellungen & Backup">${hicon('zahnrad')}</button></div>${ctx}</header>`;
+  if (!c && ui.view === 'player') {
+    const pk = ui.plTab === 'playDet' ? 'playDet' : 'playMin', pb = (k, l) => `<button class="hact${pk === k ? ' on' : ''}" data-a="plTab" data-v="${k}">${l}</button>`;
+    ctx = `<div class="hctx is-actions">${pb('playMin', '▶ Minimalistischer Player')}${pb('playDet', '▶ Detailplayer')}</div>`;
+  }
+  return `<header class="noprint hdr${c ? (isS ? ' c-single' : ' c-prog') : ''}"><div class="hrow"><div class="brand">${LOTUS}Verenas Yoga Planomat<small class="ver" title="Programmversion">${typeof APP_VER !== 'undefined' ? APP_VER : ''}</small></div>${b('courses', 'Programme', 'prog')}${b('singles', 'Stunden', 'stunde')}${b('sequences', 'Sequenzen', 'sequenz')}${b('player', 'Player', 'player')}${b('catalog', 'Übungskatalog', 'katalog')}${b('seqcat', 'Sequenzkatalog', 'seqkat')}${b('mantras', 'Mantras', 'mantra')}${b('songs', 'Lied-Katalog', 'lied')}${b('texts', 'Textvorlagen', 'textvorl')}${b('email', 'Emails', 'email')}${c ? '<span class="hname ' + (isS ? 'is-single' : 'is-prog') + '\" title="' + esc(c.name) + '\">' + '<b>' + esc(c.name) + '</b></span>' : ''}<span class="grow"></span><button class="tab gear${ui.view === 'settings' ? ' on' : ''}" data-a="nav" data-v="settings" title="Einstellungen & Backup" aria-label="Einstellungen & Backup">${hicon('zahnrad')}</button></div>${ctx}</header>`;
 }
 function viewCourses() {
   const pt = ui.pTab || 'list', cs = state.courses.filter(c => !c.template && !c.single), ts = state.courses.filter(c => c.template && !c.single);
