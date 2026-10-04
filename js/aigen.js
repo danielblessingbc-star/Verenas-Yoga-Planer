@@ -391,3 +391,109 @@ Object.assign(AIGEN_ACTIONS, {
     finally { ui.aiProgBusy = false; render(); }
   }
 });
+
+
+// ---------- Einzelnen Übungsblock per KI neu berechnen (Einzelstundenplanung) ----------
+// Die KI wählt und ordnet die Übungen des Blocks so, dass sie aus der letzten Übung des vorigen Blocks heraus fließen und in den nächsten Block münden.
+// Es bleibt bei der Anzahl der Übungen des Blocks; Flows (Sequenzen) und Sonderbausteine bleiben an ihrer Stelle; Kandidaten kommen aus dem Katalog (Gruppe, Einschränkungen, Vorgaben und Filter der Stunde).
+const aiBlkEx = it => { const e = it && exById(it.id); return e && !e.txt ? e : null; };
+// Übung (oder Textstelle) direkt vor bzw. nach dem Block: nächster aktiver Block mit Inhalt
+function aiBlkNeighbors(s, key) {
+  const ks = order(s), i = ks.indexOf(key), exs = k => (s.blk[k] || []).map(aiBlkEx).filter(Boolean);
+  const res = { prev: null, next: null };
+  for (let j = i - 1; j >= 0 && !res.prev; j--) {
+    const k = ks[j]; if (!bon(s, k)) continue;
+    if (bty(s, k) === 'ex') { const l = exs(k); if (l.length) res.prev = { block: bn(s, k), e: l[l.length - 1] }; }
+    else res.prev = { block: bn(s, k), e: null };
+  }
+  for (let j = i + 1; j < ks.length && !res.next; j++) {
+    const k = ks[j]; if (!bon(s, k)) continue;
+    if (bty(s, k) === 'ex') { const l = exs(k); if (l.length) res.next = { block: bn(s, k), e: l[0] }; }
+    else res.next = { block: bn(s, k), e: null, lie: abOf(s, k) === 'shava' };
+  }
+  return res;
+}
+async function aiBlockPlan(c, s, key, ctxInfo) {
+  const { cands, skel, n, kN, pN, nb } = ctxInfo, ab = abOf(s, key);
+  const geb = effGeb(c, s).map(k => GEBRECHEN[k]).filter(Boolean), pos = e => AISEQ_POS[aiSeqPos(e)];
+  const prevTxt = nb.prev ? (nb.prev.e ? `Der vorige Block „${nb.prev.block}“ endet mit „${nb.prev.e.n}“ (${pos(nb.prev.e)}).` : `Davor kommt „${nb.prev.block}“ (Atem, Text oder Mantra, meist im aufrechten Sitzen).`) : 'Davor kommt nichts: die Stunde beginnt mit diesem Block.';
+  const nextTxt = nb.next ? (nb.next.e ? `Danach folgt der Block „${nb.next.block}“ und beginnt mit „${nb.next.e.n}“ (${pos(nb.next.e)}).` : nb.next.lie ? `Danach folgt „${nb.next.block}“ in Rückenlage.` : `Danach folgt „${nb.next.block}“ (Text, kein Übungsblock).`) : 'Danach kommt nichts mehr.';
+  const list = cands.map(e => `${e.id} | ${e.n} | ${pos(e)} | ${fmtMin(e.m)} Min. | ${lvName(e)}${e.c === 'kraft' ? ' | Kraft' : ''}${e.peak ? ' | Peak Pose' : ''}`).join('\n');
+  const p = `Du bist eine erfahrene Yogalehrerin und hilfst einer Kollegin, einen einzelnen Übungsblock ihrer Yogastunde neu zusammenzustellen. Die Übungen stammen aus ihrem Katalog.
+Stunde: Gruppe ${LEVELS[effLevel(c, s)]}, ${sessionTotal(s)} Minuten${geb.length ? ', Einschränkungen: ' + geb.join(', ') : ''}. Motto: „${s.motto.title}“${s.motto.focus ? ', Fokus: ' + s.motto.focus : ''}.${s.aiPrompt ? ' Beschreibung der Kollegin: „' + s.aiPrompt + '“.' : ''}${(c.st || []).length || (c.reg || []).length ? ` Vorgaben: ${[(c.st || []).map(k => STILE[k]).filter(Boolean).join(', '), (c.reg || []).map(k => KAT.reg[k]).filter(Boolean).join(', ')].filter(Boolean).join('; ')} (bevorzugen).` : ''}
+Zu berechnen ist der Block „${bn(s, key)}“ (${aiBlkKind(ab)}), Dauer ${fmtMin(blockMin(s, key))} Min.
+${prevTxt}
+${nextTxt}
+Aufbau des Blocks (${n} freie Plätze, die du mit Übungen füllst; feste Teile bleiben an ihrer Stelle):
+${skel}
+Katalog (eine Übung je Zeile: ID | Name | Körperposition | Dauer | Stufe):
+${list}
+
+Antworte ausschließlich mit JSON in genau dieser Form: {"items":[{"id":"ID aus dem Katalog"}]}
+Regeln: "items" enthält genau ${n} Einträge in der Reihenfolge der freien Plätze, keine ID doppelt.${kN ? ` Genau ${kN} davon sind Kraftübungen (Zeile mit „Kraft“).` : ' Keine Kraftübungen.'}${pN ? ` Eine Peak Pose (Zeile mit „Peak Pose“) steht als letzte Übung.` : ''}
+Das Wichtigste ist der Flow: Die erste Übung muss aus dem Ende des vorigen Blocks natürlich entstehen (zum Beispiel nach Rückenlage zuerst über Seitlage, Drehung oder Vierfüßler aufrichten, nie direkt vom Liegen in den Stand springen), jede weitere Übung aus der vorigen, und die letzte Übung soll in den folgenden Block münden. Achte auf die Körperposition: bleibe möglichst lange in derselben Position oder wechsle nur zu einer direkt benachbarten (Sitz, Stand, Balance, Vierfüßler/Knien, Bauchlage, Rückenlage, Langsitz; vom Stand nie direkt in die Rückenlage und umgekehrt). Wechsle die Position nur so oft wie nötig. Baue einen runden Bogen: ruhig beginnen, steigern, sanft ausklingen, sofern der Block das zulässt. Nutze das Motto und die Vorgaben der Stunde für die Auswahl. Verwende nur IDs aus dem Katalog.`;
+  try { return jsonFrom(await aiCall(p, 2500), '{', '}'); }
+  catch (e) { if (/JSON|position/.test(e.message)) throw new Error('Die KI-Antwort war nicht lesbar. Bitte nochmal versuchen.'); throw e; }
+}
+const aiBlkKind = ab => ({ mobi: 'Mobilisation', shakti: 'Shakti Naam', aufw: 'Aufwärmen im Stand', asana: 'Asanas, Hauptteil', ausgl: 'Ausgleich und Cool down am Boden', kraft: 'Kraftübungen' })[ab] || 'Übungsblock';
+async function aiRerollBlock(c, s, key) {
+  const items = s.blk[key] || [], ab = abOf(s, key), main = ab === 'asana';
+  const free = items.filter(it => !it.seq && !isSb(it) && aiBlkEx(it)), fixedIds = items.filter(it => it.seq || isSb(it)).map(it => it.id);
+  let n = free.length;
+  if (!n) { if (items.some(it => it.seq)) throw new Error('In diesem Block steht nur ein Flow, der nicht verändert wird.'); n = Math.max(2, Math.round((blockMin(s, key) || 6) / 1.5)); }
+  const kN = main ? free.filter(it => aiBlkEx(it).c === 'kraft').length : 0, pN = main && free.some(it => aiBlkEx(it).peak) ? 1 : 0;
+  const ctx = mkCtx(c, s, Math.random), mine = new Set(free.map(it => it.id));
+  ctx.have = new Set(blkIds(s).filter(id => !mine.has(id)));
+  let pool = poolFor(s, key).filter(e => !(main && e.c === 'kraft'));
+  if (pool.length < n * 2 && FALLBACK[ab]) pool = pool.concat(poolOf(...FALLBACK[ab]));
+  if (ab !== 'shakti' && ab !== 'kraft') pool = withPref(pool, ab, ctx);
+  if (kN) pool = pool.concat(poolOf('kraft'));
+  if (pN) pool = pool.concat(exAll().filter(e => e.peak && e.c !== 'kraft' && !pool.includes(e)));
+  let cands = eligible(Array.from(new Set(pool)).filter(e => !e.txt), ctx);
+  if (cands.length > 90) { const keep = cands.map(e => ({ e, sc: scoreEx(e, ctx) })).sort((a, b) => b.sc - a.sc).slice(0, 90).map(x => x.e); cands = cands.filter(e => keep.includes(e) || (kN && e.c === 'kraft' && keep.length < 100) || e.peak && pN); }
+  cands.sort((a, b) => seqIdx(a.id) - seqIdx(b.id));
+  if (cands.length < Math.min(n, 3)) throw new Error('Für diesen Block gibt es zu wenige passende Übungen im Katalog.');
+  n = Math.min(n, cands.length);
+  let slot = 0; const skel = items.map(it => { if (it.seq || isSb(it)) { const e = aiBlkEx(it); return `FEST: ${e ? e.n : exById(it.id).n}${it.seq ? ' (Teil des Flows „' + it.seqName + '“)' : ''}`; } return aiBlkEx(it) ? `Platz ${++slot}: frei` : ''; }).filter(Boolean);
+  while (slot < n) skel.push(`Platz ${++slot}: frei`);
+  const nb = aiBlkNeighbors(s, key), ids = new Set(cands.map(e => e.id));
+  const r = await aiBlockPlan(c, s, key, { cands, skel: skel.join('\n'), n, kN, pN, nb });
+  const chosen = [];
+  (Array.isArray(r.items) ? r.items : []).forEach(x => { const e = x && x.id ? exById(String(x.id)) : null; if (e && ids.has(e.id) && !chosen.includes(e)) chosen.push(e); });
+  if (chosen.length < 2) throw new Error('Die KI hat keine brauchbare Übungsfolge geliefert. Bitte nochmal versuchen.');
+  chosen.length = Math.min(chosen.length, n);
+  // fehlende Übungen: beste übrige Kandidaten an die Stelle mit dem glattesten Übergang setzen
+  const notes = [];
+  if (chosen.length < n) {
+    notes.push(`${n - chosen.length} Übung(en) ergänzt, weil die KI zu wenige geliefert hat`);
+    cands.map(e => ({ e, sc: scoreEx(e, ctx) })).sort((a, b) => b.sc - a.sc).map(x => x.e).filter(e => !chosen.includes(e) && !(kN === 0 && e.c === 'kraft') && !e.peak).slice(0, n - chosen.length).forEach(e => {
+      let best = { p: chosen.length, c: Infinity };
+      for (let q = 0; q <= chosen.length; q++) { const cc = (q ? aiFlowCost(chosen[q - 1], e) : 0) + (q < chosen.length ? aiFlowCost(e, chosen[q]) : 0); if (cc < best.c) best = { p: q, c: cc }; }
+      chosen.splice(best.p, 0, e);
+    });
+  }
+  let q = 0; const out = [];
+  items.forEach(it => { if (it.seq || isSb(it)) out.push(it); else if (aiBlkEx(it) && q < chosen.length) out.push(mkItem(chosen[q++])); });
+  while (q < chosen.length) out.push(mkItem(chosen[q++]));
+  out.forEach(it => { if (!it.seq && !isSb(it)) { const e = aiBlkEx(it); applyAlt(s, it); if (e && e.peak && effLevel(c, s) !== 'fort') it.peakAlt = true; } });
+  s.blk[key] = out;
+  const bud = +(s.bm && s.bm[key] && s.bm[key].min) || 0; if (bud > 0) fitItems(out, bud);
+  // Übergänge prüfen: Sprünge im Block und an den Blockgrenzen
+  const seqE = out.map(aiBlkEx).filter(Boolean), chain = (nb.prev && nb.prev.e ? [nb.prev.e] : []).concat(seqE, nb.next && nb.next.e ? [nb.next.e] : []);
+  const jumps = []; for (let k = 1; k < chain.length; k++) if (aiFlowCost(chain[k - 1], chain[k]) >= 1) jumps.push(`„${chain[k - 1].n}“ zu „${chain[k].n}“`);
+  if (jumps.length) notes.push('Übergänge prüfen: ' + jumps.slice(0, 3).join('; ') + (jumps.length > 3 ? '; …' : ''));
+  if (kN && seqE.filter(e => e.c === 'kraft').length !== kN) notes.push('Anzahl der Kraftübungen weicht ab');
+  return { n: seqE.length, notes, prev: nb.prev };
+}
+Object.assign(AIGEN_ACTIONS, {
+  async aiRerollBlk(d) {
+    const { c, s } = sessionOf(d.id); if (!s || ui.aiBlkBusy) return;
+    if (!(state.settings.apiKey || '').trim()) { toast('Kein API-Schlüssel hinterlegt (Einstellungen, Abschnitt „KI-Texte“).', 6000); return; }
+    const key = d.b; ui.aiBlkBusy = s.id + ':' + key; render(); toast('KI berechnet den Block neu …', 30000);
+    try {
+      const r = await aiRerollBlock(c, s, key); touch(s); save(); ui.aiBlkBusy = null; render();
+      toast(`Block „${bn(s, key)}“ neu berechnet (${r.n} Übungen${r.prev && r.prev.e ? ', Anschluss an „' + r.prev.e.n + '“' : ''}).${r.notes.length ? ' Hinweise: ' + r.notes.join(' | ') + '.' : ''}`, 10000);
+    } catch (e) { console.error(e); toast('⚠ ' + e.message, 10000); }
+    finally { ui.aiBlkBusy = null; render(); }
+  }
+});
