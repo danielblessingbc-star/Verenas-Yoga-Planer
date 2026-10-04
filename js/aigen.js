@@ -1,6 +1,7 @@
 /* KI-generierte Stunde: Seite unter „Stunden“. Vorgaben wie in der Einzelstundenplanung (Name, Motto, Datum, Gruppe, Einschränkungen, Dauer)
    plus Freitext. Die KI wählt Motto, Stil, Körperregion, Atem, Mantra, Mobilisation, Kraft und Wunschübungen; die Übungen selbst kommen
-   immer aus dem Katalog (regelbasiert, mit Einschränkungen). Danach schreibt die KI die Texte der Stunde. */
+   immer aus dem Katalog (regelbasiert, mit Einschränkungen). Optional werden Übungen aus dem Übungskatalog und Flows (Sequenzen) aus dem Sequenzkatalog fest eingeplant
+   (g.inc, siehe aiGenInclude und aiGenFlowSeqs); sie werden so einsortiert, dass die Stunde fließt. Danach schreibt die KI die Texte der Stunde. */
 const AIGEN_EXAMPLES = {
   anf: 'Eine sanfte Einsteigerstunde für Menschen ohne Yoga-Erfahrung zum Thema Ankommen und den eigenen Körper kennenlernen. Einfache Haltungen im Stehen und Sitzen und viel Mobilisation, jede Übung langsam und klar, mit ausreichend Pausen. Keine Kraftübungen und kein Mantra. Die Kindhaltung und den Berg (Tadasana) bitte einbauen. Am Ende eine kurze, einfache Entspannung. Die Texte sollen ermutigend sein und ohne Fachbegriffe auskommen.',
   mittel: 'Eine fließende Stunde für Teilnehmende mit etwas Erfahrung zum Thema Kraft und Stabilität. Schwerpunkt auf Beinen, Rumpf und Balance, gern mit Krieger II und dem Baum. Zwei Kraftübungen, zum Ankommen ein kurzes Mantra. Am Ende ein Cool down für Hüfte und Rücken und eine ausführliche Endentspannung. Die Texte sollen klar und motivierend sein.',
@@ -9,7 +10,7 @@ const AIGEN_EXAMPLES = {
   sen: 'Eine ruhige Abendstunde für meine Seniorengruppe zum Thema Loslassen. Schwerpunkt auf Hüfte und unterem Rücken, überwiegend im Sitzen und Liegen, keine Kraftübungen. Zum Anfang ein kurzes Ankommen mit dem Atem, am Ende eine ausführliche Tiefenentspannung. Wenn möglich die Taube in der sanften Variante und die Kindhaltung einbauen. Ein Mantra bitte weglassen. Die Texte sollen sehr ruhig, einfach und warm klingen.'
 };
 const AIGEN_EXAMPLE = AIGEN_EXAMPLES.sen;
-const aiGenDefault = () => ({ name: '', motto: '', date: todayIso(), level: 'sen', geb: [], total: 75, prompt: '' });
+const aiGenDefault = () => ({ name: '', motto: '', date: todayIso(), level: 'sen', geb: [], total: 75, inc: [], prompt: '' });
 
 // Beispiel-Prompt je Stufe: Auswahl der Stufe (Standard: gewählte Gruppe), Übernehmen setzt Text und Gruppe
 function aiExBox(pre, EX, g) {
@@ -35,7 +36,8 @@ ${fld('Gruppe', sel('u:aiGen.level', Object.keys(LEVELS).map(k => [k, LEVELS[k]]
 ${fld('Einschränkungen / Gebrechen berücksichtigen', `<div class="fchips">${gebs}</div>`, 'wide')}
 </div></section>
 <section class="panel span2"><h2 class="ph">${pn(4, 'Dauer', 'Gesamtdauer der Stunde. Die Aufteilung auf die Bausteine ergibt sich daraus und lässt sich danach in den Vorgaben ändern.')}</h2><div class="atin">${inp('u:aiGen.total', 'number', g.total, 'min="20" max="180" step="1"')}<span>Minuten</span></div><div class="qd">${[60, 75, 90, 120].map(m => `<button class="qdb${+g.total === m ? ' on' : ''}" data-a="aiGenTotal" data-v="${m}">${m}</button>`).join('')}</div></section>
-<section class="panel span2"><h2 class="ph">${pn(5, 'Beschreibung der Stunde', 'Freitext für die KI: Thema, Stimmung, Schwerpunkt, Wunschübungen, Atem, Mantra, Tonfall der Texte.')}</h2>
+${aiIncPanel(g, pn)}
+<section class="panel span2"><h2 class="ph">${pn(6, 'Beschreibung der Stunde', 'Freitext für die KI: Thema, Stimmung, Schwerpunkt, Wunschübungen, Atem, Mantra, Tonfall der Texte.')}</h2>
 <div class="fld wide"><label>Dein Wunsch an die KI</label><textarea data-f="u:aiGen.prompt" rows="8" placeholder="Beschreibe die Stunde, z. B. Thema, Schwerpunkt, Stimmung, besondere Wünsche …">${esc(g.prompt)}</textarea></div>
 ${aiExBox('aiGen', AIGEN_EXAMPLES, g)}
 <p class="muted">Die KI steuert: Motto und Kernsatz, Fokus, Yogastil, Körperregion, Atemteil, Mantra, Art der Mobilisation, Anzahl Kraftübungen, Wunschübungen und die Texte. Wunschübungen werden nur eingebaut, wenn sie im Katalog stehen und zu den Einschränkungen passen. Gesendet werden nur dein Text und die Vorgaben, keine Teilnehmerdaten.</p>
@@ -44,6 +46,132 @@ ${aiExBox('aiGen', AIGEN_EXAMPLES, g)}
 <div class="bar noprint"><button class="primary" data-a="aiGenCreate" ${busy ? 'disabled' : ''}>${busy ? 'KI plant die Stunde …' : '✨ Stunde generieren'}</button><span class="muted">${ready ? 'Danach landest du in der Einzelstundenplanung und kannst alles anpassen.' : 'Dafür ist ein API-Schlüssel nötig (Einstellungen, Abschnitt „KI-Texte“).'}</span></div>`;
 }
 
+// ---------- Enthaltene Übungen und Flows (Auswahl aus Übungs- und Sequenzkatalog) ----------
+// g.inc = [{ t: 'ex' | 'seq', id }]. Übungen ersetzen die am besten passende Übung eines passenden Blocks und werden in die Reihenfolge der Stundenplanung einsortiert;
+// Flows (Sequenzen) kommen als zusammenhängende Gruppe in den Block ihrer Art und an die Stelle, an der der Übergang aus der Körperposition der Nachbarübungen am glattesten ist.
+const AIINC_MAX = 6;
+const aiIncList = g => (g.inc = Array.isArray(g.inc) ? g.inc : []).map(x => x.t === 'seq' ? { x, q: sqById(x.id) } : { x, e: exById(x.id) }).filter(r => r.q || r.e);
+const aiIncBad = (r, geb) => r.q ? sqProps(r.q).x.filter(k => geb.includes(k)).map(k => GEBRECHEN[k]) : (contra(r.e, geb) ? (r.e.x || []).filter(k => geb.includes(k)).map(k => GEBRECHEN[k]) : []);
+function aiIncPanel(g, pn) {
+  const rows = aiIncList(g);
+  const list = rows.map(r => {
+    const bad = aiIncBad(r, g.geb), del = `<button type="button" class="ghost sm" data-a="aiGenIncDel" data-t="${r.x.t}" data-id="${esc(r.x.id)}" title="Entfernen">✕</button>`;
+    const warn = bad.length ? `<span class="chip warn">⚠ Vorsicht bei: ${esc(bad.join(', '))}. Bitte entfernen oder die Einschränkung ändern.</span>` : '';
+    return r.q
+      ? `<div class="aiinc"><div class="mts">${sqItems(r.q).slice(0, 8).map(sqTile).join('')}</div><div class="aiinfo"><b>${esc(r.q.name)}</b> ${sqTypeChip(sqType(r.q))}<small class="muted">Flow aus dem Sequenzkatalog · ${sqCount(r.q.items.length)} · ${fmtMin(sqMin(r.q))} Min.</small>${warn}</div>${del}</div>`
+      : `<div class="aiinc">${sqTile({ id: r.e.id, min: r.e.m })}<div class="aiinfo"><b>${esc(r.e.n)}</b><small class="muted">Übung aus dem Übungskatalog · ${esc(CATS[r.e.c] || '')} · ${fmtMin(r.e.m)} Min.</small>${warn}</div>${del}</div>`;
+  }).join('');
+  return `<section class="panel span2"><h2 class="ph">${pn(5, 'Enthaltene Übung oder Flow', 'Optional: Wähle Übungen aus dem Übungskatalog und Flows aus dem Sequenzkatalog, die in der Stunde vorkommen müssen. Die Stunde baut sie so ein, dass sie sich in einen fließenden Ablauf fügen.')}</h2>
+${list || '<p class="muted">Keine Vorgabe: die KI und die automatische Auswahl entscheiden frei.</p>'}
+<div class="bar"><button type="button" class="ghost sm" data-a="aiGenIncOpen" ${rows.length >= AIINC_MAX ? 'disabled' : ''}>＋ Übung oder Flow aus dem Katalog wählen</button>${rows.length >= AIINC_MAX ? `<span class="muted">Höchstens ${AIINC_MAX} Vorgaben.</span>` : ''}</div></section>`;
+}
+// Auswahlfenster: oben die Flows (Sequenzen), darunter alle Übungen; Vorgaben, die zu den Einschränkungen nicht passen oder schon gewählt sind, sind gesperrt
+function openAiIncPicker(btn) {
+  closePicker();
+  const g = ui.aiGen; if (!g) return;
+  ui.pk = { kind: 'aiinc' };
+  const have = new Set(aiIncList(g).map(r => r.x.t + ':' + r.x.id)), geb = g.geb;
+  const head = t => `<div class="pkhead" style="grid-column:1/-1;font-weight:600;margin:6px 2px 0">${t}</div>`;
+  const seqRows = (state.sequences || []).filter(q => sqItems(q).length).map(q => {
+    const bad = sqProps(q).x.some(k => geb.includes(k)), off = bad || have.has('seq:' + q.id), names = sqExs(q).slice(0, 5).map(e => e.n).join(', ') + (sqExs(q).length > 5 ? ' …' : '');
+    return `<button class="pko" data-a="aiGenIncPick" data-t="seq" data-id="${esc(q.id)}" ${off ? `disabled title="${bad ? 'Passt nicht zu den gewählten Einschränkungen' : 'Schon gewählt'}"` : ''} data-q="${esc(norm(q.name + ' flow sequenz ' + SEQ_TYPES[sqType(q)].n))}"><div class="pkinfo"><div class="pkname"><b>${esc(q.name)}</b>${sqTypeChip(sqType(q))}</div><div class="pkmeta"><span class="muted">${sqCount(q.items.length)} · ${fmtMin(sqMin(q))} Min.</span></div><small class="muted">${esc(names)}</small></div></button>`;
+  }).join('');
+  const exRows = exAll().filter(p => !p.txt).sort((a, b) => seqIdx(a.id) - seqIdx(b.id)).map(p => {
+    const bad = contra(p, geb), off = bad || have.has('ex:' + p.id);
+    return `<button class="pko cat-${p.c}" data-a="aiGenIncPick" data-t="ex" data-id="${esc(p.id)}" ${off ? `disabled title="${bad ? 'Passt nicht zu den gewählten Einschränkungen' : 'Schon gewählt'}"` : ''} data-q="${esc(norm(p.n + ' ' + (p.sa || '')))}"><span class="pkf">${figureSVG(p.pose)}${peakStar(p)}</span><div class="pkinfo"><div class="pkname"><b>${esc(p.n)}</b>${p.sa ? `<small class="sa">${esc(p.sa)}</small>` : ''}</div><div class="pkmeta"><span>${esc(CATS[p.c] || '')}</span><span class="muted">· ${esc(AISEQ_POS[aiSeqPos(p)])}</span></div></div></button>`;
+  }).join('');
+  const panel = document.createElement('div'); panel.id = 'pkpanel';
+  panel.innerHTML = `<input type="search" id="pkq" placeholder="Übung oder Flow suchen …" autocomplete="off"><div class="pkgrid">${seqRows ? head('Flows (Sequenzkatalog)') + seqRows : ''}${head('Übungen (Übungskatalog)')}${exRows}</div>`;
+  document.body.appendChild(panel);
+  const r = btn.getBoundingClientRect(), w = Math.min(640, window.innerWidth - 16);
+  panel.style.width = w + 'px'; panel.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + 'px';
+  const below = window.innerHeight - r.bottom - 12, above = r.top - 12;
+  if (below >= 280 || below >= above) { panel.style.top = (r.bottom + 4) + 'px'; panel.style.maxHeight = Math.max(220, below) + 'px'; }
+  else { panel.style.bottom = (window.innerHeight - r.top + 4) + 'px'; panel.style.maxHeight = Math.max(220, above) + 'px'; }
+  const q = document.getElementById('pkq'); q.focus();
+  q.addEventListener('input', () => { const v = norm(q.value); panel.querySelectorAll('.pko').forEach(b => { b.style.display = !v || b.dataset.q.includes(v) ? '' : 'none'; }); });
+}
+
+// Flow: Kosten eines Übergangs zwischen zwei Übungen nach ihrer Körperposition (gleiche Position 0, direkter Übergang 0,3, Sprung 1)
+function aiFlowCost(a, b) { const pa = aiSeqPos(a), pb = aiSeqPos(b); return pa === pb ? 0 : aiSeqLink(pa, pb) ? 0.3 : 1; }
+// Peak Pose am Ende des Blocks bleibt am Ende: fn arbeitet nur auf den Übungen davor
+function aiGenKeepTail(items, fn) {
+  const tail = []; while (items.length && !items[items.length - 1].seq && (exById(items[items.length - 1].id) || {}).peak) tail.unshift(items.pop());
+  try { fn(items); } finally { items.push(...tail); }
+}
+// Beste Stelle für die Gruppe bid im Block: kleinste Übergangskosten zur Vorgänger- und Nachfolgerübung (bei Gleichstand die nähere Stelle in der Reihenfolge der Stundenplanung)
+function aiGenGroupPos(items, bid) {
+  const ex = i => { const e = exById(i.id); return e && !e.txt ? e : null; }, grp = items.filter(i => i.seq === bid).map(ex).filter(Boolean), rest = items.filter(i => !i.seq);
+  if (!grp.length) return 0;
+  const first = grp[0], last = grp[grp.length - 1], far = (a, b) => Math.abs(seqIdx(a.id) - seqIdx(b.id)) / 200;
+  let best = { p: 0, c: Infinity };
+  for (let p = 0; p <= rest.length; p++) {
+    const prev = rest.slice(0, p).reverse().map(ex).find(Boolean), next = rest.slice(p).map(ex).find(Boolean);
+    const c = (prev ? aiFlowCost(prev, first) + far(prev, first) : 0) + (next ? aiFlowCost(last, next) + far(last, next) : 0);
+    if (c < best.c - 1e-9) best = { p, c };
+  }
+  return best.p;
+}
+// Flows der Auswahl in die Stunde übernehmen (Gruppen im Block ihrer Art); Namen der Flows, deren Block nicht aktiv ist
+function aiGenSeqApply(c, s, qs) {
+  if (!qs.length) return [];
+  s.seqPlan = { on: true, blocks: qs.map(q => ({ id: uid(), type: sqType(q), seqId: q.id, pos: 0 })) };
+  applySeqPlan(c, s);
+  return s.seqPlan.blocks.filter(b => !SEQ_BLKS.some(k => (s.blk[k] || []).some(i => i.seq === b.id))).map(b => sqById(b.seqId).name + ' (Block nicht aktiv)');
+}
+// Eine gewählte Übung einbauen: sie ersetzt die passendste Übung (gleiche Körperposition, ähnliche Dauer, schwach bewertet) eines passenden Blocks und wird einsortiert
+function aiGenInclude(c, s, e, keep) {
+  if (blkIds(s).includes(e.id)) return true;
+  let best = null;
+  exKeys(s).filter(k => bon(s, k) && bty(s, k) === 'ex').forEach(k => {
+    const ab = abOf(s, k), cat = (BCATS[ab] || []).includes(e.c);
+    if (!anFits(e, ab) && !cat) return;
+    const items = s.blk[k] || [], base = cat ? 0 : 3;
+    if (!items.some(i => !i.seq && !isSb(i))) { if (!best || base + 5 < best.d) best = { k, idx: -1, d: base + 5 }; return; }
+    items.forEach((it, idx) => {
+      const v = exById(it.id); if (!v || v.txt || it.seq || keep.has(v.id) || (v.peak && !e.peak)) return;
+      const d = base + (aiSeqPos(v) === aiSeqPos(e) ? 0 : 4) + Math.abs((+it.min || 0) - e.m) + (rating(v.id) - 3) * 0.5 + (it.id === 'tadasana' ? 9 : 0) + ((v.c === 'kraft') === (e.c === 'kraft') ? 0 : 6) - (v.peak && e.peak ? 8 : 0);
+      if (!best || d < best.d) best = { k, idx, d };
+    });
+  });
+  if (!best) return false;
+  const ni = mkItem(e); if (e.peak && effLevel(c, s) !== 'fort') ni.peakAlt = true;
+  if (best.idx < 0) s.blk[best.k].push(ni); else s.blk[best.k][best.idx] = ni;
+  applyAlt(s, ni); return true;
+}
+// Nach dem Einbauen: Übungen in die Reihenfolge der Stundenplanung bringen (Peak Pose bleibt am Ende), Flows an die glatteste Stelle setzen
+function aiGenFlowPlace(s) {
+  exKeys(s).forEach(k => {
+    const items = s.blk[k]; if (!items || !items.length) return;
+    aiGenKeepTail(items, a => {
+      sortItems(a);
+      seqUnits(a).filter(u => u.seq).forEach(u => { const pos = aiGenGroupPos(a, u.seq); a.forEach(i => { if (i.seq === u.seq) i.seqPos = pos; }); sortItems(a); });
+    });
+  });
+  seqSyncPlan(s);
+}
+// Hinweise zu den Übergängen an den eingebauten Stellen (Sprünge zwischen Körperpositionen, die nicht direkt ineinander übergehen)
+function aiGenFlowNotes(s, ids) {
+  const notes = [];
+  exKeys(s).filter(k => bon(s, k)).forEach(k => {
+    const rows = (s.blk[k] || []).map(i => ({ i, e: exById(i.id) })).filter(r => r.e && !r.e.txt);
+    for (let j = 1; j < rows.length; j++) {
+      const a = rows[j - 1], b = rows[j];
+      if (!(((a.i.seq || b.i.seq) && a.i.seq !== b.i.seq) || ids.has(a.e.id) || ids.has(b.e.id))) continue;
+      if (aiFlowCost(a.e, b.e) >= 1) notes.push(`„${a.e.n}“ (${AISEQ_POS[aiSeqPos(a.e)]}) zu „${b.e.n}“ (${AISEQ_POS[aiSeqPos(b.e)]})`);
+    }
+  });
+  return notes;
+}
+// Eingeplante Inhalte brauchen ihren Block: Mobilisation und Shakti Naam einschalten, wenn nur dort passende Inhalte stehen
+function aiGenNeed(c, rows) {
+  const t = r => r.q ? sqType(r.q) : r.e.c;
+  if (rows.some(r => t(r) === 'mobilisation' || t(r) === 'mobi_sitz') && c.mobi === 'aus') c.mobi = 'sitz';
+  if (rows.some(r => t(r) === 'shakti') && !c.shakti) { c.shakti = 1; c.shaktiMode = 'immer'; if (!(+c.durs.shakti > 1)) c.durs.shakti = 8; }
+  fitDurs(c, 'total');
+}
+const aiIncText = rows => rows.map(r => r.q ? `Flow „${r.q.name}“ (${SEQ_TYPES[sqType(r.q)].n}, Übungen: ${sqExs(r.q).map(e => e.n).join(', ')})` : `Übung „${r.e.n}“`).join('; ');
+
 // Katalogübung zu einem frei genannten Namen finden (genau, dann Anfang, dann enthalten)
 function aiGenFind(name) {
   const n = norm(name); if (n.length < 3) return null;
@@ -51,22 +179,22 @@ function aiGenFind(name) {
   return all.find(e => nm(e) === n || norm(e.sa || '') === n) || all.find(e => nm(e).startsWith(n)) || all.find(e => nm(e).includes(n)) || all.find(e => nm(e).length >= 6 && n.includes(nm(e))) || null;
 }
 // Wunschübungen (frei genannte Namen) in eine Stunde einbauen: nur Katalogübungen, die zu den Einschränkungen passen
-function aiGenWishes(c, s, wishes) {
+function aiGenWishes(c, s, wishes, skip) {
   const geb = effGeb(c, s), put = [], miss = [];
   (Array.isArray(wishes) ? wishes : []).slice(0, 8).forEach(w => {
     const e = aiGenFind(String(w)); if (!e) { miss.push(String(w)); return; }
     if (blkIds(s).includes(e.id)) { put.push(e.n); return; }
-    if (contra(e, geb) || !anSwapIn(s, e)) miss.push(e.n + ' (passt nicht)'); else put.push(e.n);
+    if (contra(e, geb) || !anSwapIn(s, e, skip)) miss.push(e.n + ' (passt nicht)'); else put.push(e.n);
   });
   return { put, miss };
 }
 const aiGenList = m => Object.keys(m).map(k => `${k} (${String(m[k]).replace(/\s*\(.*$/, '')})`).join(', ');
 async function aiGenPlan(g) {
-  const geb = g.geb.map(k => GEBRECHEN[k]).filter(Boolean);
+  const inc = aiIncList(g), geb = g.geb.map(k => GEBRECHEN[k]).filter(Boolean);
   const p = `Du bist eine erfahrene Yogalehrerin und hilfst einer Kollegin, eine einzelne Yogastunde zu planen. Die Übungen wählt ihre Software aus ihrem Katalog aus. Du legst nur die Rahmenbedingungen fest und nennst Übungen, die sie ausdrücklich wünscht.
 Beschreibung der Kollegin: „${g.prompt.trim()}“
 Feste Vorgaben: Gruppe ${LEVELS[g.level]}, Dauer ${g.total} Minuten${geb.length ? ', Einschränkungen: ' + geb.join(', ') : ''}. ${g.motto.trim() ? 'Das Motto ist vorgegeben: „' + g.motto.trim() + '“ (du ergänzt Kernsatz, Fokus und Schlagworte).' : 'Wähle ein passendes Motto.'}
-Antworte ausschließlich mit JSON in genau dieser Form:
+${inc.length ? `Fest eingeplant (die Kollegin hat sie aus ihrem Katalog gewählt, ihre Software baut sie zwingend ein): ${aiIncText(inc)}. Wähle Motto, Fokus, Yogastile, Körperregionen, Mobilisation und Kraft so, dass die Stunde dazu passt und diese Inhalte natürlich darin liegen. Setze st und reg nur, wenn sie diese Inhalte nicht ausschließen. Führe sie nicht zusätzlich unter wish auf.\n` : ''}Antworte ausschließlich mit JSON in genau dieser Form:
 {"motto":{"title":"2 bis 5 Wörter","kern":"Kernsatz in der Ich-Form","focus":"körperlicher Fokus in Stichworten","tags":["2 bis 4 Schlagworte aus: ${Object.keys(KEYWORDS).join(', ')}"]},
 "st":["Yogastile aus: ${aiGenList(STILE)}"],"reg":["Körperregionen aus: ${aiGenList(KAT.reg)}"],
 "breath":"aus oder atem oder atem_wahr oder gemischt","mantra":"aus oder immer","mobi":"sitz oder liegen oder stand oder aus","kraft":0,"wish":["Name einer gewünschten Übung"]}
@@ -90,27 +218,43 @@ const AIGEN_ACTIONS = {
   aiGenTotal(d) { ui.aiGen.total = +d.v; render(); },
   aiGenExample() { aiExTake('aiGen', AIGEN_EXAMPLES, ui.aiGen); },
   aiGenExLvl(d) { ui.aiGenEx = d.v; render(); },
+  aiGenIncOpen(d, el) { openAiIncPicker(el); },
+  aiGenIncPick(d) {
+    const p = ui.pk, g = ui.aiGen; if (!p || p.kind !== 'aiinc' || !g) return;
+    const t = d.t === 'seq' ? 'seq' : 'ex'; g.inc = g.inc || [];
+    if (g.inc.length < AIINC_MAX && !g.inc.some(x => x.t === t && x.id === d.id)) g.inc.push({ t, id: d.id });
+    closePicker(); render();
+  },
+  aiGenIncDel(d) { const g = ui.aiGen; if (!g) return; g.inc = (g.inc || []).filter(x => !(x.t === d.t && x.id === d.id)); render(); },
   async aiGenCreate() {
     const g = ui.aiGen; if (!g || ui.aiGenBusy) return;
     if (!(g.prompt || '').trim()) { toast('Bitte beschreibe die Stunde im Textfeld.'); return; }
     if (!(state.settings.apiKey || '').trim()) { toast('Kein API-Schlüssel hinterlegt (Einstellungen, Abschnitt „KI-Texte“).', 6000); return; }
+    const inc = aiIncList(g), bad = inc.filter(r => aiIncBad(r, g.geb).length);
+    if (bad.length) { const b = bad[0]; toast(`„${b.q ? b.q.name : b.e.n}“ passt nicht zu den gewählten Einschränkungen. Bitte bei „Enthaltene Übung oder Flow“ entfernen oder die Einschränkung ändern.`, 7000); return; }
     ui.aiGenBusy = true; render(); toast('KI plant die Stunde …', 30000);
     try {
       const p = await aiGenPlan(g), pm = p.motto || {}, tags = (Array.isArray(pm.tags) ? pm.tags : []).filter(t => KEYWORDS[t]);
       const title = (g.motto || '').trim() || String(pm.title || '').trim() || 'Neue Stunde', kern = String(pm.kern || '').trim() || `Heute darf „${title}“ für mich spürbar werden.`;
       const c = defaultCourseFixed({ name: (g.name || '').trim() || title, count: 1, single: true, start: g.date || todayIso(), level: LEVELS[g.level] ? g.level : 'sen', gebrechen: g.geb.slice(), total: clamp(Math.round(+g.total) || 75, 20, 180), motto: { mode: 'eigen', preset: 'alltag', free: '', eigen: title + ' | ' + kern } });
-      aiGenApply(c, p); planCourse(c);
+      aiGenApply(c, p); aiGenNeed(c, inc); planCourse(c);
       const s = c.sessions[0], motto = { themeId: '', title, kern, focus: String(pm.focus || '').trim() || focusFromTags(tags.length ? tags : keywordTags(title)), tags: tags.length ? tags : keywordTags(title) };
       fillSession(c, s, 0, { motto });
       const notes = [];
       if (anItems(s).length < 6 && (c.st.length || c.reg.length)) { c.st = []; c.reg = []; fillSession(c, s, 0, { motto }); notes.push('Stil- und Regionsvorgabe war zu eng und wurde nicht angewendet.'); }
-      const { put, miss } = aiGenWishes(c, s, p.wish);
+      // Gewählte Flows und Übungen zuerst (geschützt vor Wunschübungen), dann alles in einen Fluss bringen
+      const incQ = inc.filter(r => r.q).map(r => r.q), incE = inc.filter(r => r.e).map(r => r.e), keep = new Set(incE.map(e => e.id).concat(incQ.flatMap(q => sqExs(q).map(e => e.id)))), incMiss = aiGenSeqApply(c, s, incQ), incPut = incQ.map(q => q.name).filter(n => !incMiss.some(m => m.startsWith(n + ' (')));
+      incE.forEach(e => { if (aiGenInclude(c, s, e, keep)) incPut.push(e.n); else incMiss.push(e.n + ' (kein passender aktiver Block)'); });
+      const { put, miss } = aiGenWishes(c, s, p.wish, v => keep.has(v.id));
+      if (inc.length) { aiGenFlowPlace(s); const fn = aiGenFlowNotes(s, new Set(incE.map(e => e.id))); if (fn.length) notes.push('Übergänge prüfen: ' + fn.slice(0, 3).join('; ') + (fn.length > 3 ? '; …' : '') + '.'); }
+      put.unshift(...incPut); miss.unshift(...incMiss);
       fitSession(c, s);
+      incQ.forEach(q => { const blk = (s.seqPlan && s.seqPlan.blocks.find(b => b.seqId === q.id)); const key = blk && SEQ_TYPES[sqPType(blk)].blk, tgt = key && blockTargets(c, s)[key]; if (tgt > 0 && sqMin(q) > tgt) notes.push(`„${q.name}“ dauert ${fmtMin(sqMin(q))} Min., der Block nur ${fmtMin(tgt)} Min. (Blockzeit in den Vorgaben erhöhen).`); });
       if (Math.abs(plannedTotal(s) - sessionTotal(s)) > 1.01) notes.push('Die geplante Zeit weicht um ' + fmtMin(Math.abs(plannedTotal(s) - sessionTotal(s))) + ' Min. von der Soll-Dauer ab (Vorgaben prüfen).');
       s.aiPrompt = g.prompt.trim();
       state.courses.unshift(c); ui.aiGen = null; ui.sTab = 'list'; ui.view = 'course'; ui.courseId = c.id; ui.tab = 'sessions'; ui.sel = s.id; ui.open = new Set(['set', 'ovw']);
       save(); render(); toast('Stunde angelegt, KI schreibt die Texte …', 30000);
-      try { await aiTexts(c, s, 0, g.prompt.trim()); save(); render(); toast(`Stunde „${title}“ erstellt.${put.length ? ' Eingebaut: ' + put.join(', ') + '.' : ''}${miss.length ? ' Nicht eingebaut: ' + miss.join(', ') + '.' : ''}${notes.length ? ' ' + notes.join(' ') : ''}`, 9000); }
+      try { await aiTexts(c, s, 0, g.prompt.trim() + (inc.length ? ' Fest enthalten sind: ' + aiIncText(inc) + '. Beschreibe in den Texten fließende Übergänge zu diesen Inhalten.' : '')); save(); render(); toast(`Stunde „${title}“ erstellt.${put.length ? ' Eingebaut: ' + put.join(', ') + '.' : ''}${miss.length ? ' Nicht eingebaut: ' + miss.join(', ') + '.' : ''}${notes.length ? ' ' + notes.join(' ') : ''}`, 9000); }
       catch (e) { console.error(e); toast('Stunde erstellt, aber die KI-Texte fehlen: ' + e.message + ' Mit „Texte per KI“ nochmal versuchen.', 12000); }
     } catch (e) { console.error(e); toast('⚠ ' + e.message, 12000); }
     finally { ui.aiGenBusy = false; render(); }
