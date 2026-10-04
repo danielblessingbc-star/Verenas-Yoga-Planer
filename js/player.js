@@ -72,7 +72,7 @@ function plSteps(c, s) {
 }
 const PL_TEXTICON = '<path d="M22 18h56v58H22z"/><path d="M32 34h36M32 46h36M32 58h24"/>';
 
-// Auswahlseite (Seite „Stunden“): welche Stunde soll abgespielt werden?
+// Auswahlseite (Seite „Player“): welche Stunde soll abgespielt werden?
 function viewPlayers(kind) {
   const det = kind === 'playDet';
   const singles = state.courses.filter(c => c.single && !c.template && c.sessions.length), progs = state.courses.filter(c => !c.single && !c.template && c.sessions.length);
@@ -117,6 +117,7 @@ document.addEventListener('keydown', e => {
   if (e.key === ' ') { e.preventDefault(); PLAYER_ACTIONS.plToggle(); } else if (e.key === 'ArrowRight') PLAYER_ACTIONS.plNext(); else if (e.key === 'ArrowLeft') PLAYER_ACTIONS.plPrev();
 });
 const PLAYER_ACTIONS = {
+  plTab(d) { ui.plTab = d.v; render(); },
   plPlay(d) {
     const c = state.courses.find(x => x.id === d.id), s = c && c.sessions.find(x => x.id === d.sid); if (!s) return;
     const steps = plSteps(c, s); if (!steps.length) { toast('Diese Stunde hat keine abspielbaren Inhalte.'); return; }

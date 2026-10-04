@@ -4,7 +4,6 @@ const isSingle = c => !!(c && c.single);
 const deepCopy = o => JSON.parse(JSON.stringify(o));
 
 function viewSingles() {
-  if (ui.sTab === 'playMin' || ui.sTab === 'playDet') return viewPlayers(ui.sTab);
   if (ui.sTab === 'aiGen') return viewAiGen();
   const pt = ui.sTab || 'list', ss = state.courses.filter(c => c.single && !c.template), ts = state.courses.filter(c => c.single && c.template);
   const card = c => { const s = c.sessions[0] || {}; return `<div class="card course"><div class="grow"><a class="title" data-a="open" data-id="${c.id}">${esc(c.name)}</a>
@@ -77,6 +76,14 @@ const SINGLE_ACTIONS = {
   newSingle() {
     const c = defaultCourseFixed({ name: 'Neue Einzelstunde ' + fmtDate(todayIso()), count: 1, single: true });
     startCourse(c); ui.doc.ueb = false; ui.doc.sel = '0';
+  },
+  // Leere Einzelstunden-Vorlage: Struktur (Blöcke, Zeiten) wie in den Vorgaben, aber ohne vorausgewählte Übungen, Mantra und Atemteil
+  newEmptyTpl() {
+    const c = defaultCourseFixed({ name: 'Neue Vorlage ' + fmtDate(todayIso()), count: 1, single: true, template: true });
+    startCourse(c);
+    const s = c.sessions[0]; EXKEYS.forEach(k => { s.blk[k] = []; }); s.mantra = null; s.atem = { a: '', w: '' };
+    s.txEdited = {}; genTexts(c, s, 0); ui.doc.ueb = false; ui.doc.sel = '0'; save(); render();
+    toast('Leere Vorlage angelegt: Vorgaben prüfen, dann in der Einzelstundenplanung Übungen wählen.', 5000);
   },
   // Speichern als Einzelstunden-Vorlage bzw. Einzelstunde: Name direkt auf der Seite eingeben (ohne Browser-Dialog)
   saveSessTpl(d) { SINGLE_ACTIONS._ss(d, 'tpl'); },
