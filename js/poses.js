@@ -92,6 +92,7 @@ function figureSVG(key, size) {
   if (key === 'mantrasb') return manIconSVG('om').replace('<svg class="fig"', '<svg class="fig"' + px);   // Sonderbaustein „Mantra“
   if (key === 'textblock') return TEXTICON.replace('<svg class="fig"', '<svg class="fig"' + px);   // Sonderbaustein „Textblock“
   if (key === 'pause') return PAUSEICON.replace('<svg class="fig"', '<svg class="fig"' + px);   // Sonderbaustein „Pause“
+  if (key === 'eigen') return EIGENICON.replace('<svg class="fig"', '<svg class="fig"' + px);   // Sonderbaustein „Eigener Baustein“ ohne Symbol
   if (key === 'frei') return FREIICON.replace('<svg class="fig"', '<svg class="fig"' + px);   // Sonderbaustein „Freie Übung“ ohne Text
   return `<svg class="fig" viewBox="0 0 100 100"${px} aria-hidden="true">${figureParts(key)}</svg>`;
 }
@@ -134,6 +135,7 @@ Object.assign(ICONS, {
 
 const LIEDICON = '<svg class="fig" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M40 70V22l34-8v48"/><path d="M40 40l34-8"/><ellipse cx="30" cy="72" rx="10" ry="8"/><ellipse cx="64" cy="64" rx="10" ry="8"/></g></svg>';
 const FREIICON = '<svg class="fig" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M64 18l18 18-42 42-22 4 4-22z"/><path d="M56 26l18 18"/></g></svg>';
+const EIGENICON = '<svg class="fig" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="16" y="16" width="68" height="68" rx="14" stroke-dasharray="6 6"/><path d="M50 34v32M34 50h32"/></g></svg>';
 const PAUSEICON = '<svg class="fig" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="50" cy="50" r="36"/><path d="M40 36v28M60 36v28"/></g></svg>';
 // Kachel der „Freien Übung“: der eingetragene Text steht als Name in der Kachel (Schrift passt sich der Länge an)
 function freiFig(txt, size) {
