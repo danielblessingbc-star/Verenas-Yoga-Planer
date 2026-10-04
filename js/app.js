@@ -735,7 +735,7 @@ const A = {
   fltGeb(d) { const { s } = sessionOf(d.id); const g = s.flt.geb = s.flt.geb || [], i = g.indexOf(d.v); i < 0 ? g.push(d.v) : g.splice(i, 1); ui.open.add('flt:' + s.id); save(); render(); },
   fltReset(d) { const { s } = sessionOf(d.id); s.flt = null; ui.open.add('flt:' + s.id); save(); render(); toast('Filter auf Standard zurückgesetzt – bereits gewählte Übungen bleiben.'); },
   frameView() { ui.frameBlocks = !ui.frameBlocks; render(); },
-  nav(d) { ui.view = d.v; ui.courseId = null; ui.tplSel = null; ui.saveSess = null; if (d.v === 'courses') ui.pTab = 'list'; if (d.v === 'singles') ui.sTab = 'list'; render(); },
+  nav(d) { ui.view = d.v; ui.seqAiOn = false; ui.courseId = null; ui.tplSel = null; ui.saveSess = null; if (d.v === 'courses') ui.pTab = 'list'; if (d.v === 'singles') ui.sTab = 'list'; render(); },
   open(d) { ui.view = 'course'; ui.courseId = d.id; ui.tab = 'frame'; ui.open = new Set(['set', 'ovw']); const oc = state.courses.find(x => x.id === d.id); if (oc && oc.single) { ui.doc.ueb = false; ui.doc.sel = '0'; } else if (ui.doc.sel === '0' && oc) { ui.doc.sel = 'all'; ui.doc.ueb = true; } render(); },
   tab(d) { ui.tab = d.v; render(); },
   segPick(d, el) { const w = el.closest('.seg'), s = w && w.querySelector('select'); if (!s || el.disabled) return; s.value = d.v; s.dispatchEvent(new Event('change', { bubbles: true })); setTimeout(render, 0); },
