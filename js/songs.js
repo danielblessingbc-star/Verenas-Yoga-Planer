@@ -29,6 +29,7 @@ function sbPreview(it, e) {
 // Name, Zusatz und Symbol eines Sonderbausteins (Anzeige in Stunde, Ausdruck, Player)
 function sbInfo(it, e) {
   if (e.sb === 'frei') { const t = String(it.tx || '').replace(/\s+/g, ' ').trim(); return { title: t || 'Freie Übung', sub: t ? '' : 'noch kein Text', fig: freiFig(t) }; }
+  if (e.sb === 'eigen') { const t = String(it.tx || '').replace(/\s+/g, ' ').trim(); return { title: t || 'Eigener Baustein', sub: t ? '' : 'noch kein Titel', fig: figureSVG(it.icon && POSES[it.icon] ? it.icon : 'eigen') }; }
   if (e.sb === 'rep') return { title: e.rn + 'x', sub: 'Wiederholung ab hier', fig: figureSVG(e.pose) };
   if (e.sb === 'repend') return { title: 'Wiederholung Ende', sub: '', fig: figureSVG(e.pose) };
   if (e.sb === 'pause') return { title: 'Pause', sub: String(it.tx || '').replace(/\s+/g, ' ').trim(), fig: figureSVG('pause') };
@@ -40,6 +41,7 @@ function sbInfo(it, e) {
 function sbDet(it, e) {
   const paras = t => String(t || '').split(/\n{2,}/).filter(x => x.trim());
   if (e.sb === 'pause') return [{ ic: 'clock', h: 'Pause', paras: [String(it.tx || '').trim() || 'Kurz innehalten und nachspüren.'] }];
+  if (e.sb === 'eigen') return [{ ic: 'cue', h: 'Baustein', paras: [String(it.tx || '').trim() || 'Es ist noch kein Titel eingetragen.'] }];
   if (e.sb === 'frei') return [{ ic: 'cue', h: 'Übung', paras: [String(it.tx || '').trim() || 'Es ist noch kein Text eingetragen.'] }];
   if (e.sb === 'lied') {
     const x = songById(it.ref); if (!x) return [{ ic: 'cue', h: 'Lied', paras: ['Es ist noch kein Lied gewählt.'] }];
@@ -100,11 +102,17 @@ const SB_PICK = [
   [LIED_ID, 'lied', 'Lied', 'Statt einer Übung: ein Lied aus dem Lied-Katalog', 'lied song musik gesang sonderbaustein'],
   [MANSB_ID, 'mantrasb', 'Mantra', 'Statt einer Übung: ein Mantra aus der Seite Mantras', 'mantra chanten gesang sonderbaustein'],
   [FREI_ID, 'frei', 'Freie Übung', 'Statt einer Übung: ein frei eingetragener Name, der in der Kachel steht', 'freie übung name text kachel handstand sonderbaustein'],
+  [EIGEN_ID, 'eigen', 'Eigener Baustein', 'Statt einer Übung: eigener Titel unter der Kachel und ein Symbol deiner Wahl', 'eigener baustein titel symbol kachel sonderbaustein'],
   [PAUSE_ID, 'pause', 'Pause', 'Statt einer Übung: eine Pause mit eigener Dauer', 'pause ruhe nachspüren erholung sonderbaustein']
 ].concat(REP_N.filter(n => n > 1).map(n => ['sb_rep' + n, 'rep' + n, n + 'x', 'Wiederholung: öffnender und schließender Baustein werden zusammen eingefügt, die Übungen dazwischen werden ' + n + 'x durchgeführt', 'wiederholung wiederholen runde schleife ' + n + 'x sonderbaustein']));
 // Symbol einer Kachel: Sonderbaustein „Freie Übung“ zeigt ihren Text, alles andere das Strichmännchen
-const tileName = (it, e) => e.sb === 'frei' && String(it.tx || '').trim() ? String(it.tx).trim() : e.n;
-const sbTileFig = (it, e) => e.sb === 'frei' ? sbInfo(it, e).fig : figureSVG(e.pose);
+const tileName = (it, e) => (e.sb === 'frei' || e.sb === 'eigen') && String(it.tx || '').trim() ? String(it.tx).trim() : e.n;
+const sbTileFig = (it, e) => e.sb === 'frei' || e.sb === 'eigen' ? sbInfo(it, e).fig : figureSVG(e.pose);
+// Titelfeld und Symbolauswahl (wie bei einer neuen Übung) des „Eigenen Bausteins“; txAttr bzw. symAttr tragen die data-Attribute des Aufrufers
+function eigenEdit(it, txAttr, symAct, symAttr, openId) {
+  const pick = posePickerHTML(it.icon || '', symAct).split('data-a="' + symAct + '"').join(symAttr + ' data-a="' + symAct + '"');
+  return `<input type="text" class="sbnote" ${txAttr} value="${esc(it.tx || '')}" maxlength="60" placeholder="Titel (steht unter der Kachel), z. B. Handstand …" autocomplete="off"><details class="sqfold eigsym" data-id="${openId}" ${ui.open.has(openId) ? 'open' : ''}><summary>Symbol wählen</summary>${pick}</details>`;
+}
 // Beim Tippen im Textfeld einer freien Übung die Kachel daneben sofort nachführen
 document.addEventListener('input', ev => {
   const t = ev.target; if (!t || !t.classList || !t.classList.contains('freitx')) return;
@@ -115,6 +123,7 @@ function sonderPanels(q) {
   const P = (c, fig, n, txt, kw) => (!q || kw.includes(q)) ? `<div class="panel sonder"><div class="ktile cat-${c}">${figureSVG(fig)}</div><div><b>Sonderbaustein: ${n}</b><p class="muted">${txt}</p></div></div>` : '';
   return P('textblock', 'textblock', 'Textblock', 'Im Auswahlfenster einer Stunde (Klick auf eine Übungskachel oder „＋ Übung auswählen“) und in der Sequenz stehen ganz oben die Sonderbausteine. Wählst du den Textblock, entsteht an dieser Stelle statt einer Übung ein Textabschnitt mit eigener Dauer, z. B. für eine Anleitung, einen Hinweis oder Yoga Nidra. Er wird im Ausdruck und im Player mit ausgegeben und erscheint nie automatisch.', 'textblock sonderbaustein text')
     + P('frei', 'frei', 'Freie Übung', 'Wie der Textblock, aber mit einem einzeiligen Textfeld neben der Kachel: Was du dort einträgst (z. B. „Handstand“), steht als Name in der Kachel, im Ausdruck und im Player. Die Dauer stellst du selbst ein.', 'freie übung name text kachel handstand sonderbaustein')
+    + P('eigen', 'eigen', 'Eigener Baustein', 'Wie die Freie Übung, aber mit eigenem Titel und frei gewähltem Symbol: Neben der Kachel trägst du den Titel ein und wählst das Symbol aus denselben Strichmännchen wie bei einer neuen Übung. Der Titel steht unter der Kachel, im Ausdruck und im Player. Die Dauer stellst du selbst ein.', 'eigener baustein titel symbol kachel sonderbaustein')
     + P('rep3', 'rep3', 'Wiederholung (2x bis 6x)', 'Für Übungsfolgen, die mehrfach hintereinander gemacht werden: Wählst du z. B. „3x“, werden der öffnende Baustein und der schließende „Wiederholung Ende“ (gespiegeltes Wiederholungszeichen) gemeinsam eingefügt. Die Übungen dazwischen schiebst du per Ziehen an die richtige Stelle. Die Dauer des Blocks rechnet die Wiederholungen mit; im Player werden die Runden nacheinander abgespielt. Fehlt das Ende, gilt die Wiederholung bis zum Blockende.', 'wiederholung wiederholen runde schleife sonderbaustein')
     + P('pause', 'pause', 'Pause', 'Eine Pause an dieser Stelle der Stunde oder der Sequenz, z. B. zum Nachspüren oder Trinken. Du stellst nur die Dauer ein und kannst einen kurzen Hinweis eintragen, der unter dem Namen „Pause“ steht, im Ausdruck erscheint und im Player angezeigt wird.', 'pause ruhe nachspüren erholung sonderbaustein')
     + P('lied', 'lied', 'Lied', 'Wie der Textblock, aber mit einem Lied aus dem Lied-Katalog (oben rechts). Die Dauer des Liedes wird übernommen, wenn sie dort eingetragen ist. Im Player erscheinen Liedtext, Einsatz und Notizen.', 'lied song musik gesang sonderbaustein')

@@ -77,7 +77,7 @@ function seqApplyBlock(c, s, key) {
   if (seqActive(s, key)) mine.forEach(b => {
     const q = sqById(b.seqId);
     if (!q) { if (old[b.id]) ins.push(...old[b.id]); return; }
-    sqItems(q).forEach(x => { const it = mkItem(exById(x.id), x.min); if (hasTx(exById(x.id))) it.tx = x.tx || ''; else if (isSb(it)) it.ref = x.ref || ''; it.seq = b.id; it.seqName = q.name; it.seqType = sqPType(b); it.seqPos = +b.pos || 0; applyAlt(s, it); ins.push(it); });
+    sqItems(q).forEach(x => { const it = mkItem(exById(x.id), x.min); if (hasTx(exById(x.id))) { it.tx = x.tx || ''; if (x.icon) it.icon = x.icon; } else if (isSb(it)) it.ref = x.ref || ''; it.seq = b.id; it.seqName = q.name; it.seqType = sqPType(b); it.seqPos = +b.pos || 0; applyAlt(s, it); ins.push(it); });
   });
   const have = new Set(ins.map(i => i.id));
   s.blk[key] = ins.concat(items.filter(i => !i.seq && !have.has(i.id)));
@@ -145,7 +145,7 @@ function seqRow(it, i, n) {
   const e = exById(it.id), tx = isSb(it), tile = e
     ? `<div class="xtile cat-${e.c} pkt" data-a="seqPk" data-i="${i}" title="Klicken: andere Übung wählen">${tx ? sbInfo(it, e).fig : figureSVG(e.pose)}${peakStar(e)}</div>`
     : `<div class="xtile empty pkt" data-a="seqPk" data-i="${i}" title="Klicken: Übung wählen"><span class="plus">＋</span></div>`;
-  return `<div class="seqrow${tx ? ' txb' : ''}"><span class="seqno">${i + 1}</span>${tile}<div class="seqnm">${e ? `<b>${esc(e.n)}</b>${e.sa ? `<i class="sa">${esc(e.sa)}</i>` : ''}${tx ? (isRepSb(it) ? `<small class="muted">${e.sb === 'rep' ? 'Wiederholung ab hier – bis „Wiederholung Ende“' : 'Ende der Wiederholung'}</small>` : e.sb === 'pause' ? `<input type="text" class="sbnote" data-chg="seqTx" data-i="${i}" value="${esc(it.tx || '')}" maxlength="60" placeholder="Hinweis (optional), z. B. Nachspüren …" autocomplete="off">` : e.sb === 'frei' ? `<input type="text" class="freitx" data-chg="seqTx" data-i="${i}" value="${esc(it.tx || '')}" maxlength="60" placeholder="Name der Übung, z. B. Handstand …" autocomplete="off">` : isTxb(it) ? `<textarea rows="3" class="seqtx" data-chg="seqTx" data-i="${i}" placeholder="Text an dieser Stelle der Sequenz …">${esc(it.tx || '')}</textarea>` : sbRefSelect(it, e, `data-chg="seqRef" data-i="${i}"`) + sbPreview(it, e)) : ''}` : '<b class="muted">noch keine Übung gewählt</b>'}</div>
+  return `<div class="seqrow${tx ? ' txb' : ''}"><span class="seqno">${i + 1}</span>${tile}<div class="seqnm">${e ? `<b>${esc(e.n)}</b>${e.sa ? `<i class="sa">${esc(e.sa)}</i>` : ''}${tx ? (isRepSb(it) ? `<small class="muted">${e.sb === 'rep' ? 'Wiederholung ab hier – bis „Wiederholung Ende“' : 'Ende der Wiederholung'}</small>` : e.sb === 'eigen' ? eigenEdit(it, `data-chg="seqTx" data-i="${i}"`, 'seqSym', `data-i="${i}"`, `eigq:${i}`) : e.sb === 'pause' ? `<input type="text" class="sbnote" data-chg="seqTx" data-i="${i}" value="${esc(it.tx || '')}" maxlength="60" placeholder="Hinweis (optional), z. B. Nachspüren …" autocomplete="off">` : e.sb === 'frei' ? `<input type="text" class="freitx" data-chg="seqTx" data-i="${i}" value="${esc(it.tx || '')}" maxlength="60" placeholder="Name der Übung, z. B. Handstand …" autocomplete="off">` : isTxb(it) ? `<textarea rows="3" class="seqtx" data-chg="seqTx" data-i="${i}" placeholder="Text an dieser Stelle der Sequenz …">${esc(it.tx || '')}</textarea>` : sbRefSelect(it, e, `data-chg="seqRef" data-i="${i}"`) + sbPreview(it, e)) : ''}` : '<b class="muted">noch keine Übung gewählt</b>'}</div>
 <div class="am">${isRepSb(it) ? '' : `<input type="number" min="0.5" max="30" step="0.5" value="${it.min}" data-chg="seqMin" data-i="${i}"><span>Min.</span>`}</div>
 <button class="ghost sm" data-a="seqMv" data-i="${i}" data-d="-1" ${i === 0 ? 'disabled' : ''} title="Nach oben">▲</button><button class="ghost sm" data-a="seqMv" data-i="${i}" data-d="1" ${i === n - 1 ? 'disabled' : ''} title="Nach unten">▼</button>
 <button class="ghost sm danger" data-a="seqRm" data-i="${i}" title="Übung entfernen">🗑</button></div>`;
@@ -232,11 +232,13 @@ const SEQ_ACTIONS = {
   seqRm(d) { const dr = ui.seqDraft; if (!dr || dr.items.length <= 1) { toast('Eine Sequenz braucht mindestens eine Übung.'); return; } dr.items.splice(+d.i, 1); render(); },
   seqMv(d) { const a = ui.seqDraft.items, i = +d.i, j = i + +d.d; if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; render(); },
   seqPk(d, el) { openSeqPicker(el, +d.i); },
+  seqSym(d) { const dr = ui.seqDraft, it = dr && dr.items[+d.i]; if (!it) return; it.icon = d.v; render(); },
+  seqTx(el) { const d = ui.seqDraft; if (d && d.items[+el.dataset.i]) d.items[+el.dataset.i].tx = el.value; },
   seqPick(d) {
     const p = ui.pk, dr = ui.seqDraft; if (!p || p.kind !== 'seq' || !dr || !dr.items[p.i]) return;
     if (isRepSb({ id: d.id })) { dr.items.splice(p.i, dr.items[p.i].id ? 0 : 1, { id: d.id, min: 0 }, { id: REPEND_ID, min: 0 }); closePicker(); render(); return; }   // Wiederholung wird vor der gewählten Zeile eingefügt
-    const it = dr.items[p.i], wasRep = isRepSb(it); it.id = d.id; if (wasRep) it.min = (exById(d.id) || {}).m || 1;
-    if (d.id === TXB_ID || d.id === FREI_ID || d.id === PAUSE_ID) { it.tx = it.tx || ''; delete it.ref; } else if (d.id === LIED_ID || d.id === MANSB_ID) { it.ref = ''; delete it.tx; it.min = (exById(d.id) || {}).m || it.min; } else { delete it.tx; delete it.ref; }
+    const it = dr.items[p.i], wasRep = isRepSb(it); it.id = d.id; if (wasRep) it.min = (exById(d.id) || {}).m || 1; if (d.id !== EIGEN_ID) delete it.icon;
+    if (d.id === TXB_ID || d.id === FREI_ID || d.id === PAUSE_ID || d.id === EIGEN_ID) { it.tx = it.tx || ''; delete it.ref; } else if (d.id === LIED_ID || d.id === MANSB_ID) { it.ref = ''; delete it.tx; it.min = (exById(d.id) || {}).m || it.min; } else { delete it.tx; delete it.ref; }
     closePicker(); render();
   },
   // Eigenschaften: Klick setzt die Gruppe auf „manuell“ (Startwert = bisheriger automatischer Wert); „↻ automatisch“ hebt das auf
@@ -250,7 +252,7 @@ const SEQ_ACTIONS = {
     if (d.items.some(i => !i.id)) { toast('Bitte für jede Übung eine Auswahl treffen oder die Anzahl verringern.'); return; }
     if (d.items.some(i => (i.id === LIED_ID || i.id === MANSB_ID) && !i.ref)) { toast('Bitte bei jedem Lied bzw. Mantra eine Auswahl treffen.'); return; }
     if ((state.sequences || []).some(q => q.id !== d.id && norm(q.name) === norm(name))) { toast('Eine Sequenz mit diesem Namen gibt es schon.'); return; }
-    const q = { id: d.id, name, type: SEQ_TYPES[d.type] ? d.type : 'asana', items: d.items.map(i => Object.assign({ id: i.id, min: isRepSb(i) ? 0 : Math.max(0.5, +i.min || 0.5) }, hasTx(exById(i.id)) ? { tx: String(i.tx || '') } : isSb(i) ? { ref: String(i.ref || '') } : {})) }, k = state.sequences.findIndex(x => x.id === d.id);
+    const q = { id: d.id, name, type: SEQ_TYPES[d.type] ? d.type : 'asana', items: d.items.map(i => Object.assign({ id: i.id, min: isRepSb(i) ? 0 : Math.max(0.5, +i.min || 0.5) }, hasTx(exById(i.id)) ? Object.assign({ tx: String(i.tx || '') }, i.id === EIGEN_ID && i.icon ? { icon: i.icon } : {}) : isSb(i) ? { ref: String(i.ref || '') } : {})) }, k = state.sequences.findIndex(x => x.id === d.id);
     if (String(d.desc || '').trim()) q.desc = String(d.desc).trim();
     const sn = String((d.src || {}).n || '').trim(), su = String((d.src || {}).u || '').trim(); if (sn || su) q.src = { n: sn, u: su };
     if (d.man && Object.keys(d.man).length) q.man = deepCopy(d.man);
@@ -282,7 +284,6 @@ const SEQ_ACTIONS = {
 const SEQ_CH = {
   seqRef(el) { const d = ui.seqDraft, it = d && d.items[+el.dataset.i]; if (!it) return; it.ref = el.value; const x = it.id === LIED_ID ? songById(it.ref) : null; if (x && +x.dur > 0) it.min = +x.dur; render(); },
   seqFilt(el) { const f = el.dataset.f || ''; if (f.startsWith('u:')) ui[f.slice(2)] = el.value; render(); },
-  seqTx(el) { const d = ui.seqDraft; if (d && d.items[+el.dataset.i]) d.items[+el.dataset.i].tx = el.value; },
   seqType(el) {
     const { c, s } = sessionOf(el.dataset.sid), b = seqPlanOf(s).blocks.find(x => x.id === el.dataset.bid); if (!b || !SEQ_TYPES[el.value]) return;
     b.type = el.value; b.seqId = ''; b.pos = 0; seqPurge(s, b.id);
