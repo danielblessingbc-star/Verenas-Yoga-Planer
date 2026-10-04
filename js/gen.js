@@ -267,17 +267,46 @@ function assignMottos(c, n) {
     const seasonal = ['fuelle', 'loslassen', 'freude', 'stille', 'licht', 'erwachen', 'sonne', 'genuss'];
     const mid = THEMES.map(t => t.id).filter(i => i !== 'ankommen' && i !== 'dankbarkeit' && !seasonal.includes(i));
     for (let i = mid.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [mid[i], mid[j]] = [mid[j], mid[i]]; }
+    if (n === 1) { const all = THEMES.map(t => t.id); return [mottoFromTheme(themeById(all[Math.floor(r() * all.length)]))]; }
     return ['ankommen'].concat(mid.slice(0, Math.max(0, n - 2)), n > 1 ? ['dankbarkeit'] : []).slice(0, n).map(i => mottoFromTheme(themeById(i)));
   };
-  if (m.mode === 'eigen') {
-    const lines = (m.eigen || '').split('\n').map(x => x.trim()).filter(Boolean), fb = auto();
-    return Array.from({ length: n }, (_, i) => lines[i] ? mottoFromText(lines[i]) : fb[i]);
+  const base = m.mode === 'uebermotto' ? arcIds(PRESETS[m.preset === 'frei' ? presetFromText(m.free) : m.preset].l, n).map(i => mottoFromTheme(themeById(i))) : auto();
+  // Jede Zeile des Mottofelds gilt für die Stunde mit gleicher Nummer; leere Zeile = generiertes Motto
+  const lines = (m.eigen || '').split('\n').map(x => x.trim());
+  return Array.from({ length: n }, (_, i) => lines[i] ? mottoFromText(lines[i]) : base[i]);
+}
+// Mottofeld: eine Zeile je Stunde (Einzelstunde: 1 Zeile), Zeilen dürfen leer sein
+const mottoLines = c => { const n = c.single ? 1 : Math.max(1, +c.count || 1), l = (c.motto.eigen || '').split('\n').map(x => x.trim()); return Array.from({ length: n }, (_, i) => l[i] || ''); };
+const setMottoLine = (c, i, v) => { const l = mottoLines(c); l[i] = String(v || '').replace(/\s*\n\s*/g, ' ').trim(); while (l.length && !l[l.length - 1]) l.pop(); c.motto.eigen = l.join('\n'); };
+// Ein Motto generieren: mit API-Schlüssel per KI, sonst aus den eingebauten Mottos (ohne bereits vergebene)
+async function genOneMotto(c, used) {
+  const taken = new Set((used || []).filter(Boolean).map(x => norm(x.split('|')[0])));
+  if (state.settings.apiKey) {
+    try {
+      const p = `Entwirf ein Motto für eine Yogastunde (${LEVELS[c.level]}). ${taken.size ? 'Bereits vergeben, nicht wiederholen: ' + Array.from(taken).join(', ') + '. ' : ''}Kurzer Titel (2–5 Wörter) und ein Kernsatz in der Ich-Form. Antworte ausschließlich mit JSON: {"title":"…","kern":"…"}`;
+      const j = jsonFrom(await aiCall(p, 600), '{', '}');
+      if (j.title) return { text: String(j.title).trim() + (j.kern ? ' | ' + String(j.kern).trim() : ''), ai: true };
+    } catch (e) { console.error(e); return { text: genLocalMotto(taken), ai: false, err: e.message }; }
   }
-  if (m.mode === 'uebermotto') {
-    const pid = m.preset === 'frei' ? presetFromText(m.free) : m.preset;
-    return arcIds(PRESETS[pid].l, n).map(i => mottoFromTheme(themeById(i)));
+  return { text: genLocalMotto(taken), ai: false };
+}
+function genLocalMotto(taken) { const pool = THEMES.filter(t => !taken.has(norm(t.t))), t = pool[Math.floor(Math.random() * pool.length)] || THEMES[0]; return t.t; }
+// Name leer = Motto (Einzelstunde: Motto der Stunde, Programm: erstes bis letztes Motto)
+function mottoName(c) {
+  const t = c.sessions.map(s => s.motto && s.motto.title).filter(Boolean);
+  return !t.length ? '' : c.single || t.length === 1 ? t[0] : t[0] + ' bis ' + t[t.length - 1];
+}
+function fillName(c) { if (!String(c.name || '').trim()) c.name = mottoName(c) || c.name; }
+async function genName(c) {
+  const mn = mottoName(c);
+  if (state.settings.apiKey) {
+    try {
+      const p = `Gib einer Yoga-${c.single ? 'Einzelstunde' : 'Kursreihe'} (${LEVELS[c.level]}) einen kurzen, schönen Namen (2–6 Wörter).${mn ? ' Motto: „' + mn + '“.' : ''} Antworte nur mit dem Namen, ohne Anführungszeichen.`;
+      const n = (await aiCall(p, 200)).trim().replace(/^[„"“]+|[“"”]+$/g, '').split('\n')[0];
+      if (n) return { text: n, ai: true };
+    } catch (e) { console.error(e); return { text: mn, ai: false, err: e.message }; }
   }
-  return auto();
+  return { text: mn, ai: false };
 }
 function sessionTags(s) {
   const t = themeById(s.motto.themeId);
@@ -870,7 +899,7 @@ function planCourse(c) {
     if (!c.sessions[i]) c.sessions.push(newSession(c, i, mottos[i]));
     else if (!c.sessions[i].locked && c.sessions[i].status !== 'fertig') { c.sessions[i].seed = Math.floor(Math.random() * 1e9); fillSession(c, c.sessions[i], i, { motto: mottos[i] }); }
   }
-  calcDates(c);
+  calcDates(c); fillName(c);
   c.dirty = false; c.status = 'vorgeplant';
 }
 

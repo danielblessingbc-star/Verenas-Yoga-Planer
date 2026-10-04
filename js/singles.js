@@ -74,7 +74,7 @@ ${fld('Pausen / Ferien (Datum oder „von bis“, getrennt mit ;)', inp('u:build
 
 const SINGLE_ACTIONS = {
   newSingle() {
-    const c = defaultCourseFixed({ name: 'Neue Einzelstunde ' + fmtDate(todayIso()), count: 1, single: true });
+    const c = defaultCourseFixed({ name: '', count: 1, single: true });
     startCourse(c); ui.doc.ueb = false; ui.doc.sel = '0';
   },
   // Leere Einzelstunden-Vorlage: Struktur (Blöcke, Zeiten) wie in den Vorgaben, aber ohne vorausgewählte Übungen, Mantra und Atemteil
