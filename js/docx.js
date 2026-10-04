@@ -129,6 +129,7 @@ function dxBlocks(node, out, o) {
     if (tag === 'script' || tag === 'style' || cl.contains('foot') || cl.contains('wm') || cl.contains('noprint')) return;
     if (cl.contains('ex') || cl.contains('exg')) { flush(); tiles.push(n); return; }
     flushTiles();
+    if (cl.contains('b2')) { flush(); tiles = Array.from(n.children); flushTiles(); return; }
     if (cl.contains('ucard') || cl.contains('dh')) {
       flush(); const svg = n.querySelector('svg'), right = cl.contains('ucard') ? n.querySelector('.uinfo') : Array.from(n.children).find(ch => ch.tagName === 'DIV'), total = o.cw || o.pw || 9638, lw = 1250, ps = [];
       if (right) dxBlocks(right, ps, { cw: total - lw - 150, pw: o.pw });
