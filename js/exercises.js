@@ -58,7 +58,8 @@ X('knieheben_tab', 'Knieheben mit Tab', 'mobi_stand', 1, 1, 'knee_lift', 'balanc
 X('tadasana', 'Tadasana', 'flow', 1, 1, 'stand', 'wurzel atem balance licht');
 X('rueckbeuge_leicht', 'Leichte Rückbeuge', 'flow', 1, 1, 'backbend', 'herz licht energie', 'ruecken');
 X('halbe_vorbeuge', 'Halbe Vorbeuge', 'flow', 1, 1, 'half_fold', 'ruecken kraft loslassen', '', '', 'vorbeuge');
-X('vorbeuge', 'Vorbeuge (Knie gebeugt)', 'flow', 1, 1, 'fold', 'loslassen ruhe ruecken', 'ruecken osteoporose blutdruck schwindel', 'halbe_vorbeuge', 'weite_vorbeuge');
+X('vorbeuge_knie', 'Vorbeuge (Knie gebeugt)', 'flow', 1, 1, 'fold', 'loslassen ruhe ruecken', 'ruecken osteoporose blutdruck schwindel', 'halbe_vorbeuge', 'vorbeuge');
+X('vorbeuge', 'Vorbeuge', 'flow', 1, 1, 'fold', 'loslassen ruhe ruecken', 'ruecken osteoporose blutdruck schwindel', 'vorbeuge_knie', 'weite_vorbeuge');
 X('weite_vorbeuge', 'Weite Vorbeuge', 'flow', 1, 1, 'fold', 'loslassen ruhe ruecken', 'ruecken osteoporose blutdruck schwindel', 'vorbeuge');
 X('vorbeuge_aushaengen', 'Vorbeuge (Aushängen)', 'flow', 1, 1, 'fold', 'loslassen ruhe', 'ruecken osteoporose blutdruck schwindel', 'halbe_vorbeuge');
 X('wirbel_aufrollen', 'Wirbel für Wirbel aufrollen', 'flow', 1, 1, 'rollup', 'loslassen ruecken', 'ruecken osteoporose blutdruck schwindel', 'halbe_vorbeuge');
@@ -146,8 +147,9 @@ X('katze_kuh_vier', 'Katze-Kuh im Vierfüßler', 'boden', 1, 1.5, 'quad_cat', 'r
 X('kindhaltung', 'Kindhaltung (Nachspüren)', 'boden', 1, 1.5, 'child', 'ruhe loslassen', 'knie huefte');
 X('kind_breit', 'Breite Kindhaltung', 'boden', 1, 1.5, 'child', 'ruhe loslassen huefte', 'knie huefte');
 X('anahatasana', 'Anahatasana', 'boden', 2, 1.5, 'anahatasana', 'herz licht schulter', 'schulter knie handgelenk');
-X('sphinx', 'Sphinx', 'boden', 1, 1.5, 'sphinx', 'herz licht energie', '', '', 'kobra');
-X('kobra', 'Sanfte Kobra', 'boden', 2, 1.5, 'cobra', 'herz licht energie', 'handgelenk ruecken', 'sphinx');
+X('sphinx', 'Sphinx', 'boden', 1, 1.5, 'sphinx', 'herz licht energie', '', '', 'kobra_sanft');
+X('kobra_sanft', 'Sanfte Kobra', 'boden', 1, 1.5, 'cobra', 'herz licht energie', 'handgelenk ruecken', 'sphinx', 'kobra');
+X('kobra', 'Kobra', 'boden', 2, 1.5, 'cobra', 'herz licht energie', 'handgelenk ruecken', 'kobra_sanft');
 X('janu', 'Janu Sirsasana', 'boden', 2, 1.5, 'janu', 'loslassen ruhe huefte ruecken', 'ruecken knie osteoporose');
 X('malasana_hoch', 'Malasana erhöht', 'boden', 2, 1.5, 'malasana', 'wurzel huefte loslassen', 'knie huefte blutdruck schwindel');
 X('apanasana', 'Apanasana – Knie zur Brust (kreisen)', 'boden', 1, 1.5, 'supine_knee', 'loslassen ruhe huefte ruecken');
@@ -193,7 +195,7 @@ B('rueckblick', 'Rückblick', 'wahr', 1, 4, 'dankbarkeit ruhe', '',
 const SA = {
   tadasana: 'Tadasana', utkatasana: 'Utkatasana', utkatasana_halten: 'Utkatasana', goettin: 'Utkata Konasana', krieger1: 'Virabhadrasana I', krieger2: 'Virabhadrasana II',
   krieger3_unt: 'Virabhadrasana III', baum: 'Vrksasana', gomukhasana_arme: 'Gomukhasana (Arme)', adlerarme: 'Garudasana (Arme)', seitwinkel: 'Utthita Parsvakonasana',
-  vorbeuge: 'Uttanasana', weite_vorbeuge: 'Prasarita Padottanasana', halbe_vorbeuge: 'Ardha Uttanasana', vorbeuge_aushaengen: 'Uttanasana', sonnengruss: 'Surya Namaskar',
+  vorbeuge: 'Uttanasana', vorbeuge_knie: 'Uttanasana', weite_vorbeuge: 'Prasarita Padottanasana', halbe_vorbeuge: 'Ardha Uttanasana', vorbeuge_aushaengen: 'Uttanasana', sonnengruss: 'Surya Namaskar',
   arme_zur_sonne: 'Urdhva Hastasana', ausfall_klein: 'Anjaneyasana', katze_kuh_vier: 'Marjaryasana / Bitilasana', kindhaltung: 'Balasana', kind_breit: 'Balasana',
   anahatasana: 'Anahatasana', sphinx: 'Salamba Bhujangasana', kobra: 'Bhujangasana', janu: 'Janu Sirsasana', malasana_hoch: 'Malasana', apanasana: 'Apanasana',
   bruecke: 'Setu Bandha Sarvangasana', bruecke_halten: 'Setu Bandha Sarvangasana', bruecke_sanft: 'Setu Bandha Sarvangasana',
