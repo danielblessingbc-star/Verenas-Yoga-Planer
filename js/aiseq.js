@@ -49,13 +49,13 @@ function aiSeqFlow(items) {
 }
 const aiSeqClean = s => String(s || '').replace(/\s*[–—]\s*/g, ', ').trim();
 
-async function aiSeqPlan(g, cands) {
+async function aiSeqPlan(g, cands, avoid) {
   const geb = g.geb.map(k => GEBRECHEN[k]).filter(Boolean), st = exById(g.startId), en = exById(g.endId), n = clamp(Math.round(+g.count) || 8, 3, 30);
   const list = cands.map(e => `${e.id} | ${e.n} | ${AISEQ_POS[aiSeqPos(e)]} | ${fmtMin(e.m)} Min.`).join('\n');
   const p = `Du bist eine erfahrene Yogalehrerin und hilfst einer Kollegin, eine feste Übungssequenz zusammenzustellen. Die Übungen stammen aus ihrem Katalog. Du wählst die Übungen und bringst sie in die beste Reihenfolge.
 Beschreibung der Kollegin: „${g.prompt.trim()}“
 Vorgaben: Art ${SEQ_TYPES[g.type].n} (${AISEQ_TYPE_HINT[g.type]}), Gruppe ${LEVELS[g.level]}, ${n} Übungen${geb.length ? ', Einschränkungen: ' + geb.join(', ') : ''}.${st ? ` Die erste Übung ist fest vorgegeben: „${st.n}“.` : ''}${en ? ` Die letzte Übung ist fest vorgegeben: „${en.n}“.` : ''}
-Katalog (eine Übung je Zeile: ID | Name | Körperposition | Dauer):
+${avoid && avoid.length ? `Das ist ein neuer Versuch. Die bisherige Folge war: ${avoid.join(', ')}. Liefere bewusst eine andere Variante mit anderer Auswahl oder Reihenfolge, soweit Vorgaben und Flow es zulassen.\n` : ''}Katalog (eine Übung je Zeile: ID | Name | Körperposition | Dauer):
 ${list}
 
 Antworte ausschließlich mit JSON in genau dieser Form:
@@ -141,6 +141,36 @@ function aiSeqResolve(g, p) {
   return { items, miss };
 }
 
+// KI-Lauf: redo = true erzeugt aus dem aktuellen Entwurf eine neue Variante mit denselben Einstellungen
+async function aiSeqRun(redo) {
+  const g = ui.aiSeq; if (!g || ui.aiSeqBusy) return;
+  if (!(g.prompt || '').trim()) { toast('Bitte beschreibe die Sequenz im Textfeld.'); return; }
+  if (!(state.settings.apiKey || '').trim()) { toast('Kein API-Schlüssel hinterlegt (Einstellungen, Abschnitt „KI-Texte“).', 6000); return; }
+  const bad = [g.startId, g.endId].map(id => id && exById(id)).filter(e => e && contra(e, g.geb));
+  if (bad.length) { toast(`„${bad[0].n}“ passt nicht zu den gewählten Einschränkungen. Bitte Vorgabe ändern oder entfernen.`, 7000); return; }
+  const cands = aiSeqCands(g);
+  if (cands.length < 3) { toast('Für diese Vorgaben gibt es zu wenige passende Übungen im Katalog.', 6000); return; }
+  const prev = redo && ui.seqDraft ? ui.seqDraft.aiPrev || ui.seqDraft.items.map(i => (exById(i.id) || {}).n).filter(Boolean) : null;
+  ui.aiSeqBusy = true; render(); toast(redo ? 'KI berechnet die Sequenz neu …' : 'KI stellt die Sequenz zusammen …', 40000);
+  try {
+    const p = await aiSeqPlan(g, cands, prev), { items, miss } = aiSeqResolve(g, p);
+    if (items.length < 2) throw new Error('Die KI hat keine brauchbare Übungsfolge geliefert. Bitte nochmal versuchen oder die Beschreibung anpassen.');
+    const want = clamp(Math.round(+g.count) || 8, 3, 30), notes = [];
+    if (items.length !== want) notes.push(`${items.length} statt ${want} Übungen`);
+    if (miss.length) notes.push('nicht eingebaut: ' + miss.join(', '));
+    const fl = aiSeqFlow(items); if (fl.length) notes.push('Übergänge prüfen: ' + fl.slice(0, 3).join('; ') + (fl.length > 3 ? '; …' : ''));
+    const name = (g.name || '').trim() || aiSeqClean(p.name) || 'KI-Sequenz', desc = aiSeqClean(p.desc);
+    const its = items.map(e => ({ id: e.id, min: e.m || 1 }));
+    ui.seqAiOn = false; ui.aiSeqBusy = false;
+    seqStart({ id: 'seq_' + uid(), name, type: SEQ_TYPES[g.type] ? g.type : 'asana', items: its, desc, src: { n: 'KI-generiert', u: '' } }, true);
+    // Merker für „Nochmal berechnen“: Entwurf kommt von der KI; Stand zum Erkennen eigener Änderungen; Namen der Folge als Hinweis „bitte anders“
+    Object.assign(ui.seqDraft, { fromAi: true, aiSnap: JSON.stringify([name, desc, its.map(i => [i.id, i.min])]), aiPrev: items.map(e => e.n) });
+    render();
+    toast(`${redo ? 'Neue Variante' : 'Entwurf'} „${name}“ mit ${items.length} Übungen erstellt. Prüfen und mit „Sequenz speichern“ anlegen.${notes.length ? ' Hinweise: ' + notes.join(' | ') + '.' : ''}`, 15000);
+  } catch (e) { console.error(e); toast('⚠ ' + e.message, 12000); }
+  finally { ui.aiSeqBusy = false; render(); }
+}
+
 Object.assign(AIGEN_ACTIONS, {
   aiSeqOpen() { ui.aiSeq = ui.aiSeq || aiSeqDefault(); ui.seqAiOn = true; ui.seqDraft = null; ui.view = 'sequences'; ui.courseId = null; closePicker(); render(); window.scrollTo(0, 0); },
   aiSeqClose() { ui.seqAiOn = false; closePicker(); render(); },
@@ -154,27 +184,12 @@ Object.assign(AIGEN_ACTIONS, {
     if (p.slot === 'start') g.startId = d.id; else g.endId = d.id;
     closePicker(); render();
   },
-  async aiSeqCreate() {
-    const g = ui.aiSeq; if (!g || ui.aiSeqBusy) return;
-    if (!(g.prompt || '').trim()) { toast('Bitte beschreibe die Sequenz im Textfeld.'); return; }
-    if (!(state.settings.apiKey || '').trim()) { toast('Kein API-Schlüssel hinterlegt (Einstellungen, Abschnitt „KI-Texte“).', 6000); return; }
-    const bad = [g.startId, g.endId].map(id => id && exById(id)).filter(e => e && contra(e, g.geb));
-    if (bad.length) { toast(`„${bad[0].n}“ passt nicht zu den gewählten Einschränkungen. Bitte Vorgabe ändern oder entfernen.`, 7000); return; }
-    const cands = aiSeqCands(g);
-    if (cands.length < 3) { toast('Für diese Vorgaben gibt es zu wenige passende Übungen im Katalog.', 6000); return; }
-    ui.aiSeqBusy = true; render(); toast('KI stellt die Sequenz zusammen …', 40000);
-    try {
-      const p = await aiSeqPlan(g, cands), { items, miss } = aiSeqResolve(g, p);
-      if (items.length < 2) throw new Error('Die KI hat keine brauchbare Übungsfolge geliefert. Bitte nochmal versuchen oder die Beschreibung anpassen.');
-      const want = clamp(Math.round(+g.count) || 8, 3, 30), notes = [];
-      if (items.length !== want) notes.push(`${items.length} statt ${want} Übungen`);
-      if (miss.length) notes.push('nicht eingebaut: ' + miss.join(', '));
-      const fl = aiSeqFlow(items); if (fl.length) notes.push('Übergänge prüfen: ' + fl.slice(0, 3).join('; ') + (fl.length > 3 ? '; …' : ''));
-      const name = (g.name || '').trim() || aiSeqClean(p.name) || 'KI-Sequenz';
-      ui.seqAiOn = false; ui.aiSeqBusy = false;
-      seqStart({ id: 'seq_' + uid(), name, type: SEQ_TYPES[g.type] ? g.type : 'asana', items: items.map(e => ({ id: e.id, min: e.m || 1 })), desc: aiSeqClean(p.desc), src: { n: 'KI-generiert', u: '' } }, true);
-      toast(`Entwurf „${name}“ mit ${items.length} Übungen erstellt. Prüfen und mit „Sequenz speichern“ anlegen.${notes.length ? ' Hinweise: ' + notes.join(' | ') + '.' : ''}`, 15000);
-    } catch (e) { console.error(e); toast('⚠ ' + e.message, 12000); }
-    finally { ui.aiSeqBusy = false; render(); }
+  aiSeqCreate() { return aiSeqRun(false); },
+  // „Nochmal berechnen“ im Entwurf: gleiche Einstellungen (ui.aiSeq), die bisherige Folge dient als Hinweis auf „bitte anders“
+  aiSeqRedo(d, el) {
+    const dr = ui.seqDraft; if (!dr || !dr.fromAi || ui.aiSeqBusy) return;
+    const changed = JSON.stringify([dr.name, dr.desc, dr.items.map(i => [i.id, i.min])]) !== dr.aiSnap;
+    if (changed && !confirmTwice(el, 'aiseqredo', 'Der Entwurf wurde von dir geändert. Wirklich neu berechnen und die Änderungen verwerfen', '⚠ Änderungen verwerfen?')) return;
+    return aiSeqRun(true);
   }
 });
