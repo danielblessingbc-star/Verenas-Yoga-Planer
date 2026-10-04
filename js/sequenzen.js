@@ -234,8 +234,9 @@ const SEQ_ACTIONS = {
   seqPk(d, el) { openSeqPicker(el, +d.i); },
   seqPick(d) {
     const p = ui.pk, dr = ui.seqDraft; if (!p || p.kind !== 'seq' || !dr || !dr.items[p.i]) return;
-    const it = dr.items[p.i], wasOpen = repN(it), wasRep = isRepSb(it); it.id = d.id; if (wasRep && !isRepSb(it)) it.min = (exById(d.id) || {}).m || 1;
-    if (isRepSb(it)) { it.min = 0; delete it.tx; delete it.ref; if (repN(it) && !wasOpen) dr.items.splice(p.i + 1, 0, { id: REPEND_ID, min: 0 }); } else if (d.id === TXB_ID || d.id === FREI_ID || d.id === PAUSE_ID) { it.tx = it.tx || ''; delete it.ref; } else if (d.id === LIED_ID || d.id === MANSB_ID) { it.ref = ''; delete it.tx; it.min = (exById(d.id) || {}).m || it.min; } else { delete it.tx; delete it.ref; }
+    if (isRepSb({ id: d.id })) { dr.items.splice(p.i, dr.items[p.i].id ? 0 : 1, { id: d.id, min: 0 }, { id: REPEND_ID, min: 0 }); closePicker(); render(); return; }   // Wiederholung wird vor der gewählten Zeile eingefügt
+    const it = dr.items[p.i], wasRep = isRepSb(it); it.id = d.id; if (wasRep) it.min = (exById(d.id) || {}).m || 1;
+    if (d.id === TXB_ID || d.id === FREI_ID || d.id === PAUSE_ID) { it.tx = it.tx || ''; delete it.ref; } else if (d.id === LIED_ID || d.id === MANSB_ID) { it.ref = ''; delete it.tx; it.min = (exById(d.id) || {}).m || it.min; } else { delete it.tx; delete it.ref; }
     closePicker(); render();
   },
   // Eigenschaften: Klick setzt die Gruppe auf „manuell“ (Startwert = bisheriger automatischer Wert); „↻ automatisch“ hebt das auf

@@ -156,11 +156,11 @@ function freiFig(txt, size) {
   const lh = f * 1.18, y0 = 50 - (lines.length - 1) * lh / 2 + f * 0.35;
   return `<svg class="fig" viewBox="0 0 100 100"${px} aria-hidden="true"><g fill="currentColor" font-family="inherit" font-weight="600" font-size="${f}" text-anchor="middle">${lines.map((l, i) => `<text x="50" y="${(y0 + i * lh).toFixed(1)}">${esc_(l)}</text>`).join('')}</g></svg>`;
 }
-// Kacheln „Wiederholung“: Beginn = Wiederholungszeichen (dicker + dünner Strich, Punkte) und Anzahl, Ende = senkrechter Doppelstrich
+// Kacheln „Wiederholung“: Beginn = Wiederholungszeichen (dicker + dünner Strich, Punkte) und Anzahl, Ende = gespiegeltes Zeichen (Punkte links, dünner und dicker Strich rechts)
 function repFig(key, px) {
   const open = key !== 'repend', body = open
     ? `<path d="M16 18V82" stroke-width="7"/><path d="M27 18V82"/><circle cx="37" cy="40" r="3" fill="currentColor" stroke="none"/><circle cx="37" cy="60" r="3" fill="currentColor" stroke="none"/><text x="68" y="62" fill="currentColor" stroke="none" font-family="inherit" font-weight="700" font-size="34" text-anchor="middle">${key.slice(3)}x</text>`
-    : '<path d="M40 18V82"/><path d="M60 18V82"/>';
+    : '<path d="M84 18V82" stroke-width="7"/><path d="M73 18V82"/><circle cx="63" cy="40" r="3" fill="currentColor" stroke="none"/><circle cx="63" cy="60" r="3" fill="currentColor" stroke="none"/>';
   return `<svg class="fig" viewBox="0 0 100 100"${px || ''} aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${body}</g></svg>`;
 }
 const TEXTICON ='<svg class="fig" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M24 8h36l18 18v66H24z"/><path d="M60 8v18h18"/><path d="M34 46h34M34 58h34M34 70h22"/></g></svg>';

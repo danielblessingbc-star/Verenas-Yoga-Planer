@@ -46,11 +46,11 @@ const SB_DEFS = {
   [FREI_ID]: Object.assign({}, TEXTBLOCK, { id: FREI_ID, n: 'Freie Übung', c: 'frei', m: 2, pose: 'frei', sb: 'frei', d: 'Sonderbaustein: eine Übung mit frei eingetragenem Namen. Der Text neben der Kachel steht in der Kachel.' }),
   [PAUSE_ID]: Object.assign({}, TEXTBLOCK, { id: PAUSE_ID, n: 'Pause', c: 'pause', m: 1, pose: 'pause', sb: 'pause', d: 'Sonderbaustein: eine Pause an dieser Stelle der Stunde oder der Sequenz, nur mit Dauer und einem kurzen Hinweis (optional).' })
 };
-// Wiederholung: „1x“ … „6x“ öffnen eine Wiederholung der folgenden Übungsfolge, „Wiederholung Ende“ schließt sie (ohne Ende gilt sie bis zum Blockende; verschachtelt möglich).
+// Wiederholung: „2x“ … „6x“ (1x bleibt nur als Definition, damit alte Stände nicht brechen) öffnen eine Wiederholung der folgenden Übungsfolge, „Wiederholung Ende“ schließt sie (ohne Ende gilt sie bis zum Blockende; verschachtelt möglich).
 // Die Bausteine selbst haben keine Dauer (min 0); sumMin rechnet die Dauer der eingeschlossenen Übungen mit der Anzahl mal.
 const REPEND_ID = 'sb_repend', REP_N = [1, 2, 3, 4, 5, 6];
 REP_N.forEach(n => { SB_DEFS['sb_rep' + n] = Object.assign({}, TEXTBLOCK, { id: 'sb_rep' + n, n: 'Wiederholung ' + n + 'x', c: 'rep', m: 0, pose: 'rep' + n, sb: 'rep', rn: n, d: 'Sonderbaustein: Beginn einer Wiederholung. Die Übungen bis zum Baustein „Wiederholung Ende“ werden ' + n + 'x durchgeführt; die Dauer wird entsprechend mitgerechnet.' }); });
-SB_DEFS[REPEND_ID] = Object.assign({}, TEXTBLOCK, { id: REPEND_ID, n: 'Wiederholung Ende', c: 'rep', m: 0, pose: 'repend', sb: 'repend', d: 'Sonderbaustein: Ende einer Wiederholung (senkrechter Doppelstrich). Ohne diesen Baustein gilt die Wiederholung bis zum Ende des Blocks.' });
+SB_DEFS[REPEND_ID] = Object.assign({}, TEXTBLOCK, { id: REPEND_ID, n: 'Wiederholung Ende', c: 'rep', m: 0, pose: 'repend', sb: 'repend', d: 'Sonderbaustein: Ende einer Wiederholung (gespiegeltes Wiederholungszeichen). Ohne diesen Baustein gilt die Wiederholung bis zum Ende des Blocks.' });
 const repN = i => { const e = i && SB_DEFS[i.id]; return e && e.sb === 'rep' ? e.rn : 0; };
 const isRepEnd = i => !!i && i.id === REPEND_ID;
 const isRepSb = i => !!i && (repN(i) > 0 || isRepEnd(i));

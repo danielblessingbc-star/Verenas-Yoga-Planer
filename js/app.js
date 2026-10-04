@@ -895,11 +895,11 @@ const A = {
   pkpick(d) {
     const p = ui.pk; if (!p) return; const { c, s } = sessionOf(p.sid), e = exById(d.id); closePicker();
     if (p.i === '' || p.i == null) { const ni = mkItem(e); applyAlt(s, ni); s.blk[p.b].push(ni); if (repN(ni)) s.blk[p.b].push(mkItem(SB_DEFS[REPEND_ID])); }
+    else if (isRepSb(e)) s.blk[p.b].splice(+p.i, 0, mkItem(e), mkItem(SB_DEFS[REPEND_ID]));   // Wiederholung überschreibt die Übung nicht, sondern wird davor eingefügt
     else {
-      const it = s.blk[p.b][+p.i], wasSb = isSb(it), wasOpen = repN(it) > 0;
+      const it = s.blk[p.b][+p.i], wasSb = isSb(it);
       it.id = e.id; it.repAuto = true;
-      if (isRepSb(e)) { it.min = 0; delete it.tx; delete it.ref; it.rep = ''; it.repAuto = false; it.altE = it.altH = it.both = false; it.opt = false; if (repN(e) && !wasOpen) s.blk[p.b].splice(+p.i + 1, 0, mkItem(SB_DEFS[REPEND_ID])); }
-      else if (e.txt) { if (hasTx(e)) { it.tx = it.tx || ''; delete it.ref; } else { it.ref = ''; delete it.tx; } it.rep = ''; it.repAuto = false; it.altE = it.altH = it.both = false; }
+      if (e.txt) { if (hasTx(e)) { it.tx = it.tx || ''; delete it.ref; } else { it.ref = ''; delete it.tx; } it.rep = ''; it.repAuto = false; it.altE = it.altH = it.both = false; }
       else { if (wasSb) { delete it.tx; delete it.ref; it.min = e.m; } syncRep(it); applyAlt(s, it); }
     }
     save(); render();
