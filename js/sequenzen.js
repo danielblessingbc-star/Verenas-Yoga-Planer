@@ -174,7 +174,7 @@ ${fld('Quelle (Link)', inp('u:seqDraft.src.u', 'url', (d.src || {}).u || '', 'pl
 <div class="seqlist">${d.items.map((it, i) => seqRow(it, i, d.items.length)).join('')}</div>
 <button class="pkb add" data-a="seqAdd">＋ Übung hinzufügen</button>
 <details class="panel mini sqprops" data-id="sqp:edit" ${ui.open.has('sqp:edit') ? 'open' : ''}><summary>Eigenschaften</summary><p class="muted">Werden aus den Übungen der Sequenz abgeleitet und ändern sich mit ihnen. Ein Klick auf einen Wert setzt die Gruppe auf „manuell“, dann bleibt sie so, wie du sie einstellst, bis du sie mit „↻ automatisch“ zurücksetzt.</p>${sqPropEdit(d)}</details>
-<div class="bar"><button class="primary" data-a="seqSave">💾 Sequenz speichern</button><button data-a="seqCancel">Abbrechen</button><span class="grow"></span><span>Summe: <b id="seqsum">${fmtMin(sumMin(d.items))}</b> Min.</span></div></section>`;
+<div class="bar"><button class="primary" data-a="seqSave">💾 Sequenz speichern</button><button data-a="seqCancel">Abbrechen</button>${d.fromAi ? `<button data-a="aiSeqRedo" ${ui.aiSeqBusy ? 'disabled' : ''} title="Mit denselben Einstellungen eine neue Variante von der KI berechnen lassen">${ui.aiSeqBusy ? 'KI rechnet …' : '🔄 Nochmal berechnen'}</button>` : ''}<span class="grow"></span><span>Summe: <b id="seqsum">${fmtMin(sumMin(d.items))}</b> Min.</span></div></section>`;
   }
   const list = state.sequences || [];
   const card = q => `<div class="card course"><div class="grow"><b class="title" data-a="seqEdit" data-id="${q.id}">${esc(q.name)}</b> ${sqTypeChip(sqType(q))}
