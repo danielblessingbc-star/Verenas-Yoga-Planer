@@ -34,7 +34,7 @@ function save() {
 }
 const ui = {
   view: 'courses', courseId: null, tab: 'plan', open: new Set(['set', 'ovw']), sel: null, bopen: new Set(),
-  doc: { ueb: true, std: true, blatt: true, alt: false, uebw: false, detail: false, spick: false, hands: false, detS: false, mat: false, geb: false, katall: false, anaS: false, anaP: false, sel: 'all' },
+  doc: { ueb: true, std: true, blatt: true, blatt2: false, alt: false, uebw: false, detail: false, spick: false, hands: false, detS: false, mat: false, geb: false, katall: false, anaS: false, anaP: false, sel: 'all' },
   cat: { q: '', cat: '', lvl: '', geb: '', st: '', k_reg: '', k_mus: '', k_atm: '', k_auf: '', k_sup: '', k_mat: '', k_pos: '', k_dir: '', k_wirk: '', k_en: '', k_chakra: '', k_ziel: '' }, exOpen: new Set(),
   newEx: { n: '', c: 'stand', lv: 1, m: 2, pose: 'stand', tags: '', x: [], e: '' },
   exEdit: null, exDraft: null, exDraftKat: {}, exDraftAuto: [], exDraftAll: false
@@ -578,12 +578,12 @@ ${items.length ? `<div class="xhead"><div>Übung</div><div>↓ Leichtere Alterna
 }
 const DOC_GRP = {
   p: { keys: ['ueb', 'uebS', 'anaP'], title: 'Programm', ic: 'prog', hint: 'Blätter über alle Stunden des Programms (nur bei allen gewählten Stunden)' },
-  s: { keys: ['prax', 'uebE', 'std', 'blatt', 'alt', 'uebw', 'detS', 'spick', 'hands', 'anaS'], title: 'Einzelstunde', ic: 'stunde', hint: 'Je gewählter Stunde ein Blatt – Ausdruck nach Stunde sortiert' },
+  s: { keys: ['prax', 'uebE', 'std', 'blatt', 'blatt2', 'alt', 'uebw', 'detS', 'spick', 'hands', 'anaS'], title: 'Einzelstunde', ic: 'stunde', hint: 'Je gewählter Stunde ein Blatt – Ausdruck nach Stunde sortiert' },
   a: { keys: ['mat', 'geb', 'detail', 'katall'], title: 'Allgemein', ic: 'katalog', hint: 'Nachschlage-Listen, gelten für die gewählten Stunden' }
 };
 const DOC_OPT = {
   ueb: ['Kompakte Übersicht', 'Tabelle aller Stunden im Querformat'], prax: ['Praxisblatt (nach Vorlage)', 'Eine Seite je Stunde: Zeiten, Mobilisation, Shakti Naam und Asanas als Strichmännchen'], uebE: ['Stundenübersicht der Stunde', 'Verlauf und alle Kacheln, eine Seite je Stunde (Querformat)'], uebS: ['Stundenübersicht', 'Alle Stunden mit Verlauf und Kacheln (Querformat)'], anaP: ['Programmanalyse', 'Auswertung über das ganze Programm'],
-  std: ['Stundenpläne mit Texten', 'Ablauf, Texte, Übungstabelle und Material'], blatt: ['Strichmännchen-Blätter', 'Übungsfolge als Kacheln (Querformat)'], alt: ['Alternativenblatt', 'Leichtere Alternativen zu den Übungen'],
+  std: ['Stundenpläne mit Texten', 'Ablauf, Texte, Übungstabelle und Material'], blatt: ['Strichmännchen-Blätter', 'Übungsfolge als Kacheln (Querformat)'], blatt2: ['Strichmännchenblätter 2', 'Nur Datum, Motto und alle Übungen als Strichmännchen, eine Seite füllend (Querformat)'], alt: ['Alternativenblatt', 'Leichtere Alternativen zu den Übungen'],
   uebw: ['Blatt Übungsauswahl', 'Kacheln mit Beschreibung wie im Katalog'], detS: ['Detailbeschreibungen der Stunde', 'Technik, Wirkung, Varianten der Übungen dieser Stunde'], spick: ['Spickzettel', 'Ablauf mit Zeiten auf einer Seite'], hands: ['Hands-on Blatt', 'Adjustment, Support und Assistance'], anaS: ['Einzelstundenanalyse', 'Kennzahlen und Verteilungen je Stunde'],
   mat: ['Materialliste', 'Matte und Hilfsmittel mit Übungen'], geb: ['Gebrechenliste', 'Übungen und für wen nicht geeignet'], detail: ['Detailbeschreibungen', 'Technik, Wirkung, Varianten je Übung'], katall: ['Übungskatalog gesamt', 'Alle Übungen des Katalogs mit Beschreibung']
 };
@@ -913,13 +913,13 @@ const A = {
     ui.newEx = { n: '', c: n.c, lv: 1, m: 2, pose: 'stand', tags: '', x: [], e: '' }; save(); render(); toast('Übung hinzugefügt.');
   },
   delEx(d, el) { if (confirmTwice(el, 'ex' + d.id, 'Eigene Übung löschen?')) { state.customEx = state.customEx.filter(e => e.id !== d.id); save(); render(); } },
-  preview(d) { ui.tab = 'doc'; ui.doc.sel = String(idxOf(cur(), sessionOf(d.id).s)); ui.doc.ueb = false; ui.doc.std = true; ui.doc.blatt = true; ui.doc.alt = false; ui.doc.uebw = false; ui.doc.detail = false; ui.doc.spick = false; ui.doc.hands = false; ui.doc.detS = false; ui.doc.mat = false; ui.doc.geb = false; ui.doc.katall = false; ui.doc.anaS = false; ui.doc.anaP = false; render(); window.scrollTo(0, 0); },
+  preview(d) { ui.tab = 'doc'; ui.doc.sel = String(idxOf(cur(), sessionOf(d.id).s)); ui.doc.ueb = false; ui.doc.std = true; ui.doc.blatt = true; ui.doc.blatt2 = false; ui.doc.alt = false; ui.doc.uebw = false; ui.doc.detail = false; ui.doc.spick = false; ui.doc.hands = false; ui.doc.detS = false; ui.doc.mat = false; ui.doc.geb = false; ui.doc.katall = false; ui.doc.anaS = false; ui.doc.anaP = false; render(); window.scrollTo(0, 0); },
   print() {
     const c = cur(), t = document.title; document.title = fileName(c.name);
     toast('Im Druckdialog als Ziel „Als PDF speichern“ wählen (Papierformat A4).');
     setTimeout(() => { window.print(); document.title = t; }, 400);
   },
-  pdf() { ui.tab = 'doc'; ui.doc = { ueb: true, std: true, blatt: true, alt: false, uebw: false, detail: false, spick: false, hands: false, detS: false, mat: false, geb: false, katall: false, anaS: false, anaP: false, sel: 'all' }; render(); window.scrollTo(0, 0); A.print(); },
+  pdf() { ui.tab = 'doc'; ui.doc = { ueb: true, std: true, blatt: true, blatt2: false, alt: false, uebw: false, detail: false, spick: false, hands: false, detS: false, mat: false, geb: false, katall: false, anaS: false, anaP: false, sel: 'all' }; render(); window.scrollTo(0, 0); A.print(); },
   mail() {
     const c = cur(), sub = c.emailSubject || c.name + ' – Programm'; let body = overviewText(c);
     const to = mailAddrs(c).map(encodeURIComponent).join(','), mk = b => `mailto:${to}?subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(b)}`;

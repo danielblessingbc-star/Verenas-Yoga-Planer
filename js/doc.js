@@ -50,6 +50,8 @@ const DOC_CSS = `
 .ex small.sa{font-style:italic;color:#7b8f80}
 .exg{display:inline-flex;align-items:flex-end;gap:0;border:1px dashed #c4d0c6;border-radius:10px;padding:2px 3px;margin:3px 2px;background:#f8faf6}
 .ex.alt{width:78px;font-size:10px;opacity:.92}.ex.alt .fig{width:38px;height:38px}.ex.alt small.lv{color:#c9826b;font-weight:700;margin:0 0 1px}
+.b2h{font-family:"Cormorant Garamond",Georgia,"Times New Roman",serif;color:#3f5a4b;font-weight:600;font-size:26px;line-height:1.2;margin:0 0 5mm;padding:0;text-align:center}
+.b2{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:var(--rgap) var(--gap)}.paper .b2 .ex{width:auto;margin:0;overflow-wrap:anywhere;hyphens:auto;font-size:var(--fs);line-height:1.15}.paper .b2 .ex .fig{width:var(--fig);height:var(--fig)}.paper .b2 .ex .pk{width:16px;height:16px;font-size:10px;line-height:16px}
 .big .ex{width:120px;font-size:12.5px;margin:6px 4px}
 .big .ex .fig{width:82px;height:82px}
 .paper .arrow{width:34px;text-align:center;font-size:20px;color:#8aa897;vertical-align:middle}
@@ -206,7 +208,26 @@ function renderBlatt(c, s, i) {
 <div class="kurs">${esc(c.name)}</div>
 <h2>${esc(sessionTitle(c, s, i))}<br><span style="font-size:15px">${esc(groupHeading(rs))} (${fmtMin(rowsMin(rs))} Minuten)</span></h2>
 ${rowTable(rs)}${kraftBox(s)}${showAlt(c) ? altList(s) : ''}${pageFoot(c)}</section>`;
-}function courseSub(c) {
+}
+
+// Strichmännchenblätter 2: nur Datum und Motto als Überschrift, danach alle Übungen als Strichmännchen, die Seite (A4 quer) wird ausgefüllt
+function renderBlatt2(c, s, i) {
+  const tiles = [];
+  exRows(s).forEach(r => r.items.forEach(it => {
+    const e = exById(it.id); if (!e || isTxb(it)) return;
+    if (e.txt) { const b = sbInfo(it, e); tiles.push(`<span class="ex"><span class="fg">${b.fig}</span><span>${esc(b.title)}</span></span>`); return; }
+    tiles.push(`<span class="ex${it.opt ? ' opt' : ''}"><span class="fg">${figureSVG(e.pose)}${handsMark(it, e)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span>${esc(e.n)}</span></span>`);
+  }));
+  const W = 267, H = 160, n = Math.max(tiles.length, 1), gap = 3;
+  const fsOf = cw => Math.max(10, Math.min(14, cw * 0.4)), figOf = cw => Math.min(cw * 0.98, 70);
+  const need = cols => { const cw = (W - gap * (cols - 1)) / cols; return Math.ceil(n / cols) * (figOf(cw) + 3 * fsOf(cw) * 1.15 * 0.2646 + 2 + gap); };
+  let cols = 16; for (let k = 3; k <= 16; k++) if (need(k) <= H) { cols = k; break; }
+  const cw = (W - gap * (cols - 1)) / cols, rows = Math.ceil(n / cols), rowH = need(cols) / rows - gap;
+  const rgap = rows > 1 ? Math.max(gap, Math.min(14, (H - rows * rowH) / (rows - 1))) : gap;
+  const head = (s.date ? fmtDateW(s.date) + ' · ' : '') + s.motto.title;
+  return `<section class="paper land big blatt2 nofoot"><h2 class="b2h">${esc(head)}</h2><div class="b2" style="--cols:${cols};--gap:${gap}mm;--rgap:${rgap.toFixed(1)}mm;--fig:${figOf(cw).toFixed(1)}mm;--fs:${fsOf(cw).toFixed(1)}px">${tiles.join('')}</div></section>`;
+}
+function courseSub(c) {
   const T = sessionTotal(c.sessions[0] || { dur: courseDur(c) });
   const rh = { weekly: 'wöchentlich', biweekly: 'zweiwöchentlich', days: 'an ausgewählten Wochentagen' }[c.rhythm || 'weekly'];
   const bits = [LEVELS[c.level], `${c.single ? 'Einzelstunde' : c.sessions.length + ' Stunden'} à ${T} Min.${c.single ? '' : ' (' + rh + ')'}`, { aus: 'ohne Atemteil', atem: 'Atemübungen', atem_wahr: 'Atem- + Wahrnehmungsübungen', gemischt: 'Atem- und Wahrnehmungsübungen im Wechsel', zufall: 'Atem- und Wahrnehmungsübungen (zufällig)' }[c.breath]];
@@ -295,6 +316,7 @@ function buildDoc(c, o) {
     if (o.uebE) h += renderStundenUeb(c, { s, i });
     if (o.std) h += renderSession(c, s, i, o);
     if (o.blatt) h += renderBlatt(c, s, i);
+    if (o.blatt2) h += renderBlatt2(c, s, i);
     if (o.alt) h += renderAltBlatt(c, s, i);
     if (o.uebw) h += renderUebBlatt(c, s, i);
     if (o.spick) h += renderSpick(c, s, i);
@@ -345,7 +367,7 @@ function paginateDoc(root) {
   Array.prototype.slice.call(root.querySelectorAll('section.paper')).forEach(function (sec) {
     if (sec.classList.contains('pg')) return;
     var land = sec.classList.contains('land'), H = land ? 210 : 297, top = land ? 12 : 15, avail = (H - top - 17) * MM;
-    var wm = sec.querySelector('.wm'), kurs = sec.querySelector('.kurs'), h2 = sec.querySelector('h2'), foot = sec.querySelector('.foot');
+    var nofoot = sec.classList.contains('nofoot'), wm = sec.querySelector('.wm'), kurs = sec.querySelector('.kurs'), h2 = sec.querySelector('h2'), foot = sec.querySelector('.foot');
     var kids = Array.prototype.slice.call(sec.children).filter(function (n) { return !n.classList.contains('wm') && !n.classList.contains('foot'); });
     var pages = [], cur;
     function newPage(cont) {
@@ -393,6 +415,7 @@ function paginateDoc(root) {
     var n = pages.length;
     pages.forEach(function (pg, i) {
       var f = document.createElement('div'); f.className = 'foot';
+      if (nofoot) return;
       f.textContent = (foot ? foot.textContent + ' · ' : '') + 'Seite ' + (i + 1) + ' von ' + n; pg.appendChild(f);
     });
     sec.parentNode.removeChild(sec);
