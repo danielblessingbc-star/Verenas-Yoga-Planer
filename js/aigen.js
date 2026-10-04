@@ -10,7 +10,9 @@ const AIGEN_EXAMPLES = {
   sen: 'Eine ruhige Abendstunde für meine Seniorengruppe zum Thema Loslassen. Schwerpunkt auf Hüfte und unterem Rücken, überwiegend im Sitzen und Liegen, keine Kraftübungen. Zum Anfang ein kurzes Ankommen mit dem Atem, am Ende eine ausführliche Tiefenentspannung. Wenn möglich die Taube in der sanften Variante und die Kindhaltung einbauen. Ein Mantra bitte weglassen. Die Texte sollen sehr ruhig, einfach und warm klingen.'
 };
 const AIGEN_EXAMPLE = AIGEN_EXAMPLES.sen;
-const aiGenDefault = () => ({ name: '', motto: '', date: todayIso(), level: 'sen', geb: [], total: 75, inc: [], prompt: '' });
+const aiGenDefault = () => ({ name: '', motto: '', date: todayIso(), level: 'sen', geb: [], total: 75, inc: [], struct: false, auswahl: false, prompt: '' });
+// Entwurf der Vorgaben (Stundenaufbau, Übungsauswahl): ein Einzelstunden-Programm, das nie gespeichert wird; Felder mit Präfix „a:“ (siehe app.js, aiDraftC)
+const aiGenDraft = g => g.c || (g.c = defaultCourseFixed({ name: '', single: true, count: 1, level: g.level, total: clamp(Math.round(+g.total) || 75, 20, 180), gebrechen: [], st: [], reg: [] }));
 
 // Beispiel-Prompt je Stufe: Auswahl der Stufe (Standard: gewählte Gruppe), Übernehmen setzt Text und Gruppe
 function aiExBox(pre, EX, g) {
@@ -24,6 +26,7 @@ function viewAiGen() {
   const pn = (n, t, hint) => `<h3><span class="pn">${n}</span>${t}</h3><p class="phint">${hint}</p>`;
   const gebs = Object.keys(GEBRECHEN).map(k => `<label class="fchip${g.geb.includes(k) ? ' on' : ''}"><input type="checkbox" data-a="aiGenGeb" data-k="${k}" ${g.geb.includes(k) ? 'checked' : ''}> ${esc(GEBRECHEN[k])}</label>`).join('');
   const ready = !!(state.settings.apiKey || '').trim();
+  if (g.struct) g.total = aiGenDraft(g).total;   // Gesamtdauer kommt dann aus dem Stundenaufbau
   return `<div class="hero">${LOTUS}<div><h1>KI-generierte Stunde</h1><p>Du beschreibst die Stunde in eigenen Worten, die KI plant sie. Die Übungen stammen aus deinem Katalog.</p></div><span class="grow"></span></div>
 <div class="fcards noprint">
 <section class="panel span2"><h2 class="ph">${pn(1, 'Einzelstunde & Motto', 'Name und Motto sind optional: ohne Angabe wählt die KI ein passendes Motto zu deinem Text.')}</h2><div class="grid">
@@ -35,15 +38,35 @@ ${fld('Motto (optional)', inp('u:aiGen.motto', 'text', g.motto, 'placeholder="z.
 ${fld('Gruppe', sel('u:aiGen.level', Object.keys(LEVELS).map(k => [k, LEVELS[k]]), g.level))}
 ${fld('Einschränkungen / Gebrechen berücksichtigen', `<div class="fchips">${gebs}</div>`, 'wide')}
 </div></section>
-<section class="panel span2"><h2 class="ph">${pn(4, 'Dauer', 'Gesamtdauer der Stunde. Die Aufteilung auf die Bausteine ergibt sich daraus und lässt sich danach in den Vorgaben ändern.')}</h2><div class="atin">${inp('u:aiGen.total', 'number', g.total, 'min="20" max="180" step="1"')}<span>Minuten</span></div><div class="qd">${[60, 75, 90, 120].map(m => `<button class="qdb${+g.total === m ? ' on' : ''}" data-a="aiGenTotal" data-v="${m}">${m}</button>`).join('')}</div></section>
+${aiStructPanel(g, pn)}
+${aiPickPanel(g, pn)}
 ${aiIncPanel(g, pn)}
-<section class="panel span2"><h2 class="ph">${pn(6, 'Beschreibung der Stunde', 'Freitext für die KI: Thema, Stimmung, Schwerpunkt, Wunschübungen, Atem, Mantra, Tonfall der Texte.')}</h2>
+<section class="panel span2"><h2 class="ph">${pn(7, 'Beschreibung der Stunde', 'Freitext für die KI: Thema, Stimmung, Schwerpunkt, Wunschübungen, Atem, Mantra, Tonfall der Texte.')}</h2>
 <div class="fld wide"><label>Dein Wunsch an die KI</label><textarea data-f="u:aiGen.prompt" rows="8" placeholder="Beschreibe die Stunde, z. B. Thema, Schwerpunkt, Stimmung, besondere Wünsche …">${esc(g.prompt)}</textarea></div>
 ${aiExBox('aiGen', AIGEN_EXAMPLES, g)}
 <p class="muted">Die KI steuert: Motto und Kernsatz, Fokus, Yogastil, Körperregion, Atemteil, Mantra, Art der Mobilisation, Anzahl Kraftübungen, Wunschübungen und die Texte. Wunschübungen werden nur eingebaut, wenn sie im Katalog stehen und zu den Einschränkungen passen. Gesendet werden nur dein Text und die Vorgaben, keine Teilnehmerdaten.</p>
 </section>
 </div>
 <div class="bar noprint"><button class="primary" data-a="aiGenCreate" ${busy ? 'disabled' : ''}>${busy ? 'KI plant die Stunde …' : '✨ Stunde generieren'}</button><span class="muted">${ready ? 'Danach landest du in der Einzelstundenplanung und kannst alles anpassen.' : 'Dafür ist ein API-Schlüssel nötig (Einstellungen, Abschnitt „KI-Texte“).'}</span></div>`;
+}
+
+// Stundenaufbau & Dauer: standardmäßig nur die Gesamtdauer, die KI bestimmt den Aufbau; aufgeklappt wie in den Vorgaben der Einzelstundenplanung
+const aiToggle = (act, on, label) => `<label class="fchip${on ? ' on' : ''}"><input type="checkbox" data-a="${act}" ${on ? 'checked' : ''}> ${label}</label>`;
+function aiStructPanel(g, pn) {
+  const c = aiGenDraft(g), on = !!g.struct;
+  const hint = on ? 'Du legst die Blöcke selbst fest, die KI ändert daran nichts (Atemteil, Mantra, Mobilisation, Kraftübungen und Zeiten).' : 'Gesamtdauer der Stunde. Die KI bestimmt den Aufbau (Atemteil, Mantra, Mobilisation, Kraftübungen), die Aufteilung auf die Blöcke ergibt sich daraus.';
+  const simple = `<div class="atin">${inp('u:aiGen.total', 'number', g.total, 'min="20" max="180" step="1"')}<span>Minuten</span></div><div class="qd">${[60, 75, 90, 120].map(m => `<button class="qdb${+g.total === m ? ' on' : ''}" data-a="aiGenTotal" data-v="${m}">${m}</button>`).join('')}</div>`;
+  return `<section class="panel span2"><h2 class="ph">${pn(4, 'Stundenaufbau & Dauer', hint)}</h2>
+<div class="fchips">${aiToggle('aiGenStruct', on, 'Stundenaufbau selbst festlegen')}</div>
+${on ? `<div data-aid="1">${durPanel(c, 'a')}</div>` : simple}</section>`;
+}
+// Übungsauswahl: standardmäßig wählt die KI Yogastil und Körperregion; aufgeklappt wie in den Vorgaben
+function aiPickPanel(g, pn) {
+  const c = aiGenDraft(g), on = !!g.auswahl;
+  const chips = (field, map) => Object.keys(map).map(k => `<label class="fchip${(c[field] || []).includes(k) ? ' on' : ''}"><input type="checkbox" data-a="cTog" data-f2="${field}" data-v="${k}" ${(c[field] || []).includes(k) ? 'checked' : ''}> ${esc(map[k])}</label>`).join('');
+  return `<section class="panel span2"><h2 class="ph">${pn(5, 'Übungsauswahl', on ? 'Schränkt ein, aus welchen Übungen gewählt wird. Mehrfachauswahl möglich, leer = alle. Die KI ändert daran nichts.' : 'Die KI wählt Yogastil und Körperregion passend zu deiner Beschreibung.')}</h2>
+<div class="fchips">${aiToggle('aiGenPick', on, 'Übungsauswahl selbst festlegen')}</div>
+${on ? `<div class="grid" data-aid="1">${fld('Yogastil', `<div class="fchips">${chips('st', STILE)}</div>`, 'wide')}${fld('Körperregion', `<div class="fchips">${chips('reg', KAT.reg)}</div>`, 'wide')}</div>` : ''}</section>`;
 }
 
 // ---------- Enthaltene Übungen und Flows (Auswahl aus Übungs- und Sequenzkatalog) ----------
@@ -61,7 +84,7 @@ function aiIncPanel(g, pn) {
       ? `<div class="aiinc"><div class="mts">${sqItems(r.q).slice(0, 8).map(sqTile).join('')}</div><div class="aiinfo"><b>${esc(r.q.name)}</b> ${sqTypeChip(sqType(r.q))}<small class="muted">Flow aus dem Sequenzkatalog · ${sqCount(r.q.items.length)} · ${fmtMin(sqMin(r.q))} Min.</small>${warn}</div>${del}</div>`
       : `<div class="aiinc">${sqTile({ id: r.e.id, min: r.e.m })}<div class="aiinfo"><b>${esc(r.e.n)}</b><small class="muted">Übung aus dem Übungskatalog · ${esc(CATS[r.e.c] || '')} · ${fmtMin(r.e.m)} Min.</small>${warn}</div>${del}</div>`;
   }).join('');
-  return `<section class="panel span2"><h2 class="ph">${pn(5, 'Enthaltene Übung oder Flow', 'Optional: Wähle Übungen aus dem Übungskatalog und Flows aus dem Sequenzkatalog, die in der Stunde vorkommen müssen. Die Stunde baut sie so ein, dass sie sich in einen fließenden Ablauf fügen.')}</h2>
+  return `<section class="panel span2"><h2 class="ph">${pn(6, 'Enthaltene Übung oder Flow', 'Optional: Wähle Übungen aus dem Übungskatalog und Flows aus dem Sequenzkatalog, die in der Stunde vorkommen müssen. Die Stunde baut sie so ein, dass sie sich in einen fließenden Ablauf fügen.')}</h2>
 ${list || '<p class="muted">Keine Vorgabe: die KI und die automatische Auswahl entscheiden frei.</p>'}
 <div class="bar"><button type="button" class="ghost sm" data-a="aiGenIncOpen" ${rows.length >= AIINC_MAX ? 'disabled' : ''}>＋ Übung oder Flow aus dem Katalog wählen</button>${rows.length >= AIINC_MAX ? `<span class="muted">Höchstens ${AIINC_MAX} Vorgaben.</span>` : ''}</div></section>`;
 }
@@ -164,7 +187,8 @@ function aiGenFlowNotes(s, ids) {
   return notes;
 }
 // Eingeplante Inhalte brauchen ihren Block: Mobilisation und Shakti Naam einschalten, wenn nur dort passende Inhalte stehen
-function aiGenNeed(c, rows) {
+function aiGenNeed(c, rows, lock) {
+  if (lock && lock.struct) return;   // festgelegter Aufbau bleibt: ein ausgeschalteter Block wird als „nicht aktiv“ gemeldet
   const t = r => r.q ? sqType(r.q) : r.e.c;
   if (rows.some(r => t(r) === 'mobilisation' || t(r) === 'mobi_sitz') && c.mobi === 'aus') c.mobi = 'sitz';
   if (rows.some(r => t(r) === 'shakti') && !c.shakti) { c.shakti = 1; c.shaktiMode = 'immer'; if (!(+c.durs.shakti > 1)) c.durs.shakti = 8; }
@@ -194,7 +218,7 @@ async function aiGenPlan(g) {
   const p = `Du bist eine erfahrene Yogalehrerin und hilfst einer Kollegin, eine einzelne Yogastunde zu planen. Die Übungen wählt ihre Software aus ihrem Katalog aus. Du legst nur die Rahmenbedingungen fest und nennst Übungen, die sie ausdrücklich wünscht.
 Beschreibung der Kollegin: „${g.prompt.trim()}“
 Feste Vorgaben: Gruppe ${LEVELS[g.level]}, Dauer ${g.total} Minuten${geb.length ? ', Einschränkungen: ' + geb.join(', ') : ''}. ${g.motto.trim() ? 'Das Motto ist vorgegeben: „' + g.motto.trim() + '“ (du ergänzt Kernsatz, Fokus und Schlagworte).' : 'Wähle ein passendes Motto.'}
-${inc.length ? `Fest eingeplant (die Kollegin hat sie aus ihrem Katalog gewählt, ihre Software baut sie zwingend ein): ${aiIncText(inc)}. Wähle Motto, Fokus, Yogastile, Körperregionen, Mobilisation und Kraft so, dass die Stunde dazu passt und diese Inhalte natürlich darin liegen. Setze st und reg nur, wenn sie diese Inhalte nicht ausschließen. Führe sie nicht zusätzlich unter wish auf.\n` : ''}Antworte ausschließlich mit JSON in genau dieser Form:
+${g.struct ? 'Der Stundenaufbau (Atemteil, Mantra, Mobilisation, Kraftübungen, Zeiten) ist von der Kollegin fest vorgegeben: breath, mantra, mobi und kraft werden ignoriert, gib dafür Standardwerte an. ' : ''}${g.auswahl ? 'Yogastil und Körperregion sind ebenfalls fest vorgegeben: lass st und reg leer. ' : ''}${inc.length ? `Fest eingeplant (die Kollegin hat sie aus ihrem Katalog gewählt, ihre Software baut sie zwingend ein): ${aiIncText(inc)}. Wähle Motto, Fokus, Yogastile, Körperregionen, Mobilisation und Kraft so, dass die Stunde dazu passt und diese Inhalte natürlich darin liegen. Setze st und reg nur, wenn sie diese Inhalte nicht ausschließen. Führe sie nicht zusätzlich unter wish auf.\n` : ''}Antworte ausschließlich mit JSON in genau dieser Form:
 {"motto":{"title":"2 bis 5 Wörter","kern":"Kernsatz in der Ich-Form","focus":"körperlicher Fokus in Stichworten","tags":["2 bis 4 Schlagworte aus: ${Object.keys(KEYWORDS).join(', ')}"]},
 "st":["Yogastile aus: ${aiGenList(STILE)}"],"reg":["Körperregionen aus: ${aiGenList(KAT.reg)}"],
 "breath":"aus oder atem oder atem_wahr oder gemischt","mantra":"aus oder immer","mobi":"sitz oder liegen oder stand oder aus","kraft":0,"wish":["Name einer gewünschten Übung"]}
@@ -203,9 +227,11 @@ Regeln: st und reg nur füllen, wenn die Beschreibung es deutlich verlangt, sons
   catch (e) { if (/JSON|position/.test(e.message)) throw new Error('Die KI-Antwort war nicht lesbar. Bitte nochmal versuchen.'); throw e; }
 }
 // Plan der KI auf das Programm (Einzelstunde) übertragen; unbekannte Werte werden ignoriert
-function aiGenApply(c, p) {
+function aiGenApply(c, p, lock) {
+  lock = lock || {};   // struct / auswahl: von der Kollegin festgelegt, die KI ändert daran nichts
   const only = (arr, map) => (Array.isArray(arr) ? arr : []).filter(k => map[k]);
-  c.st = only(p.st, STILE); c.reg = only(p.reg, KAT.reg);
+  if (!lock.auswahl) { c.st = only(p.st, STILE); c.reg = only(p.reg, KAT.reg); }
+  if (lock.struct) return;
   if (['aus', 'atem', 'atem_wahr', 'gemischt'].includes(p.breath)) c.breath = p.breath;
   if (['aus', 'immer'].includes(p.mantra)) c.mantra = p.mantra;
   if (['sitz', 'liegen', 'stand', 'aus'].includes(p.mobi)) c.mobi = p.mobi;
@@ -218,6 +244,8 @@ const AIGEN_ACTIONS = {
   aiGenTotal(d) { ui.aiGen.total = +d.v; render(); },
   aiGenExample() { aiExTake('aiGen', AIGEN_EXAMPLES, ui.aiGen); },
   aiGenExLvl(d) { ui.aiGenEx = d.v; render(); },
+  aiGenStruct() { const g = ui.aiGen, c = aiGenDraft(g); g.struct = !g.struct; if (g.struct) { c.total = clamp(Math.round(+g.total) || 75, 20, 180); fitDurs(c, 'total'); } else g.total = c.total; render(); },
+  aiGenPick() { const g = ui.aiGen; g.auswahl = !g.auswahl; render(); },
   aiGenIncOpen(d, el) { openAiIncPicker(el); },
   aiGenIncPick(d) {
     const p = ui.pk, g = ui.aiGen; if (!p || p.kind !== 'aiinc' || !g) return;
@@ -236,8 +264,11 @@ const AIGEN_ACTIONS = {
     try {
       const p = await aiGenPlan(g), pm = p.motto || {}, tags = (Array.isArray(pm.tags) ? pm.tags : []).filter(t => KEYWORDS[t]);
       const title = (g.motto || '').trim() || String(pm.title || '').trim() || 'Neue Stunde', kern = String(pm.kern || '').trim() || `Heute darf „${title}“ für mich spürbar werden.`;
-      const c = defaultCourseFixed({ name: (g.name || '').trim() || title, count: 1, single: true, start: g.date || todayIso(), level: LEVELS[g.level] ? g.level : 'sen', gebrechen: g.geb.slice(), total: clamp(Math.round(+g.total) || 75, 20, 180), motto: { mode: 'eigen', preset: 'alltag', free: '', eigen: title + ' | ' + kern } });
-      aiGenApply(c, p); aiGenNeed(c, inc); planCourse(c);
+      const lock = { struct: !!g.struct, auswahl: !!g.auswahl }, dr = aiGenDraft(g), mine = {};
+      if (lock.struct) ['durs', 'durMode', 'breath', 'breathPrev', 'kraft', 'kraftN', 'kraftRnd', 'kraftSeed', 'mantra', 'mobi', 'mobiSeed', 'shakti', 'shaktiMode', 'shaktiSeed', 'einlOn', 'schlussOn', 'shavaOn', 'ausglOn'].forEach(k => { if (dr[k] !== undefined) mine[k] = deepCopy(dr[k]); });
+      if (lock.auswahl) { mine.st = dr.st.slice(); mine.reg = dr.reg.slice(); }
+      const c = defaultCourseFixed(Object.assign(mine, { name: (g.name || '').trim() || title, count: 1, single: true, start: g.date || todayIso(), level: LEVELS[g.level] ? g.level : 'sen', gebrechen: g.geb.slice(), total: clamp(Math.round(lock.struct ? dr.total : +g.total) || 75, 20, 180), motto: { mode: 'eigen', preset: 'alltag', free: '', eigen: title + ' | ' + kern } }));
+      aiGenApply(c, p, lock); aiGenNeed(c, inc, lock); planCourse(c);
       const s = c.sessions[0], motto = { themeId: '', title, kern, focus: String(pm.focus || '').trim() || focusFromTags(tags.length ? tags : keywordTags(title)), tags: tags.length ? tags : keywordTags(title) };
       fillSession(c, s, 0, { motto });
       const notes = [];
