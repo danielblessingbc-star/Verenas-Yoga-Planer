@@ -26,7 +26,9 @@ const AISEQ_TYPE_HINT = {
 };
 // Körperposition einer Übung (gleiche Ableitung wie die Reihenfolge in der Stundenplanung, siehe seqIdx in gen.js)
 const AISEQ_POS = { sit: 'Sitz aufrecht', stand: 'Stand', bal: 'Balance einbeinig', quad: 'Vierfüßler/Knien', prone: 'Bauchlage', fsit: 'Langsitz/Bodensitz', supine: 'Rückenlage', inv: 'Umkehrhaltung' };
-const aiSeqPos = e => e.g || (e.c === 'balance' ? 'bal' : e.c === 'stand' || e.c === 'flow' || e.c === 'mobi_stand' ? 'stand' : e.c === 'mobi_sitz' ? 'sit' : e.c === 'kraft' ? (onFloor(e) ? 'supine' : 'stand') : 'supine');
+// Position laut Katalog („Haltung im Raum“), wenn die Übung keine eigene Gruppe hat; sonst Ableitung aus der Kategorie
+const aiPosKat = e => { const p = (e.kat && e.kat.pos) || []; return !p.length ? '' : p.includes('balance') ? 'bal' : p.includes('stehen') ? 'stand' : p.includes('umkehr') ? 'inv' : p.includes('knien') ? 'quad' : p.includes('stuetz') ? 'prone' : p.includes('sitzen') ? (e.c === 'mobi_sitz' ? 'sit' : 'fsit') : p.includes('liegen') ? 'supine' : ''; };
+const aiSeqPos = e => e.g || aiPosKat(e) || (e.c === 'balance' ? 'bal' : e.c === 'stand' || e.c === 'flow' || e.c === 'mobi_stand' ? 'stand' : e.c === 'mobi_sitz' ? 'sit' : e.c === 'kraft' ? (onFloor(e) ? 'supine' : 'stand') : 'supine');
 // Natürliche Übergänge zwischen Positionen (ohne Umweg über eine dritte Position)
 const AISEQ_LINKS = ['sit-fsit', 'sit-stand', 'fsit-supine', 'fsit-quad', 'quad-prone', 'quad-supine', 'quad-stand', 'quad-inv', 'supine-inv', 'supine-prone', 'stand-bal', 'stand-prone', 'stand-inv'];
 const aiSeqLink = (a, b) => a === b || AISEQ_LINKS.includes(a + '-' + b) || AISEQ_LINKS.includes(b + '-' + a);
