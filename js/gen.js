@@ -46,6 +46,14 @@ const SB_DEFS = {
   [FREI_ID]: Object.assign({}, TEXTBLOCK, { id: FREI_ID, n: 'Freie Übung', c: 'frei', m: 2, pose: 'frei', sb: 'frei', d: 'Sonderbaustein: eine Übung mit frei eingetragenem Namen. Der Text neben der Kachel steht in der Kachel.' }),
   [PAUSE_ID]: Object.assign({}, TEXTBLOCK, { id: PAUSE_ID, n: 'Pause', c: 'pause', m: 1, pose: 'pause', sb: 'pause', d: 'Sonderbaustein: eine Pause an dieser Stelle der Stunde oder der Sequenz, nur mit Dauer und einem kurzen Hinweis (optional).' })
 };
+// Wiederholung: „1x“ … „6x“ öffnen eine Wiederholung der folgenden Übungsfolge, „Wiederholung Ende“ schließt sie (ohne Ende gilt sie bis zum Blockende; verschachtelt möglich).
+// Die Bausteine selbst haben keine Dauer (min 0); sumMin rechnet die Dauer der eingeschlossenen Übungen mit der Anzahl mal.
+const REPEND_ID = 'sb_repend', REP_N = [1, 2, 3, 4, 5, 6];
+REP_N.forEach(n => { SB_DEFS['sb_rep' + n] = Object.assign({}, TEXTBLOCK, { id: 'sb_rep' + n, n: 'Wiederholung ' + n + 'x', c: 'rep', m: 0, pose: 'rep' + n, sb: 'rep', rn: n, d: 'Sonderbaustein: Beginn einer Wiederholung. Die Übungen bis zum Baustein „Wiederholung Ende“ werden ' + n + 'x durchgeführt; die Dauer wird entsprechend mitgerechnet.' }); });
+SB_DEFS[REPEND_ID] = Object.assign({}, TEXTBLOCK, { id: REPEND_ID, n: 'Wiederholung Ende', c: 'rep', m: 0, pose: 'repend', sb: 'repend', d: 'Sonderbaustein: Ende einer Wiederholung (senkrechter Doppelstrich). Ohne diesen Baustein gilt die Wiederholung bis zum Ende des Blocks.' });
+const repN = i => { const e = i && SB_DEFS[i.id]; return e && e.sb === 'rep' ? e.rn : 0; };
+const isRepEnd = i => !!i && i.id === REPEND_ID;
+const isRepSb = i => !!i && (repN(i) > 0 || isRepEnd(i));
 const isTxb = i => !!i && i.id === TXB_ID;
 const hasTx = e => !!e && (e.sb === 'text' || e.sb === 'frei' || e.sb === 'pause');   // Sonderbausteine mit eigenem Text (it.tx) statt Verweis (it.ref)
 const isSb = i => !!i && !!SB_DEFS[i.id];
@@ -364,9 +372,18 @@ function applyAlt(s, only) {
 // Standard 
 const blkAll = s => (s.bm ? exKeys(s).filter(k => bon(s, k)) : EXKEYS).reduce((a, k) => a.concat(s.blk[k] || []), []);
 const blkIds = s => blkAll(s).map(i => i.id);
-const sumMin = items => items.reduce((a, i) => a + (+i.min || 0), 0);
+// Faktor je Baustein = Produkt der gerade offenen Wiederholungen
+function repFactors(items) { const st = []; return items.map(i => { const n = repN(i); if (n) { st.push(n); return 1; } if (isRepEnd(i)) { st.pop(); return 1; } return st.reduce((a, x) => a * x, 1); }); }
+const sumMin = items => { const f = repFactors(items); return items.reduce((a, i, k) => a + (+i.min || 0) * f[k], 0); };
+// Übungsfolge mit ausgeschriebenen Wiederholungen: [{ it, rds: [[Runde, von], …] }]; die Wiederholungsbausteine selbst entfallen
+function repExpand(items) {
+  let p = 0;
+  const parse = nested => { const out = []; while (p < items.length) { const it = items[p++]; if (isRepEnd(it)) { if (nested) return out; continue; } const n = repN(it); if (n) out.push({ rep: n, body: parse(true) }); else out.push({ it }); } return out; };
+  const res = [], go = (nodes, rds) => nodes.forEach(nd => { if (nd.it) res.push({ it: nd.it, rds }); else for (let r = 1; r <= nd.rep; r++) go(nd.body, nd.rep > 1 ? rds.concat([[r, nd.rep]]) : rds); });
+  go(parse(false), []); return res;
+}
 // Optionale Übungen (it.opt): zählen voll zur Stundenzeit, werden aber zusätzlich separat ausgewiesen
-const optMin = items => sumMin((items || []).filter(i => i.opt));
+const optMin = items => { items = items || []; const f = repFactors(items); return items.reduce((a, i, k) => a + (i.opt ? (+i.min || 0) * f[k] : 0), 0); };
 const sessionOptMin = s => s.bm ? exKeys(s).reduce((a, k) => a + (bon(s, k) ? optMin(s.blk[k]) : 0), 0) : 0;
 const optNote = m => m > 0 ? `davon ${fmtMin(m)} Min. optional` : '';
 const plannedHaupt = s => sumMin(blkAll(s));
