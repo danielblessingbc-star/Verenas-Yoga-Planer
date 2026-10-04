@@ -523,10 +523,6 @@ function sessionCard(c, s, i) {
   return `<section class="panel sess noprint" data-sid0="${id}">${head}
 <div class="grid">
 ${fld('Datum', inp(`s:${id}:date`, 'date', s.date))}
-${fld('Motto (Titel)', inp(`s:${id}:motto.title`, 'text', s.motto.title, 'data-chg="mtitle" data-sid="' + id + '"'))}
-${fld('Aus Motto-Liste', sel(`s:${id}:motto.themeId`, [['', '— eigenes Motto —']].concat(THEMES.map(t => [t.id, t.t])), s.motto.themeId, 'data-chg="theme" data-sid="' + id + '"'))}
-${fld('Kernsatz', inp(`s:${id}:motto.kern`, 'text', s.motto.kern, 'data-tx="kern"'), 'wide')}
-${fld('Körperlicher Fokus', inp(`s:${id}:motto.focus`, 'text', s.motto.focus, 'data-tx="focus"'), 'wide')}
 </div>
 ${defPanel(c, s)}
 ${seqPanel(c, s)}
@@ -997,12 +993,6 @@ const CH = {
     const { c, s } = sessionOf(el.dataset.sid), i = idxOf(c, s), m = mottoFromText(el.value); touch(s);
     if (s.txEdited.kern) m.kern = s.motto.kern; if (s.txEdited.focus) m.focus = s.motto.focus;
     s.motto = m; s.txEdited.einl = s.txEdited.einl; genTexts(c, s, i); save(); refreshFields();
-    const sel_ = document.querySelector(`[data-chg="theme"][data-sid="${s.id}"]`); if (sel_) sel_.value = m.themeId;
-  },
-  theme(el) {
-    const { c, s } = sessionOf(el.dataset.sid), t = themeById(el.value); touch(s);
-    s.motto = t ? mottoFromTheme(t) : Object.assign(mottoFromText(s.motto.title), { themeId: '' });
-    s.txEdited.kern = s.txEdited.focus = false; genTexts(c, s, idxOf(c, s)); save(); render();
   },
   altdef(el) { const { s } = sessionOf(el.dataset.sid); touch(s); s.altDef = el.checked; s.altDefSet = true; applyAlt(s); save(); render(); },
   tglw(d) { const { c, s } = sessionOf(d.sid); s.atem.w = ''; regenIfNotEdited(c, s, 'atem'); save(); render(); },
