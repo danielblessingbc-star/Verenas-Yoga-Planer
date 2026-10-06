@@ -24,7 +24,7 @@ const DOC_CSS = `
 .paper th{background:#e8efe9;color:#3f5a4b;font-weight:700}
 .paper td.min{width:64px;white-space:nowrap;color:#3f5a4b;font-weight:700}
 .paper td.lab{width:170px;font-weight:700;background:#f4f7f3}
-.paper .txt{font-size:15.5px;line-height:1.55}.paper .txt p{margin:0 0 8px}
+.paper .txt{font-size:17px;line-height:1.55}.paper .txt p{margin:0 0 8px}
 .paper .arc{margin-top:12px;color:#5b5a52;font-style:italic}
 .paper .box{border:1px solid #cfd8d0;border-left:4px solid #c9826b;padding:6px 10px;margin-top:8px;background:#fbf5ef;border-radius:0 6px 6px 0}
 .paper .alt{font-size:11.5px;color:#5b5a52;margin-top:8px;line-height:1.55}
