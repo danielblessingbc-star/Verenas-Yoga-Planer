@@ -6,8 +6,8 @@ const deepCopy = o => JSON.parse(JSON.stringify(o));
 function viewSingles() {
   if (ui.sTab === 'aiGen') return viewAiGen();
   const pt = ui.sTab || 'list', ss = state.courses.filter(c => c.single && !c.template), ts = state.courses.filter(c => c.single && c.template);
-  const card = c => { const s = c.sessions[0] || {}; return `<div class="card course"><div class="grow"><a class="title" data-a="open" data-id="${c.id}">${esc(c.name)}</a>
-<div class="meta">${esc((s.motto || {}).title || '')} · ${esc(LEVELS[c.level])} · ${c.sessions[0] ? sessionTotal(c.sessions[0]) : c.total} Min.${s.date ? ' · ' + esc(fmtDateW(s.date)) : ''}${s.status ? ' · ' + esc(STATUS[s.status] || '') : ''}</div></div>
+  const card = c => { const s = c.sessions[0] || {}, st = s.status || 'vorgeplant'; return `<div class="card course stc-${st}"><div class="grow"><a class="title" data-a="open" data-id="${c.id}">${esc(c.name)}</a> <span class="stbadge stb-${st}">${STATUS[st]}</span>
+<div class="meta">${esc((s.motto || {}).title || '')} · ${esc(LEVELS[c.level])} · ${c.sessions[0] ? sessionTotal(c.sessions[0]) : c.total} Min.${s.date ? ' · ' + esc(fmtDateW(s.date)) : ''}</div>${stampText(s) ? `<div class="stamp">${esc(stampText(s))}</div>` : ''}</div>
 <button data-a="open" data-id="${c.id}" class="primary">Öffnen</button><button data-a="dup" data-id="${c.id}" class="ghost" title="Duplizieren">⧉</button><button data-a="del" data-id="${c.id}" class="ghost danger" title="Löschen">🗑</button></div>`; };
   const tcard = (t, manage) => { const s = t.sessions[0] || {}; return `<div class="card course"><div class="grow"><b>${esc(t.name)}</b><div class="meta">Einzelstunden-Vorlage · ${esc((s.motto || {}).title || '')} · ${esc(LEVELS[t.level])} · ${t.sessions[0] ? sessionTotal(t.sessions[0]) : t.total} Min.</div></div>
 <button data-a="tplSel" data-id="${t.id}" class="primary">Einzelstunde daraus erstellen</button>${manage ? `<button data-a="open" data-id="${t.id}" class="ghost" title="Vorlage ansehen / bearbeiten">Öffnen</button><button data-a="del" data-id="${t.id}" class="ghost danger" title="Löschen">🗑</button>` : ''}</div>`; };
@@ -96,7 +96,7 @@ const SINGLE_ACTIONS = {
   ssCommit() {
     const f = ui.saveSess; if (!f) return; const { c, s } = sessionOf(f.id), nm = (f.name || '').trim(); if (!nm) { toast('Bitte einen Namen eingeben.'); return; }
     const t = deepCopy(c); t.id = uid(); t.name = nm; t.single = true; t.count = 1; t.created = todayIso(); t.template = f.kind === 'tpl';
-    const ns = deepCopy(s); ns.id = uid(); ns.locked = false; if (f.kind === 'tpl') ns.status = 'in_planung'; else t.start = ns.date || t.start; t.sessions = [ns];
+    const ns = deepCopy(s); ns.id = uid(); ns.locked = false; if (f.kind === 'tpl') setStatus(ns, 'in_planung'); else t.start = ns.date || t.start; t.sessions = [ns];
     state.courses.unshift(t); ui.saveSess = null; save(); render();
     toast(f.kind === 'tpl' ? `Einzelstunden-Vorlage „${nm}“ gespeichert (Seite „Stunden“ → ＋ Einzelstunde aus Vorlage).` : `Einzelstunde „${nm}“ gespeichert (Seite „Stunden“).`);
   },
@@ -135,7 +135,7 @@ const SINGLE_ACTIONS = {
     const mottos = assignMottos(c, b.count);
     c.sessions = b.slots.map((sl, i) => {
       const src = slotSource(sl);
-      if (sl && src && src.sessions[0]) { const s = deepCopy(src.sessions[0]); s.id = uid(); s.locked = false; s.status = 'in_planung'; return s; }
+      if (sl && src && src.sessions[0]) { const s = deepCopy(src.sessions[0]); s.id = uid(); s.locked = false; setStatus(s, 'in_planung'); return s; }
       return newSession(c, i, mottos[i]);
     });
     calcDates(c); state.courses.unshift(c); ui.build = null; ui.pTab = 'list'; ui.view = 'course'; ui.courseId = c.id; ui.tab = 'sessions'; ui.sel = c.sessions[0].id; ui.open = new Set(['set', 'ovw']);
