@@ -142,6 +142,11 @@ const BDEF = [
 const EXKEYS = ['mobi', 'shakti', 'asana', 'ausgl'];        // Standard-Übungsblöcke (werden automatisch befüllt)
 // Status: vorgeplant = automatisch befüllt; in_planung = wird automatisch gesetzt, sobald etwas geändert wurde; fertig = muss manuell gesetzt werden
 const STATUS = { vorgeplant: 'Vorgeplant', in_planung: 'In Planung', fertig: 'Fertig' };
+const nowIso = () => new Date().toISOString();
+const fmtStamp = iso => { const d = iso ? new Date(iso) : null; if (!d || isNaN(d)) return ''; const p = n => String(n).padStart(2, '0'); return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+// Statuswechsel einer Stunde mit Zeitstempel: doneAt = seit wann „Fertig“, editedAt = letzte Bearbeitung
+function setStatus(s, v) { if (!s) return; if (s.status !== v) { s.status = v; if (v === 'fertig') s.doneAt = nowIso(); else delete s.doneAt; } s.editedAt = nowIso(); }
+const stampText = s => { const a = []; if (s && s.status === 'fertig' && s.doneAt) a.push('Fertig seit ' + fmtStamp(s.doneAt)); if (s && s.editedAt) a.push('zuletzt bearbeitet ' + fmtStamp(s.editedAt)); return a.join(' · '); };
 const STATUS_MIGRATE = { entwurf: 'vorgeplant', geplant: 'in_planung', gehalten: 'fertig' };
 const BTYPES = { text: 'Text', ex: 'Übungen', atem: 'Atem + Wahrnehmung', mantra: 'Mantra' };
 const BEXTRA = [['nidra', 'Yoga Nidra', 'text']];   // zusätzliche Abschnitte (nur für eigene Blöcke wählbar, nicht Teil der Standardstunde)
@@ -885,7 +890,7 @@ function fillSession(c, s, idx, opts) {
   opts = opts || {};
   s.txd = {};
   if (opts.motto) s.motto = opts.motto;
-  s.status = 'vorgeplant';
+  setStatus(s, 'vorgeplant');
   s.kN = kraftCountFor(c, idx);
   const mOn = mantraOn(c, s, idx);
   if (s.bm && s.bmCustom) { syncHaupt(s); setMantraBlock(c, s, mOn); }

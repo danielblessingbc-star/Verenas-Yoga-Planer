@@ -188,9 +188,14 @@ function nav() {
 }
 function viewCourses() {
   const pt = ui.pTab || 'list', cs = state.courses.filter(c => !c.template && !c.single), ts = state.courses.filter(c => c.template && !c.single);
-  const card = c => `<div class="card course"><div class="grow"><a class="title" data-a="open" data-id="${c.id}">${esc(c.name)}</a>
-<div class="meta">${c.sessions.length} Stunden · ${esc(LEVELS[c.level])} · ${c.total || sessionTotal({ dur: c.durs })} Min.${c.start ? ' · ab ' + esc(fmtDateW(c.start)) : ''}</div></div>
+  const card = c => {
+    const n = {}; c.sessions.forEach(s => { const k = s.status || 'vorgeplant'; n[k] = (n[k] || 0) + 1; });
+    const tot = c.sessions.length, ov = tot && n.fertig === tot ? 'fertig' : tot && n.vorgeplant === tot ? 'vorgeplant' : 'in_planung';
+    const ed = c.sessions.map(s => s.editedAt).filter(Boolean).sort().pop();
+    return `<div class="card course stc-${ov}"><div class="grow"><a class="title" data-a="open" data-id="${c.id}">${esc(c.name)}</a>${Object.keys(STATUS).filter(k => n[k]).map(k => ` <span class="stbadge stb-${k}">${n[k]} ${STATUS[k]}</span>`).join('')}
+<div class="meta">${c.sessions.length} Stunden · ${esc(LEVELS[c.level])} · ${c.total || sessionTotal({ dur: c.durs })} Min.${c.start ? ' · ab ' + esc(fmtDateW(c.start)) : ''}</div>${ed ? `<div class="stamp">zuletzt bearbeitet ${esc(fmtStamp(ed))}</div>` : ''}</div>
 <button data-a="open" data-id="${c.id}" class="primary">Öffnen</button><button data-a="dup" data-id="${c.id}" class="ghost" title="Duplizieren">⧉</button><button data-a="del" data-id="${c.id}" class="ghost danger" title="Löschen">🗑</button></div>`;
+  };
   const tcard = (t, id, builtin) => `<div class="card course"><div class="grow"><b>${esc(t.name)}</b><div class="meta">${builtin ? 'Mitgelieferte Vorlage' : 'Eigene Vorlage'} · ${t.count || t.sessions.length} Stunden</div></div>
 <button data-a="tplSel" data-id="${id}" class="primary">Programm daraus erstellen</button>${builtin ? '' : `<button data-a="del" data-id="${t.id}" class="ghost danger" title="Löschen">🗑</button>`}</div>`;
   const tpls = ts.map(t => tcard(t, t.id, false)).join('') + BUILTIN.map((t, i) => tcard({ name: t.name, count: t.over.count }, 'builtin:' + i, true)).join('');
@@ -320,7 +325,7 @@ function ovCard(s, i, noGoto) {
   const st = s.status || 'vorgeplant';
   return `<div class="sc stc-${st}"><div class="sch"><span class="no">${i + 1}</span>${inp(`s:${s.id}:date`, 'date', s.date, 'class="scd"')}${inp(`s:${s.id}:motto.title`, 'text', s.motto.title, 'class="scm" data-chg="mtitle" data-sid="' + s.id + '"')}
 <span class="grow"></span>${s.locked ? '<span title="gesperrt">🔒</span>' : ''}<span id="ovt-${s.id}">${timeInfo(s)}</span>${statSel(`s:${s.id}:status`, st)}${noGoto ? '' : `<span class="gobtns"><button class="sm" data-a="gotoS" data-id="${s.id}">Einzelplanung →</button><button class="sm" data-a="gotoSA" data-id="${s.id}">Einzelanalyse →</button></span>`}</div>
-<div class="scs" id="ovs-${s.id}">${stripHtml(s, true)}</div>
+${stampText(s) ? `<div class="stamp">${esc(stampText(s))}</div>` : ''}<div class="scs" id="ovs-${s.id}">${stripHtml(s, true)}</div>
 ${ui.frameBlocks ? `<div class="scb">${order(s).filter(k => bon(s, k)).map(k => ovBox(s, k)).join('')}</div>` : `<div class="scf">${flatTiles(s)}</div>`}</div>`;
 }
 function frameTable(c) {
@@ -504,7 +509,7 @@ function blockCard(c, s, k) {
 function sessionCard(c, s, i) {
   const id = s.id;
   if (!s.bm) initBM(c, s);
-  const head = `<div class="shead"><span class="no">${i + 1}</span> <span class="date">${esc(fmtDateW(s.date))}</span> <b>${esc(s.motto.title)}</b> <span class="muted">·</span> <span id="tinfo0-${id}">${timeInfo(s)}</span>${s.locked ? ' 🔒' : ''}<span class="grow"></span><label class="chk" title="Gilt für alle Übungen der Stunde: leichtere und schwerere Alternativen erscheinen in der Ausgabe und sind in der Übungsauswahl markiert"><input type="checkbox" data-chg="altdef" data-sid="${id}" ${s.altDef ? 'checked' : ''}> Alternativen standardmäßig mit ausgeben</label><label class="muted">Status</label> ${statSel(`s:${id}:status`, s.status || 'vorgeplant')}</div>`;
+  const head = `<div class="shead"><span class="no">${i + 1}</span> <span class="date">${esc(fmtDateW(s.date))}</span> <b>${esc(s.motto.title)}</b> <span class="muted">·</span> <span id="tinfo0-${id}">${timeInfo(s)}</span>${s.locked ? ' 🔒' : ''}<span class="grow"></span><label class="chk" title="Gilt für alle Übungen der Stunde: leichtere und schwerere Alternativen erscheinen in der Ausgabe und sind in der Übungsauswahl markiert"><input type="checkbox" data-chg="altdef" data-sid="${id}" ${s.altDef ? 'checked' : ''}> Alternativen standardmäßig mit ausgeben</label><label class="muted">Status</label> ${statSel(`s:${id}:status`, s.status || 'vorgeplant')}${stampText(s) ? `<span class="stamp">${esc(stampText(s))}</span>` : ''}</div>`;
   const offBlocks = order(s).filter(k => !bon(s, k)).map(k => bn(s, k));
   return `<section class="panel sess noprint" data-sid0="${id}">${head}
 <div class="grid">
@@ -719,8 +724,9 @@ const MUT = new Set(['aiRerollBlk', 'seqOn', 'seqBlkAdd', 'seqBlkDel', 'seqApply
 const MUTC = new Set(['toggleGeb', 'toggleDay', 'cTog']);
 function setStatusDom(f, v) { document.querySelectorAll(`select[data-f="${f}"]`).forEach(n => { n.value = v; n.className = n.className.replace(/stat-\w+/, 'stat-' + v); }); }
 function touch(s) {
-  if (!s || s.status === 'in_planung') return;
-  s.status = 'in_planung'; setStatusDom(`s:${s.id}:status`, 'in_planung');
+  if (!s) return;
+  if (s.status === 'in_planung') { s.editedAt = nowIso(); return; }
+  setStatus(s, 'in_planung'); setStatusDom(`s:${s.id}:status`, 'in_planung');
   const card = document.querySelector(`[data-sid0="${s.id}"]`); if (card) card.className = card.className.replace(/stc-\w+/, '');
 }
 function touchC(c) { if (c && c.status !== 'in_planung') { c.status = 'in_planung'; setStatusDom('c:status', 'in_planung'); } }
@@ -809,7 +815,7 @@ const A = {
     if (v === 'vorgeplant') {
       if (!confirm('Alle Stunden werden in den Ursprungszustand zurückgesetzt (alle Änderungen gehen verloren; gesperrte Stunden bleiben). Zurücksetzen?')) return;
       c.sessions.forEach(s => { if (!s.locked) resetSession(c, s); });
-    } else c.sessions.forEach(s => { s.status = v; });
+    } else c.sessions.forEach(s => setStatus(s, v));
     save(); render(); toast('Status aller Stunden: ' + STATUS[v]);
   },
   anFix(d) { anFix(d); },
@@ -1000,7 +1006,7 @@ const CH = {
       if (!confirm('Die Stunde wird in den Ursprungszustand zurückgesetzt: Alle Änderungen (Übungen, Blöcke, Zeiten, Texte, Filter) gehen verloren und die Stunde wird neu aus dem Rahmen befüllt.\n\nZurücksetzen?')) { el.value = s.status; setStatusDom(el.dataset.f, s.status); return; }
       resetSession(c, s); save(); render(); toast('Stunde auf Vorgeplant zurückgesetzt.'); return;
     }
-    setField(el); save(); render();
+    setField(el); if (s) s.editedAt = nowIso(); if (s && s.status === 'fertig' && !s.doneAt) s.doneAt = nowIso(); if (s && s.status !== 'fertig') delete s.doneAt; save(); render();
   },
   bmmin(el) {
     const { c, s } = sessionOf(el.dataset.sid), k = el.dataset.b; setField(el);
@@ -1135,7 +1141,7 @@ function lockedSession(el) {
   return s && s.status === 'fertig' ? s : null;
 }
 function askUnlock(s) {
-  if (confirm(`Diese Stunde hat den Status „Fertig“ und ist für Änderungen gesperrt.\n\nStatus auf „In Planung“ setzen, um sie zu bearbeiten?`)) { s.status = 'in_planung'; save(); render(); }
+  if (confirm(`Diese Stunde hat den Status „Fertig“ und ist für Änderungen gesperrt.\n\nStatus auf „In Planung“ setzen, um sie zu bearbeiten?`)) { setStatus(s, 'in_planung'); save(); render(); }
 }
 function guardEvent(e, el, s) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); if (el.blur) el.blur(); askUnlock(s); }
 const isEditCtl = el => el.matches && el.matches('select, input, textarea') && (el.dataset.f || el.dataset.chg || el.dataset.add) && !/:status$|:flt\./.test(el.dataset.f || '');

@@ -314,7 +314,7 @@ function anFix(d) {
   if (!list.length) { toast('Alle betroffenen Stunden stehen auf „Fertig“ oder sind gesperrt.'); return; }
   if (!confirm(`Automatische Änderung: ${fx.what(d.v)}.\n\nBetroffen: ${list.length} Stunde(n), die nicht auf „Fertig“ stehen. Geänderte Stunden gehen auf „In Planung“. Fortfahren?`)) return;
   const changed = fx.f(c, d.v, list), set = new Set(changed);
-  set.forEach(s => { s.status = 'in_planung'; });
+  set.forEach(s => setStatus(s, 'in_planung'));
   save(); render();
   toast(set.size ? `${set.size} Stunde(n) angepasst.` : 'Es war keine passende Änderung möglich.');
 }
