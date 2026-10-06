@@ -24,7 +24,7 @@ const DOC_CSS = `
 .paper th{background:#e8efe9;color:#3f5a4b;font-weight:700}
 .paper td.min{width:64px;white-space:nowrap;color:#3f5a4b;font-weight:700}
 .paper td.lab{width:170px;font-weight:700;background:#f4f7f3}
-.paper .txt p{margin:0 0 7px}
+.paper .txt{font-size:15.5px;line-height:1.55}.paper .txt p{margin:0 0 8px}
 .paper .arc{margin-top:12px;color:#5b5a52;font-style:italic}
 .paper .box{border:1px solid #cfd8d0;border-left:4px solid #c9826b;padding:6px 10px;margin-top:8px;background:#fbf5ef;border-radius:0 6px 6px 0}
 .paper .alt{font-size:11.5px;color:#5b5a52;margin-top:8px;line-height:1.55}
@@ -51,7 +51,7 @@ const DOC_CSS = `
 .exg{display:inline-flex;align-items:flex-end;gap:0;border:1px dashed #c4d0c6;border-radius:10px;padding:2px 3px;margin:3px 2px;background:#f8faf6}
 .ex.alt{width:78px;font-size:10px;opacity:.92}.ex.alt .fig{width:38px;height:38px}.ex.alt small.lv{color:#c9826b;font-weight:700;margin:0 0 1px}
 .b2h{font-family:"Cormorant Garamond",Georgia,"Times New Roman",serif;color:#3f5a4b;font-weight:600;font-size:26px;line-height:1.2;margin:0 0 5mm;padding:0;text-align:center}
-.b2{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:var(--rgap) var(--gap)}.paper .b2 .ex{width:auto;margin:0;overflow-wrap:anywhere;hyphens:auto;font-size:var(--fs);line-height:1.15}.paper .b2 .ex .fig{width:var(--fig);height:var(--fig)}.paper .b2 .ex .pk{width:16px;height:16px;font-size:10px;line-height:16px}
+.b2{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:var(--rgap) var(--gap)}.paper .b2 .ex{width:auto;margin:0;overflow-wrap:anywhere;hyphens:auto;font-size:var(--fs);line-height:1.15}.paper .b2 .ex .fig{width:var(--fig);height:var(--fig)}.blatt3 .b2 .ex{font-weight:600}.blatt3 .b2 .ex .pa{display:block;font-size:.75em;font-weight:600;line-height:1.1}.paper .b2 .ex .pk{width:16px;height:16px;font-size:10px;line-height:16px}
 .big .ex{width:120px;font-size:12.5px;margin:6px 4px}
 .big .ex .fig{width:82px;height:82px}
 .paper .arrow{width:34px;text-align:center;font-size:20px;color:#8aa897;vertical-align:middle}
@@ -155,7 +155,9 @@ function altList(s) {
   return li.length ? `<div class="alt"><b>Alternativen</b> (↓ leichter, ↑ anspruchsvoller): ${li.join(' &nbsp;·&nbsp; ')}</div>` : '';
 }
 const showAlt = c => false;
-const sessionTitle = (c, s, i) => `Stunde ${i + 1}${s.date ? ' (' + fmtDateW(s.date) + ')' : ''} – ${s.motto.title}`;
+// Überschrift-Titel einer Stunde: bei der Einzelstunde der Name der Stunde (Kursname), sonst das Motto
+const stName = (c, s) => c.single && c.name ? c.name : s.motto.title;
+const sessionTitle = (c, s, i) => `Stunde ${i + 1}${s.date ? ' (' + fmtDateW(s.date) + ')' : ''} – ${stName(c, s)}`;
 const pageFoot = c => `<div class="foot">${esc(c.name)}</div>`;
 const DESCR = { mobi: 'Pawanmuktasana-Folge', aufw: 'Stand, Flow', asana: 'Stand, Balance', kraft: 'Kraft', ausgl: 'Boden, Rückenlage' };
 
@@ -211,21 +213,48 @@ ${rowTable(rs)}${kraftBox(s)}${showAlt(c) ? altList(s) : ''}${pageFoot(c)}</sect
 }
 
 // Strichmännchenblätter 2: nur Datum und Motto als Überschrift, danach alle Übungen als Strichmännchen, die Seite (A4 quer) wird ausgefüllt
-function renderBlatt2(c, s, i) {
-  const tiles = [];
+function renderBlatt2(c, s, i, big) {
+  const tiles = [], names = [];
+  // Blatt 3: Klammerzusatz eines Namens steht kleiner (75 %) in eigener Zeile, der Hauptname bleibt groß
+  const nm = t => { const k = big ? t.indexOf('(') : -1; return k > 0 && t.trim().endsWith(')') ? { main: t.slice(0, k).trim(), par: t.slice(k).trim() } : { main: t, par: '' }; };
+  const nmHtml = t => { const x = nm(t); return esc(x.main) + (x.par ? `<small class="pa">${esc(x.par)}</small>` : ''); };
   exRows(s).forEach(r => r.items.forEach(it => {
     const e = exById(it.id); if (!e || isTxb(it)) return;
-    if (e.txt) { const b = sbInfo(it, e); tiles.push(`<span class="ex"><span class="fg">${b.fig}</span><span>${esc(b.title)}</span></span>`); return; }
-    tiles.push(`<span class="ex${it.opt ? ' opt' : ''}"><span class="fg">${figureSVG(e.pose)}${handsMark(it, e)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span>${esc(e.n)}</span></span>`);
+    if (e.txt) { const b = sbInfo(it, e); names.push(nm(b.title)); tiles.push(`<span class="ex"><span class="fg">${b.fig}</span><span>${nmHtml(b.title)}</span></span>`); return; }
+    names.push(nm(e.n)); tiles.push(`<span class="ex${it.opt ? ' opt' : ''}"><span class="fg">${figureSVG(e.pose)}${handsMark(it, e)}${e.peak ? '<b class="pk">★</b>' : ''}</span><span>${nmHtml(e.n)}</span></span>`);
   }));
   const W = 267, H = 160, n = Math.max(tiles.length, 1), gap = 3;
-  const fsOf = cw => Math.max(10, Math.min(14, cw * 0.4)), figOf = cw => Math.min(cw * 0.98, 70);
-  const need = cols => { const cw = (W - gap * (cols - 1)) / cols; return Math.ceil(n / cols) * (figOf(cw) + 3 * fsOf(cw) * 1.15 * 0.2646 + 2 + gap); };
-  let cols = 16; for (let k = 3; k <= 16; k++) if (need(k) <= H) { cols = k; break; }
-  const cw = (W - gap * (cols - 1)) / cols, rows = Math.ceil(n / cols), rowH = need(cols) / rows - gap;
-  const rgap = rows > 1 ? Math.max(gap, Math.min(14, (H - rows * rowH) / (rows - 1))) : gap;
-  const head = (s.date ? fmtDateW(s.date) + ' · ' : '') + s.motto.title;
-  return `<section class="paper land big blatt2 nofoot"><h2 class="b2h">${esc(head)}</h2><div class="b2" style="--cols:${cols};--gap:${gap}mm;--rgap:${rgap.toFixed(1)}mm;--fig:${figOf(cw).toFixed(1)}mm;--fs:${fsOf(cw).toFixed(1)}px">${tiles.join('')}</div></section>`;
+  // Blatt 3: möglichst große, fette Schrift unter den Figuren (von weitem lesbar). Gesucht wird die größte Schrift, bei der alle Namen
+  // (Zeilenumbruch aus den echten Namen geschätzt) samt Figur (mind. 15 mm) auf die Seite passen; unter den Spaltenzahlen gewinnt die größte Figur.
+  let cols, fs, fig, rgap;
+  if (big) {
+    // Zeilenzahl eines Namens bei Breite wpx: Wörter per Canvas gemessen (Ersatz: 0,56 em je Zeichen); zu lange Wörter brechen mitten im Wort um
+    const cx = (() => { try { return document.createElement('canvas').getContext('2d'); } catch (e) { return null; } })();
+    const wdOf = (w, f) => { if (cx) cx.font = '600 ' + f + 'px Nunito, "Segoe UI", sans-serif'; return cx ? cx.measureText(w).width : w.length * f * 0.56; };
+    const wrap = (t, wpx, f) => { const wd = w => wdOf(w, f), sp = f * 0.28;
+      return t.split(' ').reduce((r, w) => { const x = wd(w), k = Math.max(1, Math.ceil(x / wpx)); return r.c && r.c + sp + x <= wpx ? { n: r.n, c: r.c + sp + x } : { n: r.n + k, c: x - (k - 1) * wpx }; }, { n: 0, c: 0 }).n; };
+    // erst ohne Wortbrüche mitten im Wort (bis 14 px), sonst darf die Schrift mit Brüchen größer bleiben
+    for (let f = 24, pass = 0; f >= 10 && !cols; f -= 0.5) {
+      if (f < 14 && pass === 0) { pass = 1; f = 24; }
+      let best = null;
+      for (let k = 3; k <= 16; k++) {
+        const cw = (W - gap * (k - 1)) / k, wpx = cw * 3.78 - 6, rows = Math.ceil(n / k);
+        const lines = Math.max(...names.map(t => wrap(t.main, wpx, f) * f + (t.par ? wrap(t.par, wpx, f * 0.75) * f * 0.75 : 0))), tx = lines * 1.12 * 0.2646 + 1;
+        const fg = Math.min(cw * 0.98, 70, (H - (rows - 1) * gap) / rows - tx - 2);
+        if (fg >= 15 && (pass || !names.some(t => t.main.split(' ').some(w => wdOf(w, f) > wpx))) && (!best || fg > best.fg)) best = { k, fg, rows, tx };
+      }
+      if (best) { cols = best.k; fs = f; fig = best.fg; rgap = best.rows > 1 ? Math.max(gap, Math.min(14, (H - best.rows * (best.fg + best.tx + 2)) / (best.rows - 1))) : gap; }
+    }
+  }
+  if (!cols) {
+    const fsOf = cw => Math.max(10, Math.min(14, cw * 0.4)), figOf = cw => Math.min(cw * 0.98, 70);
+    const need = k => { const cw = (W - gap * (k - 1)) / k; return Math.ceil(n / k) * (figOf(cw) + 3 * fsOf(cw) * 1.15 * 0.2646 + 2 + gap); };
+    cols = 16; for (let k = 3; k <= 16; k++) if (need(k) <= H) { cols = k; break; }
+    const cw = (W - gap * (cols - 1)) / cols, rows = Math.ceil(n / cols), rowH = need(cols) / rows - gap;
+    fs = fsOf(cw); fig = figOf(cw); rgap = rows > 1 ? Math.max(gap, Math.min(14, (H - rows * rowH) / (rows - 1))) : gap;
+  }
+  const head = (s.date ? fmtDateW(s.date) + ' · ' : '') + stName(c, s);
+  return `<section class="paper land big blatt2${big ? ' blatt3' : ''} nofoot"><h2 class="b2h">${esc(head)}</h2><div class="b2" style="--cols:${cols};--gap:${gap}mm;--rgap:${rgap.toFixed(1)}mm;--fig:${fig.toFixed(1)}mm;--fs:${fs.toFixed(1)}px">${tiles.join('')}</div></section>`;
 }
 function courseSub(c) {
   const T = sessionTotal(c.sessions[0] || { dur: courseDur(c) });
@@ -266,9 +295,9 @@ function renderStundenUeb(c, only) {
       const est = cols => { const cell = W / cols - 3; return Math.ceil(n / cols) * (cell * 0.62 + 2.3 * fsOf(cell) * 0.2646 + 3.5 + 1.1); };
       let cols = 14; for (let k = 6; k <= 14; k++) if (est(k) <= 138) { cols = k; break; }
       const cell = W / cols - 3;
-      return `<div class="ovc big"><div class="ovh"><span class="no">${i + 1}</span><span>${esc(fmtDateW(s.date))}</span><span class="tt">${esc(s.motto.title)}</span><span class="mi">${fmtMin(plannedTotal(s))} Min.</span></div><div class="ovs">${strip}</div><div class="ovt" style="grid-template-columns:repeat(${cols},minmax(0,1fr));gap:4px;--fig:${(cell * 0.62).toFixed(1)}mm;--fs:${fsOf(cell).toFixed(1)}px">${tiles.join('')}</div></div>`;
+      return `<div class="ovc big"><div class="ovh"><span class="no">${i + 1}</span><span>${esc(fmtDateW(s.date))}</span><span class="tt">${esc(stName(c, s))}</span><span class="mi">${fmtMin(plannedTotal(s))} Min.</span></div><div class="ovs">${strip}</div><div class="ovt" style="grid-template-columns:repeat(${cols},minmax(0,1fr));gap:4px;--fig:${(cell * 0.62).toFixed(1)}mm;--fs:${fsOf(cell).toFixed(1)}px">${tiles.join('')}</div></div>`;
     }
-    return `<div class="ovc"><div class="ovh"><span class="no">${i + 1}</span><span>${esc(fmtDateW(s.date))}</span><span class="tt">${esc(s.motto.title)}</span><span class="mi">${fmtMin(plannedTotal(s))} Min.</span></div><div class="ovs">${strip}</div><div class="ovt">${tiles.join('')}</div></div>`;
+    return `<div class="ovc"><div class="ovh"><span class="no">${i + 1}</span><span>${esc(fmtDateW(s.date))}</span><span class="tt">${esc(stName(c, s))}</span><span class="mi">${fmtMin(plannedTotal(s))} Min.</span></div><div class="ovs">${strip}</div><div class="ovt">${tiles.join('')}</div></div>`;
   }).join('');
   if (only) return `<section class="paper land">${paperHead(c, esc(sessionTitle(c, only.s, only.i)) + '<br><span style="font-size:15px">Stundenübersicht</span>')}${cards}${pageFoot(c)}</section>`;
   return `<section class="paper land">${paperHead(c, 'Stundenübersicht', esc(courseSub(c)))}${cards}${pageFoot(c)}</section>`;
@@ -317,6 +346,7 @@ function buildDoc(c, o) {
     if (o.std) h += renderSession(c, s, i, o);
     if (o.blatt) h += renderBlatt(c, s, i);
     if (o.blatt2) h += renderBlatt2(c, s, i);
+    if (o.blatt3) h += renderBlatt2(c, s, i, true);
     if (o.alt) h += renderAltBlatt(c, s, i);
     if (o.uebw) h += renderUebBlatt(c, s, i);
     if (o.spick) h += renderSpick(c, s, i);
