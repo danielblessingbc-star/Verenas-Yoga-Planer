@@ -130,9 +130,11 @@ function refreshFields() {
     const r = resolve(el.dataset.f); if (!r.o) return; const v = getP(r.o, r.p);
     if (el.type === 'checkbox') el.checked = !!v; else if (el.type === 'radio') el.checked = String(v) === el.value; else el.value = v == null ? '' : v;
   });
+  document.querySelectorAll('input[type="date"]').forEach(el => { const w = el.previousElementSibling; if (w && w.classList.contains('wdl')) { const d = parseDate(el.value); w.textContent = d ? WDAY[d.getUTCDay()] : ''; } });
   hlAll();
   const b = $('#dirtyBanner'); if (b && cur()) b.classList.toggle('hide', !cur().dirty);
-  const c = cur(); if (c) c.sessions.forEach(s => { const t = $('#tot-' + s.id); if (t) t.textContent = sessionTotal(s); });
+  const c = cur(); if (c) c.sessions.forEach(s => {
+    document.querySelectorAll(`.pill[data-id="${s.id}"]`).forEach(p => { const sm = p.querySelector('small'); if (sm) sm.textContent = fmtDateS(s.date); p.title = `${s.motto.title} – ${fmtDateW(s.date)}${s.locked ? ' (gesperrt)' : ''}`; }); const t = $('#tot-' + s.id); if (t) t.textContent = sessionTotal(s); });
   document.querySelectorAll('.tw[data-twk]').forEach(n => { const s = c && c.sessions.find(x => x.id === n.dataset.sid); if (s) n.textContent = twText(s, n.dataset.twk); });
 }
 // Piktogramme der Kopfzeile (Linien-Symbole)
@@ -211,8 +213,9 @@ function viewCourse(c) {
   if (!['frame', 'sessions', 'doc', 'overview', 'sessionAn', 'programAn'].includes(ui.tab)) ui.tab = 'frame';
   const tb = (v, l, n) => `<button class="tab${ui.tab === v ? ' on' : ''}" data-a="tab" data-v="${v}"><span class="tn">${n}</span> ${l}</button>`;
   const ovBtns = ui.tab === 'overview' ? Object.keys(STATUS).map(k => { const n = c.sessions.filter(x => (x.status || 'vorgeplant') === k).length; return `<button class="stfil stp-${k}${ui.ovF === k ? ' on' : ''}" data-a="ovFilter" data-v="${k}" title="${ui.ovF === k ? 'Filter aufheben' : 'Nur Stunden mit Status „' + STATUS[k] + '“ zeigen'}">${STATUS[k]} <b>${n}</b></button>`; }).join('') : '';
-  return `<div class="bar noprint">${ovBtns}<span class="grow"></span><label class="muted">Status Rahmen</label> ${statSel('c:status', c.status || 'vorgeplant')}
-${ui.tab === 'frame' ? '' : '<button class="ghost" data-a="saveTpl" title="Als Vorlage speichern">★ Als Vorlage</button>'}<button class="ghost" data-a="pdf" title="Programm als PDF speichern">⬇ Als PDF speichern</button></div>${ui.tab === 'frame' ? frameView(c) : ui.tab === 'sessions' ? sessionsView(c) : ui.tab === 'sessionAn' ? viewSessionAnalysis(c) : ui.tab === 'programAn' ? viewProgramAnalysis(c) : ui.tab === 'overview' ? (c.sessions.length ? frameTable(c) : '<p class="muted">Noch keine Stunden angelegt – in der Rahmenplanung „Rahmen auf die Stunden anwenden“ klicken.</p>') : docPanel(c)}`;
+  const topBar = ui.tab === 'sessions' ? '' : `<div class="bar noprint">${ovBtns}<span class="grow"></span><label class="muted">Status Rahmen</label> ${statSel('c:status', c.status || 'vorgeplant')}
+${ui.tab === 'frame' ? '' : '<button class="ghost" data-a="saveTpl" title="Als Vorlage speichern">★ Als Vorlage</button>'}<button class="ghost" data-a="pdf" title="Programm als PDF speichern">⬇ Als PDF speichern</button></div>`;
+  return `${topBar}${ui.tab === 'frame' ? frameView(c) : ui.tab === 'sessions' ? sessionsView(c) : ui.tab === 'sessionAn' ? viewSessionAnalysis(c) : ui.tab === 'programAn' ? viewProgramAnalysis(c) : ui.tab === 'overview' ? (c.sessions.length ? frameTable(c) : '<p class="muted">Noch keine Stunden angelegt – in der Rahmenplanung „Rahmen auf die Stunden anwenden“ klicken.</p>') : docPanel(c)}`;
 }
 // Stundenaufbau & Dauer (gemeinsam für die Vorgaben und die KI-Seite): P = Feldpräfix, 'c' = aktuelles Programm, 'a' = Entwurf der KI-generierten Stunde
 const selC = (chg, opts, cur_, extra) => `<select data-chg="${chg}" ${extra || ''}>${opts.map(o => opt(o[0], o[1], cur_)).join('')}</select>`;
@@ -1137,6 +1140,11 @@ function sidOfEl(el) {
 }
 function lockedSession(el) {
   const c = cur(); if (!c || !el || !el.dataset) return null;
+  // Rahmen/Vorgaben gelten als „Fertig“, wenn die Einzelstunde bzw. alle Stunden des Programms fertig sind
+  if (ui.tab === 'frame' && c.sessions.length && el.closest && el.closest('.fcards, .bar') && (c.single ? c.sessions[0].status === 'fertig' : c.sessions.every(x => x.status === 'fertig'))
+    && (/^c:/.test(el.dataset.f || '') || el.dataset.chg || el.dataset.f2 || /^(plan|dates|toggleDay|toggleGeb|cTog|genMotto|genName|genUeber|aiMottos)$/.test(el.dataset.a || ''))) return c.sessions[0];
+  // Rahmenfelder, die Termine aller Stunden neu berechnen (Startdatum, Rhythmus, Pausen, Anzahl, Wochentage)
+  if (/^c:(start|rhythm|pauses|count)$/.test(el.dataset.f || '') || el.dataset.a === 'toggleDay' || el.dataset.a === 'dates') return c.sessions.find(x => x.status === 'fertig') || null;
   const sid = sidOfEl(el), s = sid && c.sessions.find(x => x.id === sid);
   return s && s.status === 'fertig' ? s : null;
 }
