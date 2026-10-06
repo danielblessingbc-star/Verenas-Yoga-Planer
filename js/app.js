@@ -14,21 +14,7 @@ function save() {
   saveT = setTimeout(() => {
     try {
       localStorage.setItem(KEY, JSON.stringify(state));
-      // Google Sheets Backup
-      if (typeof saveToGoogleSheets === 'function' && state.courses && state.courses.length > 0) {
-        state.courses.forEach(course => {
-          if (course.sessions) {
-            course.sessions.forEach(session => {
-              saveToGoogleSheets(
-                course.name + ' - ' + (session.name || 'Sitzung'),
-                course.level || 'gemischt',
-                course.motto?.preset || 'Allgemein',
-                JSON.stringify({ course: course.name, session: session.name, total: session.T })
-              );
-            });
-          }
-        });
-      }
+      if (typeof syncMarkDirty === 'function') syncMarkDirty();
     } catch (e) { toast('Speichern im Browser nicht möglich – bitte Backup herunterladen.'); }
   }, 150);
 }
@@ -714,6 +700,7 @@ ${fld('Leichtere Alternative', sel('u:newEx.e', [['', '–']].concat(exAll().map
 function viewSettings() {
   const g = state.settings;
   return `<div class="bar"><h1>Einstellungen & Backup</h1></div>
+<div class="panel"><h3>Abgleich zwischen Rechnern</h3><p class="muted">Speichert den kompletten Stand zusätzlich in deinem Google Sheet, damit auf allen PCs derselbe Stand erscheint (Einrichtung: docs/sync-einrichtung.md). Der KI-Schlüssel wird nicht übertragen.</p><div class="bar"><button data-a="syncSetup">${typeof syncReady === 'function' && syncReady() ? '⚙ Abgleich ändern' : '☁ Abgleich einrichten'}</button><button data-a="syncNow">↻ Jetzt abgleichen</button><span class="muted" id="syncSt">${typeof syncReady === 'function' && syncReady() ? '' : 'nicht eingerichtet'}</span></div></div>
 <div class="panel"><h3>Speicherung</h3><p class="muted">Alle Programme, Vorlagen und Bewertungen werden automatisch in diesem Browser gespeichert (auf diesem Rechner). Für ein Backup oder um auf einem anderen Rechner weiterzuarbeiten: Datei exportieren und dort importieren.</p>
 <div class="bar"><button class="primary" data-a="exportAll">⬇ Backup exportieren (.json)</button><button data-a="importPick">⬆ Backup importieren …</button><button class="danger" data-a="resetAll">Alle Daten löschen</button></div></div>
 ${rcpPanel()}
@@ -971,6 +958,8 @@ const A = {
   eml() { const c = cur(); download(fileName(c.name) + '.eml', buildEml(c, ui.doc, mailAddrs(c).join(', '), c.emailSubject || c.name + ' – Programm'), 'message/rfc822'); toast('Entwurf gespeichert – per Doppelklick in deinem Mailprogramm öffnen.'); },
   html() { const c = cur(); download(fileName(c.name) + '.html', standaloneHtml(c, ui.doc), 'text/html'); },
   async copy() { try { await navigator.clipboard.writeText(overviewText(cur())); toast('Übersicht kopiert.'); } catch (e) { toast('Kopieren nicht möglich.'); } },
+  syncSetup() { syncSetup(); },
+  syncNow() { syncCheck(); },
   exportAll() { download('yoga-kursplaner-backup-' + todayIso() + '.json', JSON.stringify(state, null, 1), 'application/json'); },
   exportCourse() { const c = cur(); download(fileName(c.name) + '.json', JSON.stringify({ course: c, ratings: state.ratings }, null, 1), 'application/json'); },
   importPick() { $('#imp').click(); },
@@ -1400,21 +1389,6 @@ normalizeState();
 applyCatalogState();
 document.head.insertAdjacentHTML('beforeend', `<style id="docCss">${DOC_CSS}</style>`);
 render();
-
-// Google Sheets Auto-Load beim Start
-if (typeof loadFromGoogleSheets === 'function') {
-  setTimeout(async () => {
-    try {
-      const sheetData = await loadFromGoogleSheets();
-      if (sheetData && Array.isArray(sheetData) && sheetData.length > 1) {
-        console.log('✅ Google Sheets Daten geladen');
-        toast('Daten von Google Sheets geladen', 2000);
-      }
-    } catch (e) {
-      console.log('ℹ Google Sheets nicht verfügbar oder kein Backup');
-    }
-  }, 500);
-}
 
 // ---- Aktionen: Übungen bearbeiten ----
 Object.assign(A, {
