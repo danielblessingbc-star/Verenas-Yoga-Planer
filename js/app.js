@@ -732,6 +732,13 @@ function touch(s) {
   setStatus(s, 'in_planung'); setStatusDom(`s:${s.id}:status`, 'in_planung');
   const card = document.querySelector(`[data-sid0="${s.id}"]`); if (card) card.className = card.className.replace(/stc-\w+/, '');
 }
+// Einzelstunde: Status des Rahmens folgt dem Status der Stunde (Fertig ↔ In Planung)
+function syncSingleStatus(c) {
+  if (!c || !c.single || !c.sessions[0]) return;
+  const st = c.sessions[0].status;
+  if (st === 'fertig') c.status = 'fertig'; else if (c.status === 'fertig') c.status = 'in_planung'; else return;
+  setStatusDom('c:status', c.status);
+}
 function touchC(c) { if (c && c.status !== 'in_planung') { c.status = 'in_planung'; setStatusDom('c:status', 'in_planung'); } }
 const A = {
   noop() { },
@@ -1009,7 +1016,7 @@ const CH = {
       if (!confirm('Die Stunde wird in den Ursprungszustand zurückgesetzt: Alle Änderungen (Übungen, Blöcke, Zeiten, Texte, Filter) gehen verloren und die Stunde wird neu aus dem Rahmen befüllt.\n\nZurücksetzen?')) { el.value = s.status; setStatusDom(el.dataset.f, s.status); return; }
       resetSession(c, s); save(); render(); toast('Stunde auf Vorgeplant zurückgesetzt.'); return;
     }
-    setField(el); if (s) s.editedAt = nowIso(); if (s && s.status === 'fertig' && !s.doneAt) s.doneAt = nowIso(); if (s && s.status !== 'fertig') delete s.doneAt; save(); render();
+    setField(el); if (s) s.editedAt = nowIso(); if (s && s.status === 'fertig' && !s.doneAt) s.doneAt = nowIso(); if (s && s.status !== 'fertig') delete s.doneAt; syncSingleStatus(c); save(); render();
   },
   bmmin(el) {
     const { c, s } = sessionOf(el.dataset.sid), k = el.dataset.b; setField(el);
@@ -1149,7 +1156,7 @@ function lockedSession(el) {
   return s && s.status === 'fertig' ? s : null;
 }
 function askUnlock(s) {
-  if (confirm(`Diese Stunde hat den Status „Fertig“ und ist für Änderungen gesperrt.\n\nStatus auf „In Planung“ setzen, um sie zu bearbeiten?`)) { setStatus(s, 'in_planung'); save(); render(); }
+  if (confirm(`Diese Stunde hat den Status „Fertig“ und ist für Änderungen gesperrt.\n\nStatus auf „In Planung“ setzen, um sie zu bearbeiten?`)) { setStatus(s, 'in_planung'); syncSingleStatus(cur()); save(); render(); }
 }
 function guardEvent(e, el, s) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); if (el.blur) el.blur(); askUnlock(s); }
 const isEditCtl = el => el.matches && el.matches('select, input, textarea') && (el.dataset.f || el.dataset.chg || el.dataset.add) && !/:status$|:flt\./.test(el.dataset.f || '');
